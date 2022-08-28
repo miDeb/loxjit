@@ -10,6 +10,8 @@ pub enum OpCode {
     True,
     False,
     Pop,
+    GetLocal,
+    SetLocal,
     GetGlobal,
     DefineGlobal,
     SetGlobal,
@@ -90,6 +92,8 @@ impl Chunk {
             OpCode::Greater => Self::simple_instruction("OP_GREATER", offset),
             OpCode::Less => Self::simple_instruction("OP_LESS", offset),
             OpCode::Equal => Self::simple_instruction("OP_EQUAL", offset),
+            OpCode::GetLocal => self.byte_instruction("OP_GET_LOCAL", offset),
+            OpCode::SetLocal => self.byte_instruction("OP_SET_LOCAL", offset),
         }
     }
 
@@ -103,6 +107,12 @@ impl Chunk {
         print!("{:16} {:4} '", name, offset);
         print!("{}", self.constants[constant as usize]);
         println!("'");
+        offset + 2
+    }
+
+    fn byte_instruction(&self, name: &str, offset: usize) -> usize {
+        let slot = self.code[offset + 1];
+        println!("{:16} {:4}", name, slot);
         offset + 2
     }
 }

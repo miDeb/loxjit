@@ -151,6 +151,14 @@ impl Vm {
                 OpCode::Pop => {
                     self.pop();
                 }
+                OpCode::GetLocal => {
+                    let slot = self.read_byte();
+                    self.push(unsafe { self.stack[slot as usize].assume_init() });
+                }
+                OpCode::SetLocal => {
+                    let slot = self.read_byte();
+                    self.stack[slot as usize] = MaybeUninit::new(self.peek(0));
+                }
                 OpCode::GetGlobal => {
                     let name = self.read_string();
                     let Some(value) = self.globals.get(name) else {
