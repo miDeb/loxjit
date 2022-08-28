@@ -1,6 +1,6 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive, UnsafeFromPrimitive};
 
-use crate::value::{print_value, Value};
+use crate::value::Value;
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive, UnsafeFromPrimitive)]
 #[repr(u8)]
@@ -9,6 +9,10 @@ pub enum OpCode {
     Nil,
     True,
     False,
+    Pop,
+    GetGlobal,
+    DefineGlobal,
+    SetGlobal,
     Equal,
     Greater,
     Less,
@@ -18,6 +22,7 @@ pub enum OpCode {
     Div,
     Not,
     Negate,
+    Print,
     Return,
 }
 
@@ -66,11 +71,16 @@ impl Chunk {
         let op_code: OpCode = self.code[offset].try_into().unwrap();
 
         match op_code {
-            OpCode::Constant => Self::constant_instruction(&self, "OP_CONSTANT", offset),
+            OpCode::Constant => self.constant_instruction("OP_CONSTANT", offset),
             OpCode::Nil => Self::simple_instruction("OP_NIL", offset),
             OpCode::True => Self::simple_instruction("OP_TRUE", offset),
             OpCode::False => Self::simple_instruction("OP_FALSE", offset),
+            OpCode::Pop => Self::simple_instruction("OP_POP", offset),
+            OpCode::DefineGlobal => self.constant_instruction("OP_DEFINE_GLOBAL", offset),
+            OpCode::SetGlobal => self.constant_instruction("OP_SET_GLOBAL", offset),
+            OpCode::GetGlobal => self.constant_instruction("OP_GET_GLOBAL", offset),
             OpCode::Negate => Self::simple_instruction("OP_NEGATE", offset),
+            OpCode::Print => Self::simple_instruction("OP_PRINT", offset),
             OpCode::Return => Self::simple_instruction("OP_RETURN", offset),
             OpCode::Add => Self::simple_instruction("OP_ADD", offset),
             OpCode::Sub => Self::simple_instruction("OP_SUB", offset),
@@ -91,7 +101,7 @@ impl Chunk {
     fn constant_instruction(&self, name: &str, offset: usize) -> usize {
         let constant = self.code[offset + 1];
         print!("{:16} {:4} '", name, offset);
-        print_value(self.constants[constant as usize]);
+        print!("{}", self.constants[constant as usize]);
         println!("'");
         offset + 2
     }

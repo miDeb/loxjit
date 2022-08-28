@@ -1,10 +1,11 @@
-use std::mem::MaybeUninit;
+use std::{collections::HashMap, mem::MaybeUninit};
 
 use crate::{
     chunk::{Chunk, OpCode},
     common::DEBUG_TRACE_EXECUTION,
     compiler::Parser,
-    value::{print_value, Value},
+    interned_strings::StringInterner,
+    value::Value,
 };
 
 pub enum InterpretResult {
@@ -32,6 +33,8 @@ pub struct Vm {
     ip: *const u8,
     stack: [MaybeUninit<Value>; 256],
     sp: *mut MaybeUninit<Value>,
+    interned_strings: StringInterner,
+    globals: HashMap<&'static str, Value>,
 }
 
 macro_rules! runtime_error {
@@ -50,6 +53,8 @@ impl Vm {
             chunk,
             stack: [MaybeUninit::uninit(); 256],
             sp: std::ptr::null_mut(),
+            interned_strings: StringInterner::new(),
+            globals: HashMap::new(),
         }
     }
 
@@ -70,6 +75,10 @@ impl Vm {
     fn read_constant(&mut self) -> Value {
         let index = self.read_byte() as usize;
         self.chunk.constants[index]
+    }
+
+    fn read_string(&mut self) -> &'static str {
+        self.read_constant().as_string()
     }
 
     fn push(&mut self, value: Value) {
@@ -101,6 +110,19 @@ impl Vm {
         self.reset_stack();
     }
 
+    fn concatenate(&mut self) {
+        let b = self.pop().as_string();
+        let a = self.pop().as_string();
+
+        let mut new_string = String::with_capacity(a.len() + b.len());
+        new_string.push_str(a);
+        new_string.push_str(b);
+
+        let obj = self.interned_strings.put(new_string);
+
+        self.push(Value::Obj(obj));
+    }
+
     pub fn run(&mut self) -> InterpretResult {
         self.reset_stack();
         self.ip = self.chunk.code.as_ptr();
@@ -110,7 +132,7 @@ impl Vm {
                 let mut slot = self.stack.as_ptr();
                 while slot < self.sp {
                     print!("[ ");
-                    print_value(unsafe { (*slot).assume_init() });
+                    print!("{}", unsafe { (*slot).assume_init() });
                     unsafe { slot = slot.add(1) };
                     print!(" ]");
                 }
@@ -126,6 +148,30 @@ impl Vm {
                 OpCode::Nil => self.push(Value::Nil),
                 OpCode::True => self.push(Value::Bool(true)),
                 OpCode::False => self.push(Value::Bool(false)),
+                OpCode::Pop => {
+                    self.pop();
+                }
+                OpCode::GetGlobal => {
+                    let name = self.read_string();
+                    let Some(value) = self.globals.get(name) else {
+                        runtime_error!(self, "Undefined variable '{}'.", name);
+                        return InterpretResult::RuntimeError;
+                    };
+                    self.push(*value);
+                }
+                OpCode::DefineGlobal => {
+                    let name = self.read_string();
+                    self.globals.insert(name, self.peek(0));
+                    self.pop();
+                }
+                OpCode::SetGlobal => {
+                    let name = self.read_string();
+                    if self.globals.insert(name, self.peek(0)).is_none() {
+                        self.globals.remove(name);
+                        runtime_error!(self, "Undefined variable '{}'.", name);
+                        return InterpretResult::RuntimeError;
+                    }
+                }
                 OpCode::Negate => {
                     if !self.peek(0).is_number() {
                         runtime_error!(self, "Operand must be a number.");
@@ -134,12 +180,22 @@ impl Vm {
                     let value = self.pop().as_number();
                     self.push(Value::Number(-value));
                 }
+                OpCode::Print => {
+                    println!("{}", self.pop());
+                }
                 OpCode::Return => {
-                    print_value(self.pop());
-                    println!();
                     return InterpretResult::Ok;
                 }
-                OpCode::Add => binary_op!(self, add, Value::Number),
+                OpCode::Add => {
+                    if self.peek(0).is_string() && self.peek(1).is_string() {
+                        self.concatenate();
+                    } else if self.peek(0).is_number() && self.peek(1).is_number() {
+                        binary_op!(self, add, Value::Number)
+                    } else {
+                        runtime_error!(self, "Operands must be two numbers or two strings.");
+                        return InterpretResult::RuntimeError;
+                    }
+                }
                 OpCode::Sub => binary_op!(self, sub, Value::Number),
                 OpCode::Mul => binary_op!(self, mul, Value::Number),
                 OpCode::Div => binary_op!(self, div, Value::Number),
@@ -159,7 +215,7 @@ impl Vm {
 
     pub fn interpret(&mut self, source: &str) -> InterpretResult {
         self.chunk = Chunk::new();
-        let mut parser = Parser::new(source, &mut self.chunk);
+        let mut parser = Parser::new(source, &mut self.chunk, &mut self.interned_strings);
         if let Err(()) = parser.compile() {
             return InterpretResult::CompileError;
         }

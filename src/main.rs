@@ -1,5 +1,6 @@
 #![feature(ptr_sub_ptr)]
 #![feature(let_else)]
+#![feature(hash_set_entry)]
 
 use std::{ffi::OsString, io::Write};
 
@@ -11,6 +12,8 @@ mod compiler;
 mod scanner;
 mod value;
 mod vm;
+mod object;
+mod interned_strings;
 
 fn main() {
     let args = std::env::args_os();
