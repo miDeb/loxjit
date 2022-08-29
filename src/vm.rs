@@ -66,6 +66,10 @@ impl Vm {
         }
     }
 
+    fn read_u16(&mut self) -> u16 {
+        u16::from_ne_bytes([self.read_byte(), self.read_byte()])
+    }
+
     fn read_opcode(&mut self) -> OpCode {
         let byte = self.read_byte();
         debug_assert!(OpCode::try_from(byte).is_ok());
@@ -190,6 +194,26 @@ impl Vm {
                 }
                 OpCode::Print => {
                     println!("{}", self.pop());
+                }
+                OpCode::Jump => {
+                    let offset = self.read_u16();
+                    self.ip = unsafe { self.ip.add(offset as usize) };
+                }
+                OpCode::JumpUp => {
+                    let offset = self.read_u16();
+                    self.ip = unsafe { self.ip.sub(offset as usize) };
+                }
+                OpCode::JumpIfFalse => {
+                    let offset = self.read_u16();
+                    if self.peek(0).is_falsey() {
+                        self.ip = unsafe { self.ip.add(offset as usize) };
+                    }
+                }
+                OpCode::JumpIfTrue => {
+                    let offset = self.read_u16();
+                    if !self.peek(0).is_falsey() {
+                        self.ip = unsafe { self.ip.add(offset as usize) };
+                    }
                 }
                 OpCode::Return => {
                     return InterpretResult::Ok;

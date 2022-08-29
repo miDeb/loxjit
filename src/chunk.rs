@@ -25,6 +25,10 @@ pub enum OpCode {
     Not,
     Negate,
     Print,
+    Jump,
+    JumpUp,
+    JumpIfFalse,
+    JumpIfTrue,
     Return,
 }
 
@@ -83,6 +87,10 @@ impl Chunk {
             OpCode::GetGlobal => self.constant_instruction("OP_GET_GLOBAL", offset),
             OpCode::Negate => Self::simple_instruction("OP_NEGATE", offset),
             OpCode::Print => Self::simple_instruction("OP_PRINT", offset),
+            OpCode::Jump => self.jump_instruction("OP_JUMP", 1, offset),
+            OpCode::JumpUp => self.jump_instruction("OP_JUMP_UP", -1, offset),
+            OpCode::JumpIfFalse => self.jump_instruction("OP_JUMP_IF_FALSE", 1, offset),
+            OpCode::JumpIfTrue => self.jump_instruction("OP_JUMP_IF_TRUE", 1, offset),
             OpCode::Return => Self::simple_instruction("OP_RETURN", offset),
             OpCode::Add => Self::simple_instruction("OP_ADD", offset),
             OpCode::Sub => Self::simple_instruction("OP_SUB", offset),
@@ -114,5 +122,16 @@ impl Chunk {
         let slot = self.code[offset + 1];
         println!("{:16} {:4}", name, slot);
         offset + 2
+    }
+
+    fn jump_instruction(&self, name: &str, sign: i8, offset: usize) -> usize {
+        let jump = i16::from_ne_bytes([self.code[offset + 1], self.code[offset + 2]]);
+        println!(
+            "{:16} {:4} -> {}",
+            name,
+            offset,
+            offset as i64 + 3 + sign as i64 * jump as i64
+        );
+        offset + 3
     }
 }
