@@ -2,20 +2,29 @@
 #![feature(let_else)]
 #![feature(hash_set_entry)]
 
-use std::{ffi::OsString, io::Write};
+#[macro_use]
+extern crate lazy_static;
+
+use std::{ffi::OsString, io::Write, time::Instant};
 
 use vm::Vm;
 
 mod chunk;
 mod common;
 mod compiler;
+mod interned_strings;
+mod object;
 mod scanner;
 mod value;
 mod vm;
-mod object;
-mod interned_strings;
+
+lazy_static! {
+    pub static ref START: Instant = Instant::now();
+}
 
 fn main() {
+    // initialize START
+    _ = *START;
     let args = std::env::args_os();
     if args.len() == 1 {
         repl();
@@ -25,9 +34,6 @@ fn main() {
         eprintln!("Usage: rlox [path]");
         std::process::exit(64);
     }
-
-    let mut vm = Vm::new();
-    vm.run();
 }
 
 fn repl() {
@@ -48,6 +54,7 @@ fn runfile(path: OsString) {
         std::process::exit(74);
     };
     let result = vm.interpret(&source);
+    std::io::stdout().flush().unwrap();
     match result {
         vm::InterpretResult::CompileError => std::process::exit(65),
         vm::InterpretResult::RuntimeError => std::process::exit(70),

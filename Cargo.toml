@@ -6,4 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+lazy_static = "1.4.0"
 num_enum = "0.5.7"
+replace_with = "0.1.7"
+rustc-hash = "1.1.0"

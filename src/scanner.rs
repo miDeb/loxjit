@@ -48,7 +48,6 @@ impl<'a> Scanner<'a> {
                 Some('\n') => {
                     self.line += 1;
                     self.advance();
-                    break;
                 }
                 Some('/') => {
                     if self.peek_next() == Some('/') {
@@ -140,7 +139,7 @@ impl<'a> Scanner<'a> {
 
     fn check_keyword(&self, start: usize, rest: &str, tt: TokenType) -> TokenType {
         if self.start.len() - self.current.len() == start + rest.len()
-            && self.start[start..].starts_with( rest)
+            && self.start[start..].starts_with(rest)
         {
             tt
         } else {
@@ -204,7 +203,7 @@ impl<'a> Scanner<'a> {
             '"' => self.string(),
             c if c.is_ascii_digit() => self.number(),
             c if c.is_ascii_alphabetic() || c == '_' => self.identifier(),
-            _ => self.error_token("Unexected character."),
+            _ => self.error_token("Unexpected character."),
         }
     }
 
@@ -279,4 +278,3 @@ pub enum TokenType {
     Error,
     Eof,
 }
-

@@ -1,15 +1,15 @@
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 
 use crate::object::Obj;
 
 pub struct StringInterner {
-    strings: HashSet<Box<Obj>>,
+    strings: FxHashSet<Box<Obj>>,
 }
 
 impl StringInterner {
     pub fn new() -> Self {
         Self {
-            strings: HashSet::new(),
+            strings: FxHashSet::default(),
         }
     }
     pub fn put(&mut self, string: String) -> *const Obj {

@@ -29,6 +29,7 @@ pub enum OpCode {
     JumpUp,
     JumpIfFalse,
     JumpIfTrue,
+    Call,
     Return,
 }
 
@@ -77,6 +78,7 @@ impl Chunk {
         let op_code: OpCode = self.code[offset].try_into().unwrap();
 
         match op_code {
+            OpCode::Call => self.byte_instruction("OP_CALL", offset),
             OpCode::Constant => self.constant_instruction("OP_CONSTANT", offset),
             OpCode::Nil => Self::simple_instruction("OP_NIL", offset),
             OpCode::True => Self::simple_instruction("OP_TRUE", offset),
