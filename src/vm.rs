@@ -1,13 +1,14 @@
-use std::{mem::MaybeUninit, time::Instant};
 use rustc_hash::FxHashMap;
+use std::{mem::MaybeUninit, time::Instant};
 
 use crate::{
     chunk::{Chunk, OpCode},
     common::DEBUG_TRACE_EXECUTION,
     compiler::Parser,
     interned_strings::StringInterner,
-    object::{Obj, ObjContents, ObjFunction, NativeFnRef},
-    value::Value, START,
+    object::{NativeFnRef, ObjClosure, ObjUpvalue},
+    value::Value,
+    START,
 };
 
 const FRAMES_MAX: usize = 64;
@@ -35,7 +36,7 @@ macro_rules! binary_op {
 
 #[derive(Copy, Clone)]
 struct CallFrame {
-    function: *const ObjFunction,
+    closure: *const ObjClosure,
     ip: *const u8,
     slots: *mut MaybeUninit<Value>,
 }
@@ -47,7 +48,6 @@ macro_rules! runtime_error {
         $vm.runtime_error();
     }};
 }
-
 
 fn clock_native(_args: &[Value]) -> Value {
     Value::Number(Instant::now().duration_since(*START).as_millis() as _)
@@ -61,8 +61,8 @@ pub struct Vm {
     sp: *mut MaybeUninit<Value>,
     interned_strings: StringInterner,
     globals: FxHashMap<&'static str, Value>,
+    open_upvalues: Option<*mut ObjUpvalue>,
 }
-
 
 impl Vm {
     pub fn new() -> Self {
@@ -73,6 +73,7 @@ impl Vm {
             sp: std::ptr::null_mut(),
             interned_strings: StringInterner::new(),
             globals: FxHashMap::default(),
+            open_upvalues: None,
         };
 
         vm.define_native("clock", clock_native);
@@ -93,7 +94,7 @@ impl Vm {
     }
 
     fn chunk(&self) -> &Chunk {
-        &unsafe { &*self.frame().function }.chunk
+        &unsafe { &*self.frame().closure }.as_function().chunk
     }
 
     fn read_byte(&mut self) -> u8 {
@@ -149,7 +150,7 @@ impl Vm {
     fn runtime_error(&mut self) {
         for i in (0..self.frame_count).rev() {
             let frame = unsafe { self.frames[i].assume_init_ref() };
-            let function = unsafe { &*frame.function };
+            let function = unsafe { &*frame.closure }.as_function();
             let instruction = unsafe { frame.ip.sub_ptr(function.chunk.code.as_ptr()) } - 1;
             eprint!("[line {}] in ", function.chunk.lines[instruction]);
             if let Some(name) = &function.name {
@@ -177,8 +178,8 @@ impl Vm {
 
     fn call_value(&mut self, callee: Value, arg_count: u8) -> Result<(), ()> {
         if callee.is_obj() {
-            if callee.is_fun() {
-                return self.call(callee.as_fun(), arg_count);
+            if callee.is_closure() {
+                return self.call(callee.as_closure(), arg_count);
             } else if callee.is_native_fun() {
                 let result = callee.as_native_fun()(unsafe {
                     std::slice::from_raw_parts(
@@ -195,7 +196,8 @@ impl Vm {
         Err(())
     }
 
-    fn call(&mut self, fun: &ObjFunction, arg_count: u8) -> Result<(), ()> {
+    fn call(&mut self, closure: &ObjClosure, arg_count: u8) -> Result<(), ()> {
+        let fun = closure.as_function();
         if arg_count != fun.arity {
             runtime_error!(
                 self,
@@ -214,13 +216,48 @@ impl Vm {
         self.push_frame(CallFrame {
             ip: fun.chunk.code.as_ptr(),
             slots: unsafe { self.sp.sub(arg_count as usize + 1) },
-            function: fun,
+            closure,
         });
         Ok(())
     }
 
     fn define_native(&mut self, name: &'static str, fun: NativeFnRef) {
         self.globals.insert(name, fun.into());
+    }
+
+    fn capture_upvalue(&mut self, local: *mut Value) -> *const ObjUpvalue {
+        let mut prev_upvalue = None;
+        let mut upvalue = self.open_upvalues;
+        while let Some(current_upvalue) = &mut upvalue && unsafe{&**current_upvalue}.location > local {
+            prev_upvalue = Some(*current_upvalue);
+            upvalue = unsafe{&**current_upvalue}.next;
+        }
+
+        if let Some(upvalue) = upvalue && unsafe{&*upvalue}.location == local {
+            return upvalue;
+        }
+
+        let created_upvalue = Box::into_raw(Box::new(ObjUpvalue {
+            location: local,
+            next: None,
+            closed: MaybeUninit::uninit(),
+        }));
+        if let Some(prev_upvalue) = &mut prev_upvalue {
+            unsafe { &mut **prev_upvalue }.next = Some(created_upvalue);
+        } else {
+            self.open_upvalues = Some(created_upvalue);
+        }
+
+        created_upvalue
+    }
+
+    fn close_upvalues(&mut self, last: *mut Value) {
+        while let Some(open_upvalues) = &mut self.open_upvalues && unsafe{&**open_upvalues}.location >= last {
+            let mut upvalue = unsafe {&mut **open_upvalues};
+            upvalue.closed.write(unsafe{*upvalue.location});
+            upvalue.location = (&mut upvalue.closed as *mut MaybeUninit<_>).cast();
+            self.open_upvalues = upvalue.next;
+        }
     }
 
     pub fn run(&mut self) -> InterpretResult {
@@ -318,9 +355,31 @@ impl Vm {
                         return InterpretResult::RuntimeError;
                     }
                 }
+                OpCode::Closure => {
+                    let function = self.read_constant().as_fun();
+                    let mut closure: Box<ObjClosure> = Box::new(function.into());
+                    for upvalue in closure.upvalues.iter_mut() {
+                        let is_local = self.read_byte() != 0;
+                        let index = self.read_byte();
+                        if is_local {
+                            *upvalue = Some(self.capture_upvalue(unsafe {
+                                self.frame().slots.add(index as usize).cast()
+                            }));
+                        } else {
+                            *upvalue = unsafe { (*self.frame().closure).upvalues[index as usize] };
+                        }
+                    }
+                    self.push(closure.into());
+                }
+                OpCode::CloseUpvalue => {
+                    let last = unsafe { self.sp.sub(1).cast() };
+                    self.close_upvalues(last);
+                    self.pop();
+                }
                 OpCode::Return => {
                     let result = self.pop();
                     self.sp = self.frame().slots;
+                    self.close_upvalues(self.sp.cast());
                     self.frame_count -= 1;
                     if self.frame_count == 0 {
                         self.pop();
@@ -352,6 +411,20 @@ impl Vm {
                     let is_falsey = self.pop().is_falsey();
                     self.push(Value::Bool(is_falsey))
                 }
+                OpCode::GetUpvalue => {
+                    let slot = self.read_byte();
+                    self.push(unsafe {
+                        *(*(*self.frame().closure).upvalues[slot as usize].unwrap_unchecked())
+                            .location
+                    })
+                }
+                OpCode::SetUpvalue => {
+                    let slot = self.read_byte();
+                    unsafe {
+                        *(*(*self.frame().closure).upvalues[slot as usize].unwrap_unchecked())
+                            .location = self.peek(0);
+                    }
+                }
             }
         }
     }
@@ -359,10 +432,11 @@ impl Vm {
     pub fn interpret(&mut self, source: &str) -> InterpretResult {
         let parser = Parser::new(source, &mut self.interned_strings);
         match parser.compile() {
-            Err(()) => InterpretResult::CompileError,
+            Err(_) => InterpretResult::CompileError,
             Ok(function) => {
                 self.reset_stack();
-                self.push(function.into());
+                let closure: Box<ObjClosure> = Box::new((&*function).into());
+                self.push(closure.into());
                 self.call_value(self.peek(0), 0).unwrap();
 
                 self.run()

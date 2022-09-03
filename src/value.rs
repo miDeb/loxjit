@@ -1,7 +1,7 @@
 use std::hash::Hash;
 use std::{fmt::Display, hint::unreachable_unchecked};
 
-use crate::object::{NativeFnRef, Obj, ObjContents, ObjFunction};
+use crate::object::{NativeFnRef, Obj, ObjContents, ObjFunction, ObjClosure};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Value {
@@ -34,6 +34,10 @@ impl Value {
 
     pub fn is_fun(&self) -> bool {
         matches!(self, &Value::Obj(o) if matches!(unsafe {&(*o).contents}, ObjContents::Function(_)))
+    }
+
+    pub fn is_closure(&self) -> bool {
+        matches!(self, &Value::Obj(o) if matches!(unsafe {&(*o).contents}, ObjContents::ObjClosure(_)))
     }
 
     pub fn is_native_fun(&self) -> bool {
@@ -80,6 +84,17 @@ impl Value {
             _ => unsafe { unreachable_unchecked() },
         }
     }
+
+    pub fn as_closure(&self) -> &'static ObjClosure {
+        match self {
+            &Value::Obj(o) => match unsafe { &(*o).contents } {
+                ObjContents::ObjClosure(closure) => closure,
+                _ => unsafe { unreachable_unchecked() },
+            },
+            _ => unsafe { unreachable_unchecked() },
+        }
+    }
+
     pub fn as_native_fun(&self) -> NativeFnRef {
         match self {
             &Value::Obj(o) => match unsafe { &(*o).contents } {

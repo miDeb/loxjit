@@ -15,6 +15,8 @@ pub enum OpCode {
     GetGlobal,
     DefineGlobal,
     SetGlobal,
+    GetUpvalue,
+    SetUpvalue,
     Equal,
     Greater,
     Less,
@@ -30,6 +32,8 @@ pub enum OpCode {
     JumpIfFalse,
     JumpIfTrue,
     Call,
+    Closure,
+    CloseUpvalue,
     Return,
 }
 
@@ -67,7 +71,7 @@ impl Chunk {
         }
     }
 
-    pub fn disassemble_instruction(&self, offset: usize) -> usize {
+    pub fn disassemble_instruction(&self, mut offset: usize) -> usize {
         print!("{:04} ", offset);
         if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
             print!("   | ");
@@ -104,6 +108,34 @@ impl Chunk {
             OpCode::Equal => Self::simple_instruction("OP_EQUAL", offset),
             OpCode::GetLocal => self.byte_instruction("OP_GET_LOCAL", offset),
             OpCode::SetLocal => self.byte_instruction("OP_SET_LOCAL", offset),
+            OpCode::Closure => {
+                offset += 1;
+                let constant = self.code[offset];
+                offset += 1;
+                println!(
+                    "{:16} {:4} {}",
+                    "OP_CLOSURE", constant, self.constants[constant as usize]
+                );
+
+                let function = self.constants[constant as usize].as_fun();
+                for _ in 0..function.upvalue_count {
+                    let is_local = self.code[offset] != 0;
+                    offset += 1;
+                    let index = self.code[offset];
+                    offset += 1;
+                    println!(
+                        "{:04}      |                     {} {}",
+                        offset - 2,
+                        if is_local { "local" } else { "upvalue" },
+                        index,
+                    );
+                }
+
+                offset
+            }
+            OpCode::CloseUpvalue => Self::simple_instruction("OP_CLOSE_UPVALUE", offset),
+            OpCode::GetUpvalue => self.byte_instruction("OP_GET_UPVALUE", offset),
+            OpCode::SetUpvalue => self.byte_instruction("OP_SET_UPVALUE", offset),
         }
     }
 

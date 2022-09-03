@@ -1,6 +1,8 @@
 #![feature(ptr_sub_ptr)]
 #![feature(let_else)]
 #![feature(hash_set_entry)]
+#![feature(result_flattening)]
+#![feature(try_blocks)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -17,6 +19,7 @@ mod object;
 mod scanner;
 mod value;
 mod vm;
+mod errors;
 
 lazy_static! {
     pub static ref START: Instant = Instant::now();

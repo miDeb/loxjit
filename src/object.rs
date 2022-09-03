@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::hash::Hash;
+use std::mem::MaybeUninit;
 
 use crate::chunk::Chunk;
 use crate::value::Value;
@@ -9,18 +10,18 @@ pub struct Obj {
     pub contents: ObjContents,
 }
 
-impl Obj {
-    pub fn new_function(arity: u8, chunk: Chunk, name: Option<Box<str>>) -> Self {
-        Self {
-            contents: ObjContents::Function(ObjFunction::new(arity, chunk, name)),
-        }
-    }
-}
-
 impl From<Box<ObjFunction>> for Obj {
     fn from(fun: Box<ObjFunction>) -> Self {
         Self {
             contents: ObjContents::Function(*fun),
+        }
+    }
+}
+
+impl From<Box<ObjClosure>> for Obj {
+    fn from(closure: Box<ObjClosure>) -> Self {
+        Self {
+            contents: ObjContents::ObjClosure(*closure),
         }
     }
 }
@@ -33,11 +34,21 @@ impl From<NativeFnRef> for Obj {
     }
 }
 
+impl From<ObjUpvalue> for Obj {
+    fn from(upvalue: ObjUpvalue) -> Self {
+        Self {
+            contents: ObjContents::ObjUpvalue(upvalue)
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Hash)]
 pub enum ObjContents {
     String(Box<str>),
     Function(ObjFunction),
     NativeFunction(NativeFn),
+    ObjClosure(ObjClosure),
+    ObjUpvalue(ObjUpvalue),
 }
 
 impl Display for Obj {
@@ -52,6 +63,14 @@ impl Display for Obj {
                 }
             }
             ObjContents::NativeFunction(_) => write!(f, "<native fn>"),
+            ObjContents::ObjClosure(closure) => {
+                if let Some(name) = &unsafe { &*closure.function }.name {
+                    write!(f, "<fn {}>", name)
+                } else {
+                    write!(f, "<script>")
+                }
+            }
+            ObjContents::ObjUpvalue(_) => write!(f, "upvalue"),
         }
     }
 }
@@ -68,11 +87,17 @@ pub struct ObjFunction {
     pub arity: u8,
     pub chunk: Chunk,
     pub name: Option<Box<str>>,
+    pub upvalue_count: usize,
 }
 
 impl ObjFunction {
     pub fn new(arity: u8, chunk: Chunk, name: Option<Box<str>>) -> Self {
-        Self { arity, chunk, name }
+        Self {
+            arity,
+            chunk,
+            name,
+            upvalue_count: 0,
+        }
     }
 }
 
@@ -99,7 +124,9 @@ pub struct NativeFn {
 }
 
 impl NativeFn {
-    fn new(inner: NativeFnRef) -> Self { Self { inner } }
+    fn new(inner: NativeFnRef) -> Self {
+        Self { inner }
+    }
 }
 
 impl PartialEq for NativeFn {
@@ -110,6 +137,56 @@ impl PartialEq for NativeFn {
 
 impl Eq for NativeFn {}
 impl Hash for NativeFn {
+    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+        unreachable!()
+    }
+}
+
+pub struct ObjClosure {
+    function: *const ObjFunction,
+    pub upvalues: Box<[Option<*const ObjUpvalue>]>,
+}
+
+impl ObjClosure {
+    pub fn as_function(&self) -> &ObjFunction {
+        unsafe { &*self.function }
+    }
+}
+
+impl From<&ObjFunction> for ObjClosure {
+    fn from(function: &ObjFunction) -> Self {
+        let upvalues = vec![None; function.upvalue_count].into_boxed_slice();
+        Self { function, upvalues }
+    }
+}
+
+impl PartialEq for ObjClosure {
+    fn eq(&self, _other: &Self) -> bool {
+        unreachable!()
+    }
+}
+
+impl Eq for ObjClosure {}
+impl Hash for ObjClosure {
+    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+        unreachable!()
+    }
+}
+
+pub struct ObjUpvalue {
+    pub location: *mut Value,
+    pub next: Option<*mut ObjUpvalue>,
+    pub closed: MaybeUninit<Value>,
+}
+
+impl PartialEq for ObjUpvalue {
+    fn eq(&self, _other: &Self) -> bool {
+        unreachable!()
+    }
+}
+
+impl Eq for ObjUpvalue {}
+impl Hash for ObjUpvalue {
     fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
         unreachable!()
     }

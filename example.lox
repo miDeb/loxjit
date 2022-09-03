@@ -1,0 +1,18 @@
+fun outer() {
+  var x = "outside";
+  fun inner() {
+    print x;
+  }
+
+  return inner;
+}
+
+fun clobberStack() {
+  var closure = outer();
+  fun clobber(){
+
+  }
+  closure();
+}
+
+clobberStack();
