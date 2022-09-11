@@ -1,6 +1,6 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive, UnsafeFromPrimitive};
 
-use crate::value::Value;
+use crate::{value::Value, gc::Trace};
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive, UnsafeFromPrimitive)]
 #[repr(u8)]
@@ -41,6 +41,12 @@ pub struct Chunk {
     pub code: Vec<u8>,
     pub constants: Vec<Value>,
     pub lines: Vec<usize>,
+}
+
+impl Trace for Chunk {
+    fn trace(&self) {
+        self.constants.trace();
+    }
 }
 
 impl Chunk {
@@ -118,7 +124,7 @@ impl Chunk {
                 );
 
                 let function = self.constants[constant as usize].as_fun();
-                for _ in 0..function.upvalue_count {
+                for _ in 0..function.borrow().upvalue_count {
                     let is_local = self.code[offset] != 0;
                     offset += 1;
                     let index = self.code[offset];

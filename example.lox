@@ -1,18 +1,9 @@
-fun outer() {
-  var x = "outside";
-  fun inner() {
-    print x;
+var previous;
+
+while (true) {
+  var take = previous;
+  fun foo() {
+    take();
   }
-
-  return inner;
+  previous = foo;
 }
-
-fun clobberStack() {
-  var closure = outer();
-  fun clobber(){
-
-  }
-  closure();
-}
-
-clobberStack();

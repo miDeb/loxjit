@@ -1,14 +1,16 @@
-use std::hash::Hash;
-use std::{fmt::Display, hint::unreachable_unchecked};
 
-use crate::object::{NativeFnRef, Obj, ObjContents, ObjFunction, ObjClosure};
+use std::fmt::Display;
+
+use crate::gc::{GcCell, Trace};
+use crate::object::NativeFnRef;
+use crate::object::{NativeFn, ObjClosure, ObjFunction, ObjHeader, ObjString, ObjType};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Value {
     Bool(bool),
     Nil,
     Number(f64),
-    Obj(*const Obj),
+    Obj(GcCell<ObjHeader>),
 }
 
 impl Value {
@@ -29,94 +31,93 @@ impl Value {
     }
 
     pub fn is_string(&self) -> bool {
-        matches!(self, &Value::Obj(o) if matches!(unsafe {&(*o).contents}, ObjContents::String(_)))
+        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjString)
     }
 
     pub fn is_fun(&self) -> bool {
-        matches!(self, &Value::Obj(o) if matches!(unsafe {&(*o).contents}, ObjContents::Function(_)))
+        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjFunction)
     }
 
     pub fn is_closure(&self) -> bool {
-        matches!(self, &Value::Obj(o) if matches!(unsafe {&(*o).contents}, ObjContents::ObjClosure(_)))
+        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjClosure)
     }
 
     pub fn is_native_fun(&self) -> bool {
-        matches!(self, &Value::Obj(o) if matches!(unsafe {&(*o).contents}, ObjContents::NativeFunction(_)))
+        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::NativeFn)
     }
 
     pub fn as_number(&self) -> f64 {
         match self {
             Value::Number(n) => *n,
-            _ => unsafe { unreachable_unchecked() },
+            _ => unreachable!(),
         }
     }
 
     pub fn as_bool(&self) -> bool {
         match self {
             Value::Bool(b) => *b,
-            _ => unsafe { unreachable_unchecked() },
+            _ => unreachable!(),
         }
     }
 
-    pub fn as_obj(&self) -> *const Obj {
+    pub fn as_obj(&self) -> GcCell<ObjHeader> {
         match self {
             Value::Obj(o) => *o,
-            _ => unsafe { unreachable_unchecked() },
+            _ => unreachable!(),
         }
     }
 
-    pub fn as_string(&self) -> &'static str {
+    pub fn as_string(&self) -> GcCell<ObjString> {
         match self {
-            &Value::Obj(o) => match unsafe { &(*o).contents } {
-                ObjContents::String(s) => s,
-                _ => unsafe { unreachable_unchecked() },
-            },
-            _ => unsafe { unreachable_unchecked() },
+            &Value::Obj(o) => {
+                assert!(self.is_string());
+                unsafe { o.cast() }
+            }
+            _ => unreachable!(),
         }
     }
 
-    pub fn as_fun(&self) -> &'static ObjFunction {
+    pub fn as_fun(&self) -> GcCell<ObjFunction> {
         match self {
-            &Value::Obj(o) => match unsafe { &(*o).contents } {
-                ObjContents::Function(fun) => fun,
-                _ => unsafe { unreachable_unchecked() },
-            },
-            _ => unsafe { unreachable_unchecked() },
+            &Value::Obj(o) => {
+                assert!(self.is_fun());
+                unsafe { o.cast() }
+            }
+            _ => unreachable!(),
         }
     }
 
-    pub fn as_closure(&self) -> &'static ObjClosure {
+    pub fn as_closure(&self) -> GcCell<ObjClosure> {
         match self {
-            &Value::Obj(o) => match unsafe { &(*o).contents } {
-                ObjContents::ObjClosure(closure) => closure,
-                _ => unsafe { unreachable_unchecked() },
-            },
-            _ => unsafe { unreachable_unchecked() },
+            &Value::Obj(o) => {
+                assert!(self.is_closure());
+                unsafe { o.cast() }
+            }
+            _ => unreachable!(),
         }
     }
-
     pub fn as_native_fun(&self) -> NativeFnRef {
         match self {
-            &Value::Obj(o) => match unsafe { &(*o).contents } {
-                ObjContents::NativeFunction(fun) => fun.inner,
-                _ => unsafe { unreachable_unchecked() },
-            },
-            _ => unsafe { unreachable_unchecked() },
+            &Value::Obj(o) => {
+                assert!(self.is_native_fun());
+                unsafe { o.cast::<NativeFn>() }.borrow().inner
+            }
+            _ => unreachable!(),
         }
     }
-
     pub fn is_falsey(&self) -> bool {
         matches!(self, Value::Nil | Value::Bool(false))
     }
 }
 
-impl<T> From<T> for Value
-where
-    Obj: From<T>,
-{
-    fn from(obj: T) -> Self {
-        let obj = obj.into();
-        Value::Obj(Box::into_raw(Box::new(obj)))
+impl Trace for Value {
+    fn trace(&self) {
+        match self {
+            Value::Bool(_) => {}
+            Value::Nil => {}
+            Value::Number(_) => {}
+            Value::Obj(obj) => obj.trace(),
+        }
     }
 }
 
@@ -126,14 +127,7 @@ impl Display for Value {
             Value::Bool(bool) => write!(f, "{bool}"),
             Value::Nil => write!(f, "nil"),
             Value::Number(number) => write!(f, "{number}"),
-            Value::Obj(o) => write!(f, "{}", unsafe { &**o }),
+            Value::Obj(o) => write!(f, "{}", o),
         }
-    }
-}
-
-impl Hash for Value {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        debug_assert!(self.is_string());
-        self.as_string().hash(state)
     }
 }

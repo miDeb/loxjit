@@ -8,10 +8,11 @@ use crate::{
     chunk::{Chunk, OpCode},
     common::DEBUG_PRINT_CODE,
     errors::{CompileError, CompileResult},
-    interned_strings::StringInterner,
-    object::ObjFunction,
+    gc::{GarbageCollector, GcCell},
+    object::{ObjFunction, ObjString},
     scanner::{Scanner, Token, TokenType},
     value::Value,
+    vm::Vm,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive)]
@@ -358,12 +359,12 @@ pub struct Parser<'a, 'b> {
     previous: Token<'a>,
     scanner: Scanner<'a>,
     had_error: bool,
-    interned_strings: &'b mut StringInterner,
     compiler: Box<Compiler<'a>>,
+    gc: &'b mut GarbageCollector<Vm, ObjString>,
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
-    pub fn new(source: &'a str, interned_strings: &'b mut StringInterner) -> Self {
+    pub fn new(source: &'a str, gc: &'b mut GarbageCollector<Vm, ObjString>) -> Self {
         Self {
             current: Token {
                 token_type: TokenType::Error,
@@ -377,8 +378,8 @@ impl<'a, 'b> Parser<'a, 'b> {
             },
             scanner: Scanner::new(source),
             had_error: false,
-            interned_strings,
             compiler: Box::new(Compiler::new(FunctionType::Script, None, None)),
+            gc,
         }
     }
 
@@ -585,10 +586,10 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn string(&mut self, _can_assign: bool) -> CompileResult<()> {
-        let obj = self
-            .interned_strings
-            .put(self.previous.source[1..self.previous.source.len() - 1].to_string());
-        self.emit_constant(Value::Obj(obj))
+        let obj = self.gc.intern_string(ObjString::new(
+            self.previous.source[1..self.previous.source.len() - 1].to_string(),
+        ));
+        self.emit_constant(Value::Obj(unsafe { obj.cast() }))
     }
 
     fn variable(&mut self, can_assign: bool) -> CompileResult<()> {
@@ -639,8 +640,8 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn identifier_constant(&mut self, name: &str) -> CompileResult<u8> {
-        let obj = self.interned_strings.put(name.to_string());
-        self.make_constant(Value::Obj(obj))
+        let obj = self.gc.intern_string(ObjString::new(name.to_string()));
+        self.make_constant(Value::Obj(unsafe { obj.cast() }))
     }
 
     fn add_local(&mut self, name: &'a str) -> CompileResult<()> {
@@ -840,7 +841,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         let compiler = std::mem::replace(&mut self.compiler, enclosing.unwrap());
         let upvalue_count = compiler.function.upvalue_count;
 
-        let byte2 = self.make_constant(compiler.function.into())?;
+        let value = Value::Obj(unsafe { GcCell::new(*compiler.function, &mut self.gc).cast() });
+        let byte2 = self.make_constant(value)?;
 
         self.emit_bytes(OpCode::Closure, byte2);
 

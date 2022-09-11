@@ -3,6 +3,7 @@
 #![feature(hash_set_entry)]
 #![feature(result_flattening)]
 #![feature(try_blocks)]
+#![feature(cell_update)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -20,6 +21,7 @@ mod scanner;
 mod value;
 mod vm;
 mod errors;
+mod gc;
 
 lazy_static! {
     pub static ref START: Instant = Instant::now();
@@ -44,7 +46,7 @@ fn repl() {
     print!("> ");
     std::io::stdout().flush().unwrap();
     for line in std::io::stdin().lines().flatten() {
-        vm.interpret(&line);
+        vm.borrow_mut().interpret(&line);
         print!("> ");
         std::io::stdout().flush().unwrap();
     }
@@ -56,7 +58,7 @@ fn runfile(path: OsString) {
         eprintln!("Could not read file {}", path.to_string_lossy());
         std::process::exit(74);
     };
-    let result = vm.interpret(&source);
+    let result = vm.borrow_mut().interpret(&source);
     std::io::stdout().flush().unwrap();
     match result {
         vm::InterpretResult::CompileError => std::process::exit(65),

@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["example.lox"],
             "cwd": "${workspaceFolder}"
         },
         {
