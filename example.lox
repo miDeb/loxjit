@@ -1,9 +1,6 @@
-var previous;
+class Pair {}
 
-while (true) {
-  var take = previous;
-  fun foo() {
-    take();
-  }
-  previous = foo;
-}
+var pair = Pair();
+pair.first = 1;
+pair.second = 2;
+print pair.first + pair.second; // 3.

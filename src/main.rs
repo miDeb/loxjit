@@ -1,9 +1,9 @@
 #![feature(ptr_sub_ptr)]
-#![feature(let_else)]
 #![feature(hash_set_entry)]
 #![feature(result_flattening)]
 #![feature(try_blocks)]
 #![feature(cell_update)]
+#![feature(let_chains)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -15,13 +15,13 @@ use vm::Vm;
 mod chunk;
 mod common;
 mod compiler;
+mod errors;
+mod gc;
 mod interned_strings;
 mod object;
 mod scanner;
 mod value;
 mod vm;
-mod errors;
-mod gc;
 
 lazy_static! {
     pub static ref START: Instant = Instant::now();

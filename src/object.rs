@@ -4,6 +4,8 @@ use std::fmt::Display;
 use std::hash::Hash;
 use std::mem::MaybeUninit;
 
+use rustc_hash::FxHashMap;
+
 use crate::chunk::Chunk;
 use crate::gc::{GcCell, GcFreeHandle, NoTrace, Trace};
 use crate::interned_strings::InternedString;
@@ -68,6 +70,13 @@ objImpl!(
     as_obj_upvalue_mut
 );
 objImpl!(NativeFn, is_native_fn, as_native_fn, as_native_fn_mut);
+objImpl!(ObjClass, is_obj_class, as_obj_class, as_obj_class_mut);
+objImpl!(
+    ObjInstance,
+    is_obj_instance,
+    as_obj_instance,
+    as_obj_instance_mut
+);
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ObjType {
@@ -76,6 +85,8 @@ pub enum ObjType {
     ObjString,
     ObjClosure,
     ObjUpvalue,
+    ObjClass,
+    ObjInstance,
 }
 
 #[derive(Debug)]
@@ -92,6 +103,8 @@ impl Trace for ObjHeader {
             ObjType::ObjString => self.as_obj_string().trace(),
             ObjType::ObjClosure => self.as_obj_closure().trace(),
             ObjType::ObjUpvalue => self.as_obj_upvalue().trace(),
+            ObjType::ObjClass => self.as_obj_class().trace(),
+            ObjType::ObjInstance => self.as_obj_instance().trace(),
         }
     }
 }
@@ -104,6 +117,8 @@ impl Display for ObjHeader {
             ObjType::ObjString => self.as_obj_string().fmt(f),
             ObjType::ObjClosure => self.as_obj_closure().fmt(f),
             ObjType::ObjUpvalue => self.as_obj_upvalue().fmt(f),
+            ObjType::ObjClass => self.as_obj_class().fmt(f),
+            ObjType::ObjInstance => self.as_obj_instance().fmt(f),
         }
     }
 }
@@ -271,6 +286,66 @@ impl Display for ObjUpvalue {
     }
 }
 
+#[repr(C)]
+pub struct ObjClass {
+    header: ObjHeader,
+    name: GcCell<ObjString>,
+}
+
+impl ObjClass {
+    pub fn new(name: GcCell<ObjString>) -> Self {
+        Self {
+            header: Self::header(),
+            name,
+        }
+    }
+}
+
+impl Trace for ObjClass {
+    fn trace(&self) {
+        self.name.trace();
+    }
+}
+
+impl Display for ObjClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+#[repr(C)]
+pub struct ObjInstance {
+    header: ObjHeader,
+    class: GcCell<ObjClass>,
+    pub fields: FxHashMap<GcCell<ObjString>, Value>,
+}
+
+impl ObjInstance {
+    pub fn new(class: GcCell<ObjClass>) -> Self {
+        Self {
+            header: Self::header(),
+            class,
+            fields: Default::default(),
+        }
+    }
+}
+
+impl Trace for ObjInstance {
+    fn trace(&self) {
+        self.class.trace();
+        for (key, value) in self.fields.iter() {
+            key.trace();
+            value.trace();
+        }
+    }
+}
+
+impl Display for ObjInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} instance", self.class)
+    }
+}
+
 pub fn free_obj(handle: GcFreeHandle<ObjString>) {
     unsafe {
         match handle.get::<ObjHeader>().obj_type {
@@ -279,6 +354,8 @@ pub fn free_obj(handle: GcFreeHandle<ObjString>) {
             ObjType::ObjString => handle.free_interned_string(),
             ObjType::ObjClosure => handle.free::<ObjClosure>(),
             ObjType::ObjUpvalue => handle.free::<ObjUpvalue>(),
+            ObjType::ObjClass => handle.free::<ObjClass>(),
+            ObjType::ObjInstance => handle.free::<ObjInstance>(),
         }
     }
 }

@@ -1,9 +1,8 @@
-
 use std::fmt::Display;
 
 use crate::gc::{GcCell, Trace};
-use crate::object::NativeFnRef;
 use crate::object::{NativeFn, ObjClosure, ObjFunction, ObjHeader, ObjString, ObjType};
+use crate::object::{NativeFnRef, ObjClass, ObjInstance};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Value {
@@ -44,6 +43,14 @@ impl Value {
 
     pub fn is_native_fun(&self) -> bool {
         matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::NativeFn)
+    }
+
+    pub fn is_class(&self) -> bool {
+        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjClass)
+    }
+
+    pub fn is_instance(&self) -> bool {
+        matches!(self, &Value::Obj(o) if o.borrow().is_obj_instance())
     }
 
     pub fn as_number(&self) -> f64 {
@@ -96,6 +103,7 @@ impl Value {
             _ => unreachable!(),
         }
     }
+
     pub fn as_native_fun(&self) -> NativeFnRef {
         match self {
             &Value::Obj(o) => {
@@ -105,6 +113,27 @@ impl Value {
             _ => unreachable!(),
         }
     }
+
+    pub fn as_class(&self) -> GcCell<ObjClass> {
+        match self {
+            &Value::Obj(o) => {
+                assert!(self.is_class());
+                unsafe { o.cast() }
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_instance(&self) -> GcCell<ObjInstance> {
+        match self {
+            &Value::Obj(o) => {
+                assert!(self.is_instance());
+                unsafe { o.cast() }
+            }
+            _ => unreachable!(),
+        }
+    }
+
     pub fn is_falsey(&self) -> bool {
         matches!(self, Value::Nil | Value::Bool(false))
     }

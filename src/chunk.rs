@@ -1,6 +1,6 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive, UnsafeFromPrimitive};
 
-use crate::{value::Value, gc::Trace};
+use crate::{gc::Trace, value::Value};
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive, UnsafeFromPrimitive)]
 #[repr(u8)]
@@ -35,6 +35,9 @@ pub enum OpCode {
     Closure,
     CloseUpvalue,
     Return,
+    Class,
+    GetProperty,
+    SetProperty,
 }
 
 pub struct Chunk {
@@ -90,6 +93,8 @@ impl Chunk {
         match op_code {
             OpCode::Call => self.byte_instruction("OP_CALL", offset),
             OpCode::Constant => self.constant_instruction("OP_CONSTANT", offset),
+            OpCode::GetProperty => self.constant_instruction("OP_GET_PROPERTY", offset),
+            OpCode::SetProperty => self.constant_instruction("OP_SET_PROPERTY", offset),
             OpCode::Nil => Self::simple_instruction("OP_NIL", offset),
             OpCode::True => Self::simple_instruction("OP_TRUE", offset),
             OpCode::False => Self::simple_instruction("OP_FALSE", offset),
@@ -97,6 +102,7 @@ impl Chunk {
             OpCode::DefineGlobal => self.constant_instruction("OP_DEFINE_GLOBAL", offset),
             OpCode::SetGlobal => self.constant_instruction("OP_SET_GLOBAL", offset),
             OpCode::GetGlobal => self.constant_instruction("OP_GET_GLOBAL", offset),
+            OpCode::Class => self.constant_instruction("OP_CLASS", offset),
             OpCode::Negate => Self::simple_instruction("OP_NEGATE", offset),
             OpCode::Print => Self::simple_instruction("OP_PRINT", offset),
             OpCode::Jump => self.jump_instruction("OP_JUMP", 1, offset),

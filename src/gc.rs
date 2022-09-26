@@ -346,6 +346,7 @@ impl<T: Trace + Display> Display for GcCell<T> {
     }
 }
 
+// TODO: Only allow one type of object in the GC to simplify the implementation.
 pub struct GarbageCollector<Root: Trace, StringType: InternedString> {
     allocated: usize,
     collection_threshold: usize,

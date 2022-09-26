@@ -6,7 +6,9 @@ use crate::{
     common::DEBUG_TRACE_EXECUTION,
     compiler::Parser,
     gc::{GarbageCollector, GcCell, GcRef, Trace},
-    object::{free_obj, NativeFn, NativeFnRef, ObjClosure, ObjString, ObjUpvalue},
+    object::{
+        free_obj, NativeFn, NativeFnRef, ObjClass, ObjClosure, ObjInstance, ObjString, ObjUpvalue,
+    },
     value::Value,
     START,
 };
@@ -56,12 +58,11 @@ macro_rules! runtime_error {
 }
 
 macro_rules! gc {
-    ($vm:expr) => {
+    ($vm:expr) => {{
         #[allow(unused_unsafe)]
-        unsafe {
-            $vm.gc.as_mut()
-        }
-    };
+        let v = unsafe { $vm.gc.as_mut() };
+        v
+    }};
 }
 
 fn clock_native(_args: &[Value]) -> Value {
@@ -219,23 +220,31 @@ impl Vm {
     }
 
     fn call_value(&mut self, callee: Value, arg_count: u8) -> Result<(), ()> {
-        if callee.is_obj() {
-            if callee.is_closure() {
-                return self.call(callee.as_closure(), arg_count);
-            } else if callee.is_native_fun() {
-                let result = callee.as_native_fun()(unsafe {
-                    std::slice::from_raw_parts(
-                        self.sp.sub(arg_count as usize) as *const _,
-                        arg_count as usize,
-                    )
-                });
-                self.sp = unsafe { self.sp.sub(arg_count as usize + 1) };
-                self.push(result);
-                return Ok(());
-            }
+        if callee.is_closure() {
+            return self.call(callee.as_closure(), arg_count);
+        } else if callee.is_native_fun() {
+            let result = callee.as_native_fun()(unsafe {
+                std::slice::from_raw_parts(
+                    self.sp.sub(arg_count as usize) as *const _,
+                    arg_count as usize,
+                )
+            });
+            self.sp = unsafe { self.sp.sub(arg_count as usize + 1) };
+            self.push(result);
+            Ok(())
+        } else if callee.is_class() {
+            let class = callee.as_class();
+            let instance = GcCell::new(ObjInstance::new(class), gc!(self));
+            unsafe {
+                self.sp
+                    .sub(arg_count as usize + 1)
+                    .write(MaybeUninit::new(instance.into()))
+            };
+            Ok(())
+        } else {
+            runtime_error!(self, "Can only call functions and classes.");
+            Err(())
         }
-        runtime_error!(self, "Can only call functions and classes.");
-        Err(())
     }
 
     fn call(&mut self, closure: GcCell<ObjClosure>, arg_count: u8) -> Result<(), ()> {
@@ -485,6 +494,43 @@ impl Vm {
                         .borrow_mut()
                         .location = self.peek(0);
                     }
+                }
+                OpCode::Class => {
+                    let name = self.read_constant().as_string();
+                    let class = GcCell::new(ObjClass::new(name), gc!(self));
+                    self.push(class.into())
+                }
+                OpCode::GetProperty => {
+                    let receiver = self.peek(0);
+                    if !receiver.is_instance() {
+                        runtime_error!(self, "Only instances have properties.");
+                        return InterpretResult::RuntimeError;
+                    }
+                    let instance = receiver.as_instance();
+                    let name = self.read_constant().as_string();
+
+                    if let Some(value) = instance.borrow().fields.get(&name) {
+                        self.pop();
+                        self.push(*value);
+                    } else {
+                        runtime_error!(self, "Undefined property '{}'.", name);
+                        return InterpretResult::RuntimeError;
+                    }
+                }
+                OpCode::SetProperty => {
+                    let receiver = self.peek(1);
+                    if !receiver.is_instance() {
+                        runtime_error!(self, "Only instances have properties.");
+                        return InterpretResult::RuntimeError;
+                    }
+                    let mut instance = receiver.as_instance();
+                    let name = self.read_constant().as_string();
+                    let value = self.pop();
+
+                    instance.borrow_mut().fields.insert(name, value);
+
+                    self.pop();
+                    self.push(value);
                 }
             }
         }

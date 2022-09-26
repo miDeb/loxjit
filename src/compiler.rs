@@ -69,8 +69,8 @@ impl<'a, 'b> ParseRule<'a, 'b> {
             },
             TokenType::Dot => ParseRule {
                 prefix: None,
-                infix: None,
-                precedence: Precedence::None,
+                infix: Some(Parser::<'a, 'b>::dot),
+                precedence: Precedence::Call,
             },
             TokenType::Minus => ParseRule {
                 prefix: Some(Parser::<'a, 'b>::unary),
@@ -574,6 +574,19 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(())
     }
 
+    fn dot(&mut self, can_assign: bool) -> CompileResult<()> {
+        self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+        let name = self.identifier_constant(self.previous.source)?;
+
+        if can_assign && self.match_token(TokenType::Equal)? {
+            self.expression()?;
+            self.emit_bytes(OpCode::SetProperty, name);
+        } else {
+            self.emit_bytes(OpCode::GetProperty, name);
+        }
+        Ok(())
+    }
+
     fn literal(&mut self, _can_assign: bool) -> CompileResult<()> {
         match self.previous.token_type {
             TokenType::False => self.emit_byte(OpCode::False),
@@ -618,16 +631,17 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn declaration(&mut self) {
-        let result = self
-            .match_token(TokenType::Var)
-            .map(|matched| {
-                if matched {
-                    self.var_declaration()
-                } else {
-                    self.statement()
-                }
-            })
-            .flatten();
+        let result = (|| {
+            if self.match_token(TokenType::Class)? {
+                self.class_declaration()
+            } else if self.match_token(TokenType::Var)? {
+                self.var_declaration()
+            } else if self.match_token(TokenType::Fun)? {
+                self.fun_declaration()
+            } else {
+                self.statement()
+            }
+        })();
 
         if let Err(e) = result {
             if e.has_line_info {
@@ -750,8 +764,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.while_statement()?;
         } else if self.match_token(TokenType::For)? {
             self.for_statement()?;
-        } else if self.match_token(TokenType::Fun)? {
-            self.fun_declaration()?;
         } else if self.match_token(TokenType::Return)? {
             self.return_statement()?;
         } else {
@@ -850,6 +862,21 @@ impl<'a, 'b> Parser<'a, 'b> {
             let upvalue = unsafe { compiler.upvalues[i].assume_init_ref() };
             self.emit_bytes(if upvalue.is_local { 1 } else { 0 }, upvalue.index);
         }
+
+        Ok(())
+    }
+
+    fn class_declaration(&mut self) -> CompileResult<()> {
+        self.consume(TokenType::Identifier, "Expect class name.")?;
+
+        let name_constant = self.identifier_constant(self.previous.source)?;
+        self.declare_variable()?;
+
+        self.emit_bytes(OpCode::Class, name_constant);
+        self.define_variable(name_constant);
+
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
+        self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
 
         Ok(())
     }
