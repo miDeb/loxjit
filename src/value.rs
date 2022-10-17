@@ -1,8 +1,7 @@
 use std::fmt::Display;
 
 use crate::gc::{GcCell, Trace};
-use crate::object::{NativeFn, ObjClosure, ObjFunction, ObjHeader, ObjString, ObjType};
-use crate::object::{NativeFnRef, ObjClass, ObjInstance};
+use crate::object::ObjHeader;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Value {
@@ -29,30 +28,6 @@ impl Value {
         matches!(self, Value::Obj(_))
     }
 
-    pub fn is_string(&self) -> bool {
-        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjString)
-    }
-
-    pub fn is_fun(&self) -> bool {
-        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjFunction)
-    }
-
-    pub fn is_closure(&self) -> bool {
-        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjClosure)
-    }
-
-    pub fn is_native_fun(&self) -> bool {
-        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::NativeFn)
-    }
-
-    pub fn is_class(&self) -> bool {
-        matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::ObjClass)
-    }
-
-    pub fn is_instance(&self) -> bool {
-        matches!(self, &Value::Obj(o) if o.borrow().is_obj_instance())
-    }
-
     pub fn as_number(&self) -> f64 {
         match self {
             Value::Number(n) => *n,
@@ -70,66 +45,6 @@ impl Value {
     pub fn as_obj(&self) -> GcCell<ObjHeader> {
         match self {
             Value::Obj(o) => *o,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_string(&self) -> GcCell<ObjString> {
-        match self {
-            &Value::Obj(o) => {
-                assert!(self.is_string());
-                unsafe { o.cast() }
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_fun(&self) -> GcCell<ObjFunction> {
-        match self {
-            &Value::Obj(o) => {
-                assert!(self.is_fun());
-                unsafe { o.cast() }
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_closure(&self) -> GcCell<ObjClosure> {
-        match self {
-            &Value::Obj(o) => {
-                assert!(self.is_closure());
-                unsafe { o.cast() }
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_native_fun(&self) -> NativeFnRef {
-        match self {
-            &Value::Obj(o) => {
-                assert!(self.is_native_fun());
-                unsafe { o.cast::<NativeFn>() }.borrow().inner
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_class(&self) -> GcCell<ObjClass> {
-        match self {
-            &Value::Obj(o) => {
-                assert!(self.is_class());
-                unsafe { o.cast() }
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_instance(&self) -> GcCell<ObjInstance> {
-        match self {
-            &Value::Obj(o) => {
-                assert!(self.is_instance());
-                unsafe { o.cast() }
-            }
             _ => unreachable!(),
         }
     }

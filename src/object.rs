@@ -22,6 +22,7 @@ macro_rules! objImpl {
                 debug_assert!(self.$is_fn());
                 unsafe { std::mem::transmute(self) }
             }
+
             pub fn $as_mut_fn(&mut self) -> &mut $obj_name {
                 debug_assert!(self.$is_fn());
                 unsafe { std::mem::transmute(self) }
@@ -32,6 +33,22 @@ macro_rules! objImpl {
             pub fn header() -> ObjHeader {
                 ObjHeader {
                     obj_type: ObjType::$obj_name,
+                }
+            }
+        }
+
+        impl Value {
+            pub fn $is_fn(&self) -> bool {
+                matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::$obj_name)
+            }
+
+            pub fn $as_fn(&self) -> GcCell<$obj_name> {
+                match self {
+                    &Value::Obj(o) => {
+                        debug_assert_eq!(o.borrow().obj_type, ObjType::$obj_name);
+                        unsafe { o.cast() }
+                    }
+                    _ => unreachable!(),
                 }
             }
         }
@@ -77,6 +94,12 @@ objImpl!(
     as_obj_instance,
     as_obj_instance_mut
 );
+objImpl!(
+    ObjBoundMethod,
+    is_obj_bound_method,
+    as_obj_bound_method,
+    as_obj_bound_method_mut
+);
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ObjType {
@@ -87,6 +110,7 @@ pub enum ObjType {
     ObjUpvalue,
     ObjClass,
     ObjInstance,
+    ObjBoundMethod,
 }
 
 #[derive(Debug)]
@@ -105,6 +129,7 @@ impl Trace for ObjHeader {
             ObjType::ObjUpvalue => self.as_obj_upvalue().trace(),
             ObjType::ObjClass => self.as_obj_class().trace(),
             ObjType::ObjInstance => self.as_obj_instance().trace(),
+            ObjType::ObjBoundMethod => self.as_obj_bound_method().trace(),
         }
     }
 }
@@ -119,6 +144,7 @@ impl Display for ObjHeader {
             ObjType::ObjUpvalue => self.as_obj_upvalue().fmt(f),
             ObjType::ObjClass => self.as_obj_class().fmt(f),
             ObjType::ObjInstance => self.as_obj_instance().fmt(f),
+            ObjType::ObjBoundMethod => self.as_obj_bound_method().fmt(f),
         }
     }
 }
@@ -290,6 +316,7 @@ impl Display for ObjUpvalue {
 pub struct ObjClass {
     header: ObjHeader,
     name: GcCell<ObjString>,
+    pub methods: FxHashMap<GcCell<ObjString>, GcCell<ObjClosure>>,
 }
 
 impl ObjClass {
@@ -297,6 +324,7 @@ impl ObjClass {
         Self {
             header: Self::header(),
             name,
+            methods: Default::default(),
         }
     }
 }
@@ -304,6 +332,8 @@ impl ObjClass {
 impl Trace for ObjClass {
     fn trace(&self) {
         self.name.trace();
+        self.methods.keys().for_each(Trace::trace);
+        self.methods.values().for_each(Trace::trace);
     }
 }
 
@@ -316,7 +346,7 @@ impl Display for ObjClass {
 #[repr(C)]
 pub struct ObjInstance {
     header: ObjHeader,
-    class: GcCell<ObjClass>,
+    pub class: GcCell<ObjClass>,
     pub fields: FxHashMap<GcCell<ObjString>, Value>,
 }
 
@@ -346,6 +376,36 @@ impl Display for ObjInstance {
     }
 }
 
+#[repr(C)]
+pub struct ObjBoundMethod {
+    header: ObjHeader,
+    pub receiver: Value,
+    pub method: GcCell<ObjClosure>,
+}
+
+impl ObjBoundMethod {
+    pub fn new(receiver: Value, method: GcCell<ObjClosure>) -> Self {
+        Self {
+            header: Self::header(),
+            receiver,
+            method,
+        }
+    }
+}
+
+impl Trace for ObjBoundMethod {
+    fn trace(&self) {
+        self.receiver.trace();
+        self.method.trace();
+    }
+}
+
+impl Display for ObjBoundMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.method.borrow().function)
+    }
+}
+
 pub fn free_obj(handle: GcFreeHandle<ObjString>) {
     unsafe {
         match handle.get::<ObjHeader>().obj_type {
@@ -356,6 +416,7 @@ pub fn free_obj(handle: GcFreeHandle<ObjString>) {
             ObjType::ObjUpvalue => handle.free::<ObjUpvalue>(),
             ObjType::ObjClass => handle.free::<ObjClass>(),
             ObjType::ObjInstance => handle.free::<ObjInstance>(),
+            ObjType::ObjBoundMethod => handle.free::<ObjBoundMethod>(),
         }
     }
 }

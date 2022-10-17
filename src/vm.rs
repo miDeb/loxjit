@@ -7,7 +7,8 @@ use crate::{
     compiler::Parser,
     gc::{GarbageCollector, GcCell, GcRef, Trace},
     object::{
-        free_obj, NativeFn, NativeFnRef, ObjClass, ObjClosure, ObjInstance, ObjString, ObjUpvalue,
+        free_obj, NativeFn, NativeFnRef, ObjBoundMethod, ObjClass, ObjClosure, ObjInstance,
+        ObjString, ObjUpvalue,
     },
     value::Value,
     START,
@@ -78,6 +79,7 @@ pub struct Vm {
     globals: FxHashMap<&'static str, Value>,
     open_upvalues: Option<GcCell<ObjUpvalue>>,
     gc: NonNull<GarbageCollector<Vm, ObjString>>,
+    init_string: Option<GcCell<ObjString>>,
 }
 
 impl Trace for Vm {
@@ -96,6 +98,7 @@ impl Trace for Vm {
             val.trace();
         }
         self.open_upvalues.trace();
+        self.init_string.trace();
     }
 }
 
@@ -109,6 +112,7 @@ impl Vm {
             globals: FxHashMap::default(),
             open_upvalues: None,
             gc: NonNull::dangling(),
+            init_string: None,
         };
 
         let gc = Box::leak(Box::new(GarbageCollector::new(vm, free_obj)));
@@ -116,6 +120,8 @@ impl Vm {
         gc.enabled = false;
 
         gc.root.borrow_mut().define_native("clock", clock_native);
+
+        gc.root.borrow_mut().init_string = Some(GcCell::new(ObjString::new("init".into()), gc));
 
         gc.root
     }
@@ -162,9 +168,13 @@ impl Vm {
     }
 
     fn read_string(&mut self) -> GcRef<String> {
-        GcRef::map(self.read_constant().as_string().borrow(), |string| {
+        GcRef::map(self.read_constant().as_obj_string().borrow(), |string| {
             &string.string
         })
+    }
+
+    fn read_obj_string(&mut self) -> GcCell<ObjString> {
+        self.read_constant().as_obj_string()
     }
 
     fn push(&mut self, value: Value) {
@@ -207,8 +217,8 @@ impl Vm {
     }
 
     fn concatenate(&mut self) {
-        let b = self.pop().as_string().borrow();
-        let a = self.pop().as_string().borrow();
+        let b = self.pop().as_obj_string().borrow();
+        let a = self.pop().as_obj_string().borrow();
 
         let mut new_string = String::with_capacity(a.string.len() + b.string.len());
         new_string.push_str(&a.string);
@@ -220,10 +230,10 @@ impl Vm {
     }
 
     fn call_value(&mut self, callee: Value, arg_count: u8) -> Result<(), ()> {
-        if callee.is_closure() {
-            return self.call(callee.as_closure(), arg_count);
-        } else if callee.is_native_fun() {
-            let result = callee.as_native_fun()(unsafe {
+        if callee.is_obj_closure() {
+            return self.call(callee.as_obj_closure(), arg_count);
+        } else if callee.is_native_fn() {
+            let result = (callee.as_native_fn().borrow().inner)(unsafe {
                 std::slice::from_raw_parts(
                     self.sp.sub(arg_count as usize) as *const _,
                     arg_count as usize,
@@ -232,15 +242,35 @@ impl Vm {
             self.sp = unsafe { self.sp.sub(arg_count as usize + 1) };
             self.push(result);
             Ok(())
-        } else if callee.is_class() {
-            let class = callee.as_class();
+        } else if callee.is_obj_class() {
+            let class = callee.as_obj_class();
             let instance = GcCell::new(ObjInstance::new(class), gc!(self));
             unsafe {
                 self.sp
                     .sub(arg_count as usize + 1)
                     .write(MaybeUninit::new(instance.into()))
             };
-            Ok(())
+            if let Some(initializer) = class
+                .borrow()
+                .methods
+                .get(self.init_string.as_ref().unwrap())
+            {
+                self.call(*initializer, arg_count)
+            } else if arg_count != 0 {
+                runtime_error!(self, "Expected 0 arguments but got {}", arg_count);
+                Err(())
+            } else {
+                Ok(())
+            }
+        } else if callee.is_obj_bound_method() {
+            let bound = callee.as_obj_bound_method().borrow();
+
+            unsafe {
+                self.sp
+                    .sub((arg_count + 1) as usize)
+                    .write(MaybeUninit::new(bound.receiver))
+            };
+            self.call(bound.method, arg_count)
         } else {
             runtime_error!(self, "Can only call functions and classes.");
             Err(())
@@ -320,6 +350,60 @@ impl Vm {
             drop(upvalue);
             self.open_upvalues = next;
         }
+    }
+
+    fn define_method(&mut self, name: GcCell<ObjString>) {
+        let method = self.peek(0).as_obj_closure();
+        let mut class = self.peek(1).as_obj_class();
+        class.borrow_mut().methods.insert(name, method);
+        self.pop();
+    }
+
+    fn bind_method(&mut self, class: GcCell<ObjClass>, name: GcCell<ObjString>) -> bool {
+        let class = class.borrow();
+        let Some(method) = class.methods.get(&name) else {
+            runtime_error!(self, "Undefined property '{}'", name);
+            return false;
+        };
+
+        let bound = GcCell::new(
+            ObjBoundMethod::new(self.peek(0), unsafe { method.cast() }),
+            gc!(self),
+        );
+        self.pop();
+        self.push(bound.into());
+
+        true
+    }
+
+    fn invoke(&mut self, name: GcCell<ObjString>, arg_count: u8) -> Result<(), ()> {
+        let receiver = self.peek(arg_count as usize);
+        let instance = receiver.as_obj_instance();
+
+        if let Some(field) = instance.borrow().fields.get(&name) {
+            unsafe {
+                self.sp
+                    .sub(arg_count as usize + 1)
+                    .write(MaybeUninit::new(*field))
+            };
+            return self.call_value(*field, arg_count);
+        }
+
+        self.invoke_from_class(instance.borrow().class, name, arg_count)
+    }
+
+    fn invoke_from_class(
+        &mut self,
+        class: GcCell<ObjClass>,
+        name: GcCell<ObjString>,
+        arg_count: u8,
+    ) -> Result<(), ()> {
+        let Some(&method) = class.borrow().methods.get(&name) else {
+            runtime_error!(self, "Undefined property '{}'", name);
+            return Err(());
+        };
+
+        self.call(method, arg_count)
     }
 
     pub fn run(&mut self) -> InterpretResult {
@@ -423,7 +507,7 @@ impl Vm {
                     }
                 }
                 OpCode::Closure => {
-                    let function = self.read_constant().as_fun();
+                    let function = self.read_constant().as_obj_function();
                     let mut closure: GcCell<ObjClosure> = GcCell::new(function.into(), gc!(self));
                     for upvalue in closure.borrow_mut().upvalues.iter_mut() {
                         let is_local = self.read_byte() != 0;
@@ -456,7 +540,7 @@ impl Vm {
                     self.push(result);
                 }
                 OpCode::Add => {
-                    if self.peek(0).is_string() && self.peek(1).is_string() {
+                    if self.peek(0).is_obj_string() && self.peek(1).is_obj_string() {
                         self.concatenate();
                     } else if self.peek(0).is_number() && self.peek(1).is_number() {
                         binary_op!(self, add, Value::Number)
@@ -496,41 +580,55 @@ impl Vm {
                     }
                 }
                 OpCode::Class => {
-                    let name = self.read_constant().as_string();
+                    let name = self.read_constant().as_obj_string();
                     let class = GcCell::new(ObjClass::new(name), gc!(self));
                     self.push(class.into())
                 }
+                OpCode::Method => {
+                    let name = self.read_constant().as_obj_string();
+                    self.define_method(name);
+                }
                 OpCode::GetProperty => {
                     let receiver = self.peek(0);
-                    if !receiver.is_instance() {
+                    if !receiver.is_obj_instance() {
                         runtime_error!(self, "Only instances have properties.");
                         return InterpretResult::RuntimeError;
                     }
-                    let instance = receiver.as_instance();
-                    let name = self.read_constant().as_string();
+                    let instance = receiver.as_obj_instance();
+                    let name = self.read_constant().as_obj_string();
 
                     if let Some(value) = instance.borrow().fields.get(&name) {
                         self.pop();
                         self.push(*value);
-                    } else {
-                        runtime_error!(self, "Undefined property '{}'.", name);
+                        continue;
+                    }
+                    if !self.bind_method(instance.borrow().class, name) {
                         return InterpretResult::RuntimeError;
                     }
                 }
                 OpCode::SetProperty => {
                     let receiver = self.peek(1);
-                    if !receiver.is_instance() {
+                    if !receiver.is_obj_instance() {
                         runtime_error!(self, "Only instances have properties.");
                         return InterpretResult::RuntimeError;
                     }
-                    let mut instance = receiver.as_instance();
-                    let name = self.read_constant().as_string();
+                    let mut instance = receiver.as_obj_instance();
+                    let name = self.read_constant().as_obj_string();
                     let value = self.pop();
 
                     instance.borrow_mut().fields.insert(name, value);
 
                     self.pop();
                     self.push(value);
+                }
+                OpCode::Invoke => {
+                    let method = self.read_obj_string();
+                    let arg_count = self.read_byte();
+                    if self.invoke(method, arg_count).is_err() {
+                        return InterpretResult::RuntimeError;
+                    }
+
+                    //self.frame()
                 }
             }
         }

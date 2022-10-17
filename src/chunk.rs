@@ -32,10 +32,12 @@ pub enum OpCode {
     JumpIfFalse,
     JumpIfTrue,
     Call,
+    Invoke,
     Closure,
     CloseUpvalue,
     Return,
     Class,
+    Method,
     GetProperty,
     SetProperty,
 }
@@ -103,6 +105,7 @@ impl Chunk {
             OpCode::SetGlobal => self.constant_instruction("OP_SET_GLOBAL", offset),
             OpCode::GetGlobal => self.constant_instruction("OP_GET_GLOBAL", offset),
             OpCode::Class => self.constant_instruction("OP_CLASS", offset),
+            OpCode::Method => self.constant_instruction("OP_METHOD", offset),
             OpCode::Negate => Self::simple_instruction("OP_NEGATE", offset),
             OpCode::Print => Self::simple_instruction("OP_PRINT", offset),
             OpCode::Jump => self.jump_instruction("OP_JUMP", 1, offset),
@@ -120,6 +123,7 @@ impl Chunk {
             OpCode::Equal => Self::simple_instruction("OP_EQUAL", offset),
             OpCode::GetLocal => self.byte_instruction("OP_GET_LOCAL", offset),
             OpCode::SetLocal => self.byte_instruction("OP_SET_LOCAL", offset),
+            OpCode::Invoke => self.invoke_instruction("OP_INVOKE", offset),
             OpCode::Closure => {
                 offset += 1;
                 let constant = self.code[offset];
@@ -129,7 +133,7 @@ impl Chunk {
                     "OP_CLOSURE", constant, self.constants[constant as usize]
                 );
 
-                let function = self.constants[constant as usize].as_fun();
+                let function = self.constants[constant as usize].as_obj_function();
                 for _ in 0..function.borrow().upvalue_count {
                     let is_local = self.code[offset] != 0;
                     offset += 1;
@@ -177,6 +181,16 @@ impl Chunk {
             name,
             offset,
             offset as i64 + 3 + sign as i64 * jump as i64
+        );
+        offset + 3
+    }
+
+    fn invoke_instruction(&self, name: &str, offset: usize) -> usize {
+        let constant = self.code[offset + 1];
+        let arg_count = self.code[offset + 2];
+        println!(
+            "{:16} ({} args) {:4} {}",
+            name, arg_count, constant, self.constants[constant as usize]
         );
         offset + 3
     }
