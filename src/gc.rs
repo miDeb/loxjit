@@ -313,6 +313,17 @@ impl<T: Trace> GcCell<T> {
     pub fn borrow_mut<'a>(&'a mut self) -> GcRefMut<T> {
         GcRefMut::new(self)
     }
+
+    pub fn to_bits(&self) -> usize {
+        self.inner.as_ptr() as _
+    }
+
+    pub unsafe fn from_bits(value: usize) -> Self {
+        Self {
+            inner: NonNull::new_unchecked(value as _),
+            _phantom_data: PhantomData,
+        }
+    }
 }
 
 impl<T: Hash + Trace> Hash for GcCell<T> {

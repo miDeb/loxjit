@@ -11,3 +11,6 @@ libc = "0.2.132"
 num_enum = "0.5.7"
 replace_with = "0.1.7"
 rustc-hash = "1.1.0"
+
+[profile.release]
+debug = 1

@@ -37,9 +37,12 @@ pub enum OpCode {
     CloseUpvalue,
     Return,
     Class,
+    Inherit,
     Method,
     GetProperty,
     SetProperty,
+    GetSuper,
+    SuperInvoke,
 }
 
 pub struct Chunk {
@@ -124,6 +127,7 @@ impl Chunk {
             OpCode::GetLocal => self.byte_instruction("OP_GET_LOCAL", offset),
             OpCode::SetLocal => self.byte_instruction("OP_SET_LOCAL", offset),
             OpCode::Invoke => self.invoke_instruction("OP_INVOKE", offset),
+            OpCode::SuperInvoke => self.invoke_instruction("OP_SUPER_INVOKE", offset),
             OpCode::Closure => {
                 offset += 1;
                 let constant = self.code[offset];
@@ -149,9 +153,11 @@ impl Chunk {
 
                 offset
             }
+            OpCode::Inherit => Self::simple_instruction("OP_INHERIT", offset),
             OpCode::CloseUpvalue => Self::simple_instruction("OP_CLOSE_UPVALUE", offset),
             OpCode::GetUpvalue => self.byte_instruction("OP_GET_UPVALUE", offset),
             OpCode::SetUpvalue => self.byte_instruction("OP_SET_UPVALUE", offset),
+            OpCode::GetSuper => self.constant_instruction("OP_GET_SUPER", offset),
         }
     }
 

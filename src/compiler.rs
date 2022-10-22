@@ -208,7 +208,7 @@ impl<'a, 'b> ParseRule<'a, 'b> {
                 precedence: Precedence::None,
             },
             TokenType::Super => ParseRule {
-                prefix: None,
+                prefix: Some(Parser::<'a, 'b>::super_),
                 infix: None,
                 precedence: Precedence::None,
             },
@@ -362,6 +362,7 @@ impl<'a> Compiler<'a> {
 
 struct ClassCompiler {
     enclosing: Option<Box<ClassCompiler>>,
+    has_superclass: bool,
 }
 
 pub struct Parser<'a, 'b> {
@@ -524,7 +525,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn number(&mut self, _can_assign: bool) -> CompileResult<()> {
-        let value = Value::Number(self.previous.source.parse().unwrap());
+        let value = Value::from_f64(self.previous.source.parse().unwrap());
         self.emit_constant(value)
     }
 
@@ -632,11 +633,37 @@ impl<'a, 'b> Parser<'a, 'b> {
         let obj = self.gc.intern_string(ObjString::new(
             self.previous.source[1..self.previous.source.len() - 1].to_string(),
         ));
-        self.emit_constant(Value::Obj(unsafe { obj.cast() }))
+        self.emit_constant(Value::from_obj(unsafe { obj.cast() }))
     }
 
     fn variable(&mut self, can_assign: bool) -> CompileResult<()> {
         self.named_variable(self.previous.source, can_assign)
+    }
+
+    fn super_(&mut self, _can_assign: bool) -> CompileResult<()> {
+        if let Some(class_compiler) = &self.class_compiler {
+            if !class_compiler.has_superclass {
+                return Err(self.error("Can't use 'super' outside of a class."));
+            }
+        } else {
+            return Err(self.error("Can't use 'super' in a class with no superclass."));
+        }
+        self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
+        self.consume(TokenType::Identifier, "Expect superclass method name.")?;
+        let name = self.identifier_constant(self.previous.source)?;
+
+        self.named_variable("this", false)?;
+        if self.match_token(TokenType::LeftParen)? {
+            let arg_count = self.argument_list()?;
+            self.named_variable("super", false)?;
+            self.emit_bytes(OpCode::SuperInvoke, name);
+            self.emit_byte(arg_count);
+        } else {
+            self.named_variable("super", false)?;
+            self.emit_bytes(OpCode::GetSuper, name)
+        }
+
+        Ok(())
     }
 
     fn named_variable(&mut self, name: &'a str, can_assign: bool) -> CompileResult<()> {
@@ -685,7 +712,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn identifier_constant(&mut self, name: &str) -> CompileResult<u8> {
         let obj = self.gc.intern_string(ObjString::new(name.to_string()));
-        self.make_constant(Value::Obj(unsafe { obj.cast() }))
+        self.make_constant(Value::from_obj(unsafe { obj.cast() }))
     }
 
     fn add_local(&mut self, name: &'a str) -> CompileResult<()> {
@@ -885,7 +912,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let compiler = std::mem::replace(&mut self.compiler, enclosing.unwrap());
         let upvalue_count = compiler.function.upvalue_count;
 
-        let value = Value::Obj(unsafe { GcCell::new(*compiler.function, &mut self.gc).cast() });
+        let value = Value::from_obj(unsafe { GcCell::new(*compiler.function, &mut self.gc).cast() });
         let byte2 = self.make_constant(value)?;
 
         self.emit_bytes(OpCode::Closure, byte2);
@@ -911,7 +938,25 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.class_compiler = Some(Box::new(ClassCompiler {
             enclosing: self.class_compiler.take(),
+            has_superclass: false,
         }));
+
+        if self.match_token(TokenType::Less)? {
+            self.consume(TokenType::Identifier, "Expect superclass name.")?;
+            self.variable(false)?;
+
+            if class_name == self.previous.source {
+                return Err(self.error("A class can't inherit from itself."));
+            }
+
+            self.named_variable(class_name, false)?;
+            self.emit_byte(OpCode::Inherit);
+            self.class_compiler.as_mut().unwrap().has_superclass = true;
+
+            self.begin_scope();
+            self.add_local("super")?;
+            self.define_variable(0);
+        }
 
         self.named_variable(class_name, false)?;
         self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
@@ -922,6 +967,10 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
         self.emit_byte(OpCode::Pop);
+
+        if self.class_compiler.as_ref().unwrap().has_superclass {
+            self.end_scope();
+        }
 
         self.class_compiler = self.class_compiler.take().unwrap().enclosing;
 

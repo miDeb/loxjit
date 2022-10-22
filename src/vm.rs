@@ -10,7 +10,7 @@ use crate::{
         free_obj, NativeFn, NativeFnRef, ObjBoundMethod, ObjClass, ObjClosure, ObjInstance,
         ObjString, ObjUpvalue,
     },
-    value::Value,
+    value::{Value, NIL_VAL, TRUE_VAL, FALSE_VAL},
     START,
 };
 
@@ -67,7 +67,7 @@ macro_rules! gc {
 }
 
 fn clock_native(_args: &[Value]) -> Value {
-    Value::Number(Instant::now().duration_since(*START).as_millis() as _)
+    Value::from_f64(Instant::now().duration_since(*START).as_millis() as f64 / 1000f64)
 }
 
 pub struct Vm {
@@ -226,7 +226,7 @@ impl Vm {
 
         let obj = gc!(self).intern_string(ObjString::new(new_string));
 
-        self.push(Value::Obj(unsafe { obj.cast() }));
+        self.push(Value::from_obj(unsafe { obj.cast() }));
     }
 
     fn call_value(&mut self, callee: Value, arg_count: u8) -> Result<(), ()> {
@@ -305,7 +305,7 @@ impl Vm {
     fn define_native(&mut self, name: &'static str, fun: NativeFnRef) {
         self.globals.insert(
             name,
-            Value::Obj(unsafe { GcCell::new(NativeFn::new(fun), gc!(self)).cast() }),
+            Value::from_obj(unsafe { GcCell::new(NativeFn::new(fun), gc!(self)).cast() }),
         );
     }
 
@@ -426,9 +426,9 @@ impl Vm {
                     let constant = self.read_constant();
                     self.push(constant);
                 }
-                OpCode::Nil => self.push(Value::Nil),
-                OpCode::True => self.push(Value::Bool(true)),
-                OpCode::False => self.push(Value::Bool(false)),
+                OpCode::Nil => self.push(NIL_VAL),
+                OpCode::True => self.push(TRUE_VAL),
+                OpCode::False => self.push(FALSE_VAL),
                 OpCode::Pop => {
                     self.pop();
                 }
@@ -472,7 +472,7 @@ impl Vm {
                         return InterpretResult::RuntimeError;
                     }
                     let value = self.pop().as_number();
-                    self.push(Value::Number(-value));
+                    self.push(Value::from_f64(-value));
                 }
                 OpCode::Print => {
                     println!("{}", self.pop());
@@ -543,24 +543,24 @@ impl Vm {
                     if self.peek(0).is_obj_string() && self.peek(1).is_obj_string() {
                         self.concatenate();
                     } else if self.peek(0).is_number() && self.peek(1).is_number() {
-                        binary_op!(self, add, Value::Number)
+                        binary_op!(self, add, Value::from_f64)
                     } else {
                         runtime_error!(self, "Operands must be two numbers or two strings.");
                         return InterpretResult::RuntimeError;
                     }
                 }
-                OpCode::Sub => binary_op!(self, sub, Value::Number),
-                OpCode::Mul => binary_op!(self, mul, Value::Number),
-                OpCode::Div => binary_op!(self, div, Value::Number),
+                OpCode::Sub => binary_op!(self, sub, Value::from_f64),
+                OpCode::Mul => binary_op!(self, mul, Value::from_f64),
+                OpCode::Div => binary_op!(self, div, Value::from_f64),
                 OpCode::Equal => {
                     let eq = self.pop() == self.pop();
-                    self.push(Value::Bool(eq))
+                    self.push(Value::from_bool(eq))
                 }
-                OpCode::Less => binary_op!(self, lt, Value::Bool),
-                OpCode::Greater => binary_op!(self, gt, Value::Bool),
+                OpCode::Less => binary_op!(self, lt, Value::from_bool),
+                OpCode::Greater => binary_op!(self, gt, Value::from_bool),
                 OpCode::Not => {
                     let is_falsey = self.pop().is_falsey();
-                    self.push(Value::Bool(is_falsey))
+                    self.push(Value::from_bool(is_falsey))
                 }
                 OpCode::GetUpvalue => {
                     let slot = self.read_byte();
@@ -583,6 +583,19 @@ impl Vm {
                     let name = self.read_constant().as_obj_string();
                     let class = GcCell::new(ObjClass::new(name), gc!(self));
                     self.push(class.into())
+                }
+                OpCode::Inherit => {
+                    let superclass = self.peek(1);
+                    let mut subclass = self.peek(0).as_obj_class();
+                    if !superclass.is_obj_class() {
+                        runtime_error!(self, "Superclass must be a class.");
+                        return InterpretResult::RuntimeError;
+                    }
+                    subclass
+                        .borrow_mut()
+                        .methods
+                        .extend(superclass.as_obj_class().borrow().methods.iter());
+                    self.pop();
                 }
                 OpCode::Method => {
                     let name = self.read_constant().as_obj_string();
@@ -627,8 +640,25 @@ impl Vm {
                     if self.invoke(method, arg_count).is_err() {
                         return InterpretResult::RuntimeError;
                     }
+                }
+                OpCode::GetSuper => {
+                    let name = self.read_obj_string();
+                    let superclass = self.pop().as_obj_class();
 
-                    //self.frame()
+                    if !self.bind_method(superclass, name) {
+                        return InterpretResult::RuntimeError;
+                    }
+                }
+                OpCode::SuperInvoke => {
+                    let method = self.read_obj_string();
+                    let arg_count = self.read_byte();
+                    let superclass = self.pop().as_obj_class();
+                    if self
+                        .invoke_from_class(superclass, method, arg_count)
+                        .is_err()
+                    {
+                        return InterpretResult::RuntimeError;
+                    }
                 }
             }
         }

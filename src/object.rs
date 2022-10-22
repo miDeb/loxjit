@@ -39,17 +39,15 @@ macro_rules! objImpl {
 
         impl Value {
             pub fn $is_fn(&self) -> bool {
-                matches!(self, &Value::Obj(o) if o.borrow().obj_type == ObjType::$obj_name)
+                self.is_obj() && self.as_obj().borrow().obj_type == ObjType::$obj_name
             }
 
             pub fn $as_fn(&self) -> GcCell<$obj_name> {
-                match self {
-                    &Value::Obj(o) => {
-                        debug_assert_eq!(o.borrow().obj_type, ObjType::$obj_name);
-                        unsafe { o.cast() }
-                    }
-                    _ => unreachable!(),
-                }
+
+
+                        debug_assert_eq!(self.as_obj().borrow().obj_type, ObjType::$obj_name);
+                        unsafe { self.as_obj().cast() }
+
             }
         }
 
@@ -61,7 +59,7 @@ macro_rules! objImpl {
 
         impl From<GcCell<$obj_name>> for Value {
             fn from(obj: GcCell<$obj_name>) -> Self {
-                Value::Obj(unsafe { obj.cast() })
+                Value::from_obj(unsafe { obj.cast() })
             }
         }
     };
