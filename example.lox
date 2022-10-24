@@ -1,2 +1,10 @@
-var nan = 0/0;
-print nan == nan;
+if (false) {
+    print 1;
+}
+else {
+    print 1;
+}
+
+if (-10) {
+    print 1;
+}

@@ -3,12 +3,12 @@ use std::fmt::Display;
 use crate::gc::{GcCell, Trace};
 use crate::object::ObjHeader;
 
-const QNAN: u64 = 0x7ffc000000000000;
+pub const QNAN: u64 = 0x7ffc000000000000;
 const TAG_NIL: u64 = 1;
 const TAG_FALSE: u64 = 2;
 const TAG_TRUE: u64 = 3;
 
-const SIGN_BIT: u64 = 0x8000000000000000;
+pub const SIGN_BIT: u64 = 0x8000000000000000;
 
 pub const NIL_VAL: Value = Value(QNAN | TAG_NIL);
 pub const FALSE_VAL: Value = Value(QNAN | TAG_FALSE);
@@ -53,6 +53,10 @@ impl Value {
 
     pub fn as_obj(&self) -> GcCell<ObjHeader> {
         unsafe { GcCell::from_bits(((self.0) & !(SIGN_BIT | QNAN)) as usize) }
+    }
+
+    pub fn to_bits(&self) -> u64 {
+        self.0
     }
 }
 

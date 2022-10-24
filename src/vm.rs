@@ -10,7 +10,7 @@ use crate::{
         free_obj, NativeFn, NativeFnRef, ObjBoundMethod, ObjClass, ObjClosure, ObjInstance,
         ObjString, ObjUpvalue,
     },
-    value::{Value, NIL_VAL, TRUE_VAL, FALSE_VAL},
+    value::{Value, FALSE_VAL, NIL_VAL, TRUE_VAL},
     START,
 };
 
@@ -669,15 +669,9 @@ impl Vm {
         let parser = Parser::new(source, unsafe { self.gc.as_mut() });
         match parser.compile() {
             Err(_) => InterpretResult::CompileError,
-            Ok(function) => {
-                self.reset_stack();
-                let closure: GcCell<ObjClosure> =
-                    GcCell::new(GcCell::new(*function, gc!(self)).into(), gc!(self));
-                self.push(closure.into());
-                self.call_value(self.peek(0), 0).unwrap();
-                unsafe { self.gc.as_mut().enabled = true }
-
-                self.run()
+            Ok(emitter) => {
+                emitter.run();
+                InterpretResult::Ok
             }
         }
     }

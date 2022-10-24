@@ -7,6 +7,7 @@ use replace_with::replace_with_or_abort;
 use crate::{
     chunk::{Chunk, OpCode},
     common::DEBUG_PRINT_CODE,
+    emitter::Emitter,
     errors::{CompileError, CompileResult},
     gc::{GarbageCollector, GcCell},
     object::{ObjFunction, ObjString},
@@ -373,6 +374,7 @@ pub struct Parser<'a, 'b> {
     compiler: Box<Compiler<'a>>,
     class_compiler: Option<Box<ClassCompiler>>,
     gc: &'b mut GarbageCollector<Vm, ObjString>,
+    emitter: Emitter,
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
@@ -393,6 +395,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             compiler: Box::new(Compiler::new(FunctionType::Script, None, None)),
             gc,
             class_compiler: None,
+            emitter: Emitter::new(),
         }
     }
 
@@ -453,6 +456,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.current_chunk().push(byte.into(), line)
     }
 
+    fn emit_bytes(&mut self, byte1: impl Into<u8>, byte2: impl Into<u8>) {
+        self.emit_byte(byte1);
+        self.emit_byte(byte2);
+    }
+
     fn emit_u16(&mut self, byte: impl Into<u16>) {
         let bytes = byte.into().to_ne_bytes();
         self.emit_bytes(bytes[0], bytes[1]);
@@ -508,11 +516,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.emit_byte(OpCode::Return)
     }
 
-    fn emit_bytes(&mut self, byte1: impl Into<u8>, byte2: impl Into<u8>) {
-        self.emit_byte(byte1);
-        self.emit_byte(byte2);
-    }
-
     fn expression(&mut self) -> CompileResult<()> {
         self.parse_precedence(Precedence::Assignment)
     }
@@ -525,8 +528,9 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn number(&mut self, _can_assign: bool) -> CompileResult<()> {
-        let value = Value::from_f64(self.previous.source.parse().unwrap());
-        self.emit_constant(value)
+        let value = self.previous.source.parse().unwrap();
+        self.emitter.number(value);
+        Ok(())
     }
 
     fn grouping(&mut self, _can_assign: bool) -> CompileResult<()> {
@@ -539,8 +543,8 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.parse_precedence(Precedence::Unary)?;
         match operator_type {
-            TokenType::Bang => self.emit_byte(OpCode::Not),
-            TokenType::Minus => self.emit_byte(OpCode::Negate),
+            TokenType::Bang => self.emitter.not(),
+            TokenType::Minus => self.emitter.negate(),
             _ => (),
         }
 
@@ -553,16 +557,16 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.parse_precedence((Into::<u8>::into(rule.precedence) + 1).try_into().unwrap())?;
 
         match operator_type {
-            TokenType::BangEqual => self.emit_bytes(OpCode::Equal, OpCode::Not),
-            TokenType::EqualEqual => self.emit_byte(OpCode::Equal),
-            TokenType::Greater => self.emit_byte(OpCode::Greater),
-            TokenType::GreaterEqual => self.emit_bytes(OpCode::Less, OpCode::Not),
-            TokenType::Less => self.emit_byte(OpCode::Less),
-            TokenType::LessEqual => self.emit_bytes(OpCode::Greater, OpCode::Not),
-            TokenType::Plus => self.emit_byte(OpCode::Add),
-            TokenType::Minus => self.emit_byte(OpCode::Sub),
-            TokenType::Star => self.emit_byte(OpCode::Mul),
-            TokenType::Slash => self.emit_byte(OpCode::Div),
+            TokenType::BangEqual => self.emitter.ne(),
+            TokenType::EqualEqual => self.emitter.eq(),
+            TokenType::Greater => self.emitter.gt(),
+            TokenType::GreaterEqual => self.emitter.ge(),
+            TokenType::Less => self.emitter.lt(),
+            TokenType::LessEqual => self.emitter.le(),
+            TokenType::Plus => self.emitter.add(),
+            TokenType::Minus => self.emitter.sub(),
+            TokenType::Star => self.emitter.mul(),
+            TokenType::Slash => self.emitter.div(),
             _ => unreachable!(),
         }
 
@@ -612,9 +616,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn literal(&mut self, _can_assign: bool) -> CompileResult<()> {
         match self.previous.token_type {
-            TokenType::False => self.emit_byte(OpCode::False),
-            TokenType::True => self.emit_byte(OpCode::True),
-            TokenType::Nil => self.emit_byte(OpCode::Nil),
+            TokenType::False => self.emitter.false_(),
+            TokenType::True => self.emitter.true_(),
+            TokenType::Nil => self.emitter.nil(),
             _ => unreachable!(),
         }
 
@@ -851,21 +855,22 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expression()?;
         self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
 
-        let then_jmp = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_byte(OpCode::Pop);
+        let then_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_false(then_jmp);
+        self.emitter.pop();
         self.statement()?;
 
-        if self.match_token(TokenType::Else)? {
-            let else_jmp = self.emit_jump(OpCode::Jump);
-            self.patch_jump(then_jmp)?;
-            self.emit_byte(OpCode::Pop);
+        let else_jmp = self.emitter.get_new_label();
+        self.emitter.jump(else_jmp);
 
+        self.emitter.set_jump_target(then_jmp);
+        self.emitter.pop();
+
+        if self.match_token(TokenType::Else)? {
             self.statement()?;
-            self.patch_jump(else_jmp)?;
-        } else {
-            self.patch_jump(then_jmp)?;
-            self.emit_byte(OpCode::Pop);
         }
+
+        self.emitter.set_jump_target(else_jmp);
         Ok(())
     }
 
@@ -912,7 +917,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         let compiler = std::mem::replace(&mut self.compiler, enclosing.unwrap());
         let upvalue_count = compiler.function.upvalue_count;
 
-        let value = Value::from_obj(unsafe { GcCell::new(*compiler.function, &mut self.gc).cast() });
+        let value =
+            Value::from_obj(unsafe { GcCell::new(*compiler.function, &mut self.gc).cast() });
         let byte2 = self.make_constant(value)?;
 
         self.emit_bytes(OpCode::Closure, byte2);
@@ -1091,7 +1097,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn print_statement(&mut self) -> CompileResult<()> {
         self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
-        self.emit_byte(OpCode::Print);
+        self.emitter.print();
         Ok(())
     }
 
@@ -1170,7 +1176,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    pub fn compile(mut self) -> Result<Box<ObjFunction>, ()> {
+    pub fn compile(mut self) -> Result<Emitter, ()> {
         let result: CompileResult<()> = (|| {
             self.advance()?;
             while !self.match_token(TokenType::Eof)? {
@@ -1186,7 +1192,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 if self.had_error {
                     Err(())
                 } else {
-                    Ok(self.compiler.function)
+                    Ok(self.emitter)
                 }
             }
             Err(e) => {

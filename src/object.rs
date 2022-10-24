@@ -43,11 +43,8 @@ macro_rules! objImpl {
             }
 
             pub fn $as_fn(&self) -> GcCell<$obj_name> {
-
-
-                        debug_assert_eq!(self.as_obj().borrow().obj_type, ObjType::$obj_name);
-                        unsafe { self.as_obj().cast() }
-
+                debug_assert_eq!(self.as_obj().borrow().obj_type, ObjType::$obj_name);
+                unsafe { self.as_obj().cast() }
             }
         }
 

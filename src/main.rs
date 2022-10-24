@@ -15,6 +15,7 @@ use vm::Vm;
 mod chunk;
 mod common;
 mod compiler;
+mod emitter;
 mod errors;
 mod gc;
 mod interned_strings;
