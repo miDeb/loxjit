@@ -7,12 +7,14 @@ pub const QNAN: u64 = 0x7ffc000000000000;
 const TAG_NIL: u64 = 1;
 const TAG_FALSE: u64 = 2;
 const TAG_TRUE: u64 = 3;
+const TAG_UNINIT: u64 = 3;
 
 pub const SIGN_BIT: u64 = 0x8000000000000000;
 
 pub const NIL_VAL: Value = Value(QNAN | TAG_NIL);
 pub const FALSE_VAL: Value = Value(QNAN | TAG_FALSE);
 pub const TRUE_VAL: Value = Value(QNAN | TAG_TRUE);
+pub const UNINIT_VAL: Value = Value(QNAN | TAG_UNINIT);
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]

@@ -1,9 +1,10 @@
-use std::fmt::Write;
 use std::mem::MaybeUninit;
+use std::{collections::HashMap, fmt::Write};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use replace_with::replace_with_or_abort;
 
+use crate::emitter::GlobalVarIndex;
 use crate::{
     chunk::{Chunk, OpCode},
     common::DEBUG_PRINT_CODE,
@@ -375,6 +376,7 @@ pub struct Parser<'a, 'b> {
     class_compiler: Option<Box<ClassCompiler>>,
     gc: &'b mut GarbageCollector<Vm, ObjString>,
     emitter: Emitter,
+    globals: HashMap<GcCell<ObjString>, GlobalVarIndex>,
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
@@ -396,6 +398,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             gc,
             class_compiler: None,
             emitter: Emitter::new(),
+            globals: HashMap::new(),
         }
     }
 
@@ -453,17 +456,13 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn emit_byte(&mut self, byte: impl Into<u8>) {
         let line = self.previous.line;
-        self.current_chunk().push(byte.into(), line)
+        self.current_chunk().push(byte.into(), line);
+        unreachable!("Should not be called while developing the compiler!");
     }
 
     fn emit_bytes(&mut self, byte1: impl Into<u8>, byte2: impl Into<u8>) {
         self.emit_byte(byte1);
         self.emit_byte(byte2);
-    }
-
-    fn emit_u16(&mut self, byte: impl Into<u16>) {
-        let bytes = byte.into().to_ne_bytes();
-        self.emit_bytes(bytes[0], bytes[1]);
     }
 
     fn end_compiler(&mut self) {
@@ -500,17 +499,17 @@ impl<'a, 'b> Parser<'a, 'b> {
             if local.is_captured {
                 self.emit_byte(OpCode::CloseUpvalue);
             } else {
-                self.emit_byte(OpCode::Pop);
+                self.emitter.pop();
             }
             self.compiler.locals.pop();
         }
     }
 
     fn emit_return(&mut self) {
-        if self.compiler.fun_type == FunctionType::Initializer {
-            self.emit_bytes(OpCode::GetLocal, 0)
-        } else {
-            self.emit_byte(OpCode::Nil);
+        match self.compiler.fun_type {
+            FunctionType::Function | FunctionType::Method => self.emit_bytes(OpCode::GetLocal, 0),
+            FunctionType::Initializer => self.emit_byte(OpCode::Nil),
+            FunctionType::Script => return,
         }
 
         self.emit_byte(OpCode::Return)
@@ -670,17 +669,38 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(())
     }
 
+    fn get_global_var_index(&mut self, constant: u8) -> GlobalVarIndex {
+        let string = self.current_chunk().constants[constant as usize].as_obj_string();
+        if let Some(value) = self.globals.get(&string) {
+            *value
+        } else {
+            let index = self.emitter.add_global();
+            self.globals.insert(string, index);
+            index
+        }
+    }
+
     fn named_variable(&mut self, name: &'a str, can_assign: bool) -> CompileResult<()> {
         let (arg, get_op, set_op) = if let Some(arg) = self.compiler.resolve_local(name)? {
-            (arg, OpCode::GetLocal, OpCode::SetLocal)
+            if can_assign && self.match_token(TokenType::Equal)? {
+                self.expression()?;
+                self.emitter.set_local(arg);
+            } else {
+                self.emitter.get_local(arg);
+            }
+            return Ok(());
         } else if let Some(arg) = self.compiler.resolve_upvalue(name)? {
             (arg, OpCode::GetUpvalue, OpCode::SetUpvalue)
         } else {
-            (
-                self.identifier_constant(name)?,
-                OpCode::GetGlobal,
-                OpCode::SetGlobal,
-            )
+            let constant = self.identifier_constant(name)?;
+            let var = self.get_global_var_index(constant);
+            if can_assign && self.match_token(TokenType::Equal)? {
+                self.expression()?;
+                self.emitter.set_global(var);
+            } else {
+                self.emitter.get_global(var);
+            }
+            return Ok(());
         };
         if can_assign && self.match_token(TokenType::Equal)? {
             self.expression()?;
@@ -767,7 +787,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if self.match_token(TokenType::Equal)? {
             self.expression()?;
         } else {
-            self.emit_byte(OpCode::Nil);
+            self.emitter.nil();
         }
 
         self.consume(
@@ -782,9 +802,10 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn define_variable(&mut self, global: u8) {
         if self.compiler.scope_depth > 0 {
             self.mark_initialized();
-            return;
+        } else {
+            let var = self.get_global_var_index(global);
+            self.emitter.define_global(var);
         }
-        self.emit_bytes(OpCode::DefineGlobal, global);
     }
 
     fn mark_initialized(&mut self) {
@@ -795,21 +816,25 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn and(&mut self, _can_assign: bool) -> CompileResult<()> {
-        let end_jmp = self.emit_jump(OpCode::JumpIfFalse);
+        let end_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_false(end_jmp);
 
-        self.emit_byte(OpCode::Pop);
+        self.emitter.pop();
         self.parse_precedence(Precedence::And)?;
 
-        self.patch_jump(end_jmp)
+        self.emitter.set_jump_target(end_jmp);
+        Ok(())
     }
 
     fn or(&mut self, _can_assign: bool) -> CompileResult<()> {
-        let end_jmp = self.emit_jump(OpCode::JumpIfTrue);
+        let end_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_true(end_jmp);
 
-        self.emit_byte(OpCode::Pop);
+        self.emitter.pop();
         self.parse_precedence(Precedence::Or)?;
 
-        self.patch_jump(end_jmp)
+        self.emitter.set_jump_target(end_jmp);
+        Ok(())
     }
 
     fn statement(&mut self) -> CompileResult<()> {
@@ -998,31 +1023,23 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(())
     }
 
-    fn emit_loop(&mut self, loop_start: usize) -> CompileResult<()> {
-        self.emit_byte(OpCode::JumpUp);
-        let Ok(offset) : Result<u16, _> = (self.current_chunk().code.len() - loop_start + 2).try_into() else {
-           return Err(self.error("Loop body too large."));
-        };
-
-        self.emit_u16(offset);
-        Ok(())
-    }
-
     fn while_statement(&mut self) -> CompileResult<()> {
-        let loop_start = self.current_chunk().code.len();
+        let loop_start = self.emitter.get_new_label();
+        self.emitter.set_jump_target(loop_start);
 
         self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
         self.expression()?;
         self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
 
-        let exit_jmp = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_byte(OpCode::Pop);
+        let exit_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_false(exit_jmp);
+        self.emitter.pop();
         self.statement()?;
 
-        self.emit_loop(loop_start)?;
+        self.emitter.jump(loop_start);
 
-        self.patch_jump(exit_jmp)?;
-        self.emit_byte(OpCode::Pop);
+        self.emitter.set_jump_target(exit_jmp);
+        self.emitter.pop();
         Ok(())
     }
 
@@ -1038,58 +1055,42 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.expression()?;
         }
 
-        let mut loop_start = self.current_chunk().code.len();
+        let mut loop_start = self.emitter.get_new_label();
+        self.emitter.set_jump_target(loop_start);
 
-        let exit_jump;
+        let exit_jump = self.emitter.get_new_label();
 
         if !self.match_token(TokenType::Semicolon)? {
             self.expression()?;
             self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
 
-            exit_jump = Some(self.emit_jump(OpCode::JumpIfFalse));
-            self.emit_byte(OpCode::Pop);
-        } else {
-            exit_jump = None;
+            self.emitter.jump_if_false(exit_jump);
+            self.emitter.pop();
         }
 
         if !self.match_token(TokenType::RightParen)? {
-            let body_jmp = self.emit_jump(OpCode::Jump);
-            let increment_start = self.current_chunk().code.len();
+            let body_jmp = self.emitter.get_new_label();
+            self.emitter.jump(body_jmp);
+
+            let increment_start = self.emitter.get_new_label();
+            self.emitter.set_jump_target(increment_start);
             self.expression()?;
-            self.emit_byte(OpCode::Pop);
+            self.emitter.pop();
             self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
 
-            self.emit_loop(loop_start)?;
+            self.emitter.jump(loop_start);
             loop_start = increment_start;
-            self.patch_jump(body_jmp)?;
+            self.emitter.set_jump_target(body_jmp);
         }
 
         self.statement()?;
 
-        self.emit_loop(loop_start)?;
+        self.emitter.jump(loop_start);
 
-        if let Some(exit_jump) = exit_jump {
-            self.patch_jump(exit_jump)?;
-            self.emit_byte(OpCode::Pop);
-        }
+        self.emitter.set_jump_target(exit_jump);
+        self.emitter.pop();
 
         self.end_scope();
-
-        Ok(())
-    }
-
-    fn emit_jump(&mut self, instruction: OpCode) -> usize {
-        self.emit_byte(instruction);
-        self.emit_u16(u16::MAX);
-        self.current_chunk().code.len() - 2
-    }
-
-    fn patch_jump(&mut self, offset: usize) -> CompileResult<()> {
-        let Ok(jump): Result<i16, _> = (self.current_chunk().code.len() - offset -2).try_into() else {
-            return Err(self.error("Too much code to jump over."));
-        };
-
-        self.current_chunk().code[offset..=offset + 1].copy_from_slice(&jump.to_ne_bytes());
 
         Ok(())
     }
@@ -1104,7 +1105,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn expression_statement(&mut self) -> CompileResult<()> {
         self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
-        self.emit_byte(OpCode::Pop);
+        self.emitter.pop();
         Ok(())
     }
 

@@ -1,4 +1,4 @@
-use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL};
+use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
 
@@ -12,6 +12,20 @@ macro_rules! my_dynasm {
             $($t)*
         )
     }
+}
+
+macro_rules! call_extern {
+    ($ops:expr, $fun:expr) => {
+        dynasm!($ops
+            ; push rbp
+            ; mov rbp, rsp
+            ; and spl, BYTE 0xF0 as _
+            ; mov rax, QWORD $fun as _
+            ; call rax
+            ; mov rsp, rbp
+            ; pop rbp
+        )
+    };
 }
 
 macro_rules! eq {
@@ -52,11 +66,6 @@ macro_rules! eq {
     };
 }
 
-pub struct Emitter {
-    ops: Assembler,
-    start: AssemblyOffset,
-}
-
 enum BinaryOp {
     Add,
     Sub,
@@ -66,6 +75,15 @@ enum BinaryOp {
     GreaterEqual,
     Less,
     LessEqual,
+}
+
+#[derive(Clone, Copy)]
+pub struct GlobalVarIndex(i32);
+
+pub struct Emitter {
+    ops: Assembler,
+    start: AssemblyOffset,
+    globals: Vec<u64>,
 }
 
 impl Emitter {
@@ -86,43 +104,40 @@ impl Emitter {
             ; .qword print_value as _
 
             ; -> expected_number:
-            ; mov rax, QWORD expected_number as _
-            ; sub rsp, 0x28
-            ; call rax
-            ; add rsp, 0x28
+            ;; call_extern!(ops, expected_number)
             ; jmp ->exit_error
 
-
             ; -> expected_add_operands:
-            ; mov rax, QWORD expected_numbers as _
-            ; sub rsp, 0x28
-            ; call rax
-            ; add rsp, 0x28
+            ;; call_extern!(ops, expected_numbers)
+            ; jmp ->exit_error
+
+            ; -> uninit_global:
+            ;; call_extern!(ops, uninit_global)
             ; jmp ->exit_error
 
             ; ->exit_error:
-            ; mov rsp, r12
-            ; pop rbx
-            ; pop rbp
-            ; pop rdi
-            ; pop rsi
-            ; pop r12
-            ; pop r13
-            ; pop r14
-            ; pop r15
+            ; mov r15, [r12]
+            ; mov r14, [r12+0x8]
+            ; mov r13, [r12+0x10]
+            ; mov rsi, [r12+0x20]
+            ; mov rdi, [r12+0x28]
+            ; mov rbp, [r12+0x30]
+            ; mov rbx, [r12+0x38]
+            ; mov rsp, [r12+0x40]
+            ; mov r12, [r12+0x18]
             ; xor rax, rax
             ; ret
 
             ; ->exit_success:
-            ; mov rsp, r12
-            ; pop rbx
-            ; pop rbp
-            ; pop rdi
-            ; pop rsi
-            ; pop r12
-            ; pop r13
-            ; pop r14
-            ; pop r15
+            ; mov r15, [r12]
+            ; mov r14, [r12+0x8]
+            ; mov r13, [r12+0x10]
+            ; mov rsi, [r12+0x20]
+            ; mov rdi, [r12+0x28]
+            ; mov rbp, [r12+0x30]
+            ; mov rbx, [r12+0x38]
+            ; mov rsp, [r12+0x40]
+            ; mov r12, [r12+0x18]
             ; mov rax, 1
             ; ret
         );
@@ -130,20 +145,76 @@ impl Emitter {
         let start = ops.offset();
 
         my_dynasm!(ops,
-            ; push r15
-            ; push r14
-            ; push r13
-            ; push r12
-            ; push rsi
-            ; push rdi
-            ; push rbp
-            ; push rbx
-            ; mov r12, rsp
+            ; mov [rcx], r15
+            ; mov [rcx+0x8], r14
+            ; mov [rcx+0x10], r13
+            ; mov [rcx+0x18], r12
+            ; mov [rcx+0x20], rsi
+            ; mov [rcx+0x28], rdi
+            ; mov [rcx+0x30], rbp
+            ; mov [rcx+0x38], rbx
+            ; mov [rcx+0x40], rsp
+            ; mov r12, rcx
             ; mov true_val, QWORD TRUE_VAL.to_bits() as _
             ; mov false_val, QWORD FALSE_VAL.to_bits() as _
             ; mov nil_val, QWORD NIL_VAL.to_bits() as _
+            ; mov rbp, rsp
+            // occupy the slot for "this" (the actual value does not matter)
+            ; push rax
         );
-        Self { start, ops }
+        Self {
+            start,
+            ops,
+            globals: vec![0; 9],
+        }
+    }
+
+    pub fn add_global(&mut self) -> GlobalVarIndex {
+        if self.globals.len() * 8 > i32::MAX as usize {
+            panic!("Too many globals");
+        }
+        self.globals.push(UNINIT_VAL.to_bits());
+        GlobalVarIndex((self.globals.len() - 1) as i32 * 8)
+    }
+
+    pub fn get_global(&mut self, index: GlobalVarIndex) {
+        dynasm!(self.ops
+            ; mov rax, QWORD [r12 + index.0]
+            ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
+            ; cmp rax, rcx
+            ; je ->uninit_global
+            ; push rax
+        )
+    }
+
+    pub fn set_global(&mut self, index: GlobalVarIndex) {
+        dynasm!(self.ops
+            ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
+            ; cmp rcx, [r12 + index.0]
+            ; je ->uninit_global
+            ; mov rax, [rsp]
+            ; mov [r12 + index.0], rax
+        )
+    }
+
+    pub fn define_global(&mut self, index: GlobalVarIndex) {
+        dynasm!(self.ops
+            ; mov rax, [rsp]
+            ; mov [r12 + index.0], rax
+        )
+    }
+
+    pub fn set_local(&mut self, index: u8) {
+        dynasm!(self.ops
+            ; mov rax, [rsp]
+            ; mov QWORD [rbp - (index as i32 * 8 + 8)], rax
+        )
+    }
+
+    pub fn get_local(&mut self, index: u8) {
+        dynasm!(self.ops
+            ; push QWORD [rbp - (index as i32 * 8 + 8)]
+        )
     }
 
     fn push_const(&mut self, constant: u64) {
@@ -326,6 +397,17 @@ impl Emitter {
             ; je =>label
         );
     }
+    pub fn jump_if_true(&mut self, label: DynamicLabel) {
+        my_dynasm!(self.ops,
+            ; mov rax, [rsp]
+            ; cmp rax, false_val
+            ; je >end
+            ; cmp rax, nil_val
+            ; je >end
+            ; jmp =>label
+            ; end:
+        );
+    }
     pub fn set_jump_target(&mut self, label: DynamicLabel) {
         dynasm!(self.ops
             ; =>label
@@ -333,16 +415,14 @@ impl Emitter {
     }
     pub fn pop(&mut self) {
         dynasm!(self.ops
-            ; pop rax
+            ; pop r11
         )
     }
 
     pub fn print(&mut self) {
         dynasm!(self.ops
             ; pop rcx
-            ; sub rsp, BYTE 0x28
-            ; call QWORD [->print_value]
-            ; add rsp, BYTE 0x28
+            ;; call_extern!(self.ops, print_value)
         )
     }
 
@@ -352,9 +432,11 @@ impl Emitter {
         );
         let executable_buffer = self.ops.finalize().unwrap();
         let fun = unsafe {
-            std::mem::transmute::<_, extern "win64" fn() -> bool>(executable_buffer.ptr(self.start))
+            std::mem::transmute::<_, extern "win64" fn(*mut u64) -> bool>(
+                executable_buffer.ptr(self.start),
+            )
         };
-        fun()
+        fun(self.globals.as_mut_ptr())
     }
 }
 
@@ -377,6 +459,9 @@ extern "win64" fn expected_number() {
 }
 extern "win64" fn expected_numbers() {
     eprintln!("Operands must be numbers.");
+}
+extern "win64" fn uninit_global() {
+    eprintln!("Unitialized global variable.");
 }
 
 #[cfg(test)]
@@ -437,6 +522,16 @@ mod tests {
         emitter.print();
         emitter.set_jump_target(then);
         emitter.pop();
+        assert!(emitter.run());
+    }
+    #[test]
+    fn global_var() {
+        let mut emitter = Emitter::new();
+        emitter.number(0f64);
+        /*  let var = emitter.add_global();
+        emitter.set_global(var);
+        emitter.get_global(var);*/
+        emitter.print();
         assert!(emitter.run());
     }
 }
