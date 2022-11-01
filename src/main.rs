@@ -4,13 +4,14 @@
 #![feature(try_blocks)]
 #![feature(cell_update)]
 #![feature(let_chains)]
+#![feature(slice_from_ptr_range)]
 
 #[macro_use]
 extern crate lazy_static;
 
 use std::{ffi::OsString, io::Write, time::Instant};
 
-use vm::Vm;
+use crate::vm::interpret;
 
 mod chunk;
 mod common;
@@ -18,7 +19,6 @@ mod compiler;
 mod emitter;
 mod errors;
 mod gc;
-mod interned_strings;
 mod object;
 mod scanner;
 mod value;
@@ -43,23 +43,21 @@ fn main() {
 }
 
 fn repl() {
-    let mut vm = Vm::new();
     print!("> ");
     std::io::stdout().flush().unwrap();
     for line in std::io::stdin().lines().flatten() {
-        vm.borrow_mut().interpret(&line);
+        interpret(&line);
         print!("> ");
         std::io::stdout().flush().unwrap();
     }
 }
 
 fn runfile(path: OsString) {
-    let mut vm = Vm::new();
     let Ok(source) = std::fs::read_to_string(&path) else {
         eprintln!("Could not read file {}", path.to_string_lossy());
         std::process::exit(74);
     };
-    let result = vm.borrow_mut().interpret(&source);
+    let result = interpret(&source);
     std::io::stdout().flush().unwrap();
     match result {
         vm::InterpretResult::CompileError => std::process::exit(65),

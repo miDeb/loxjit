@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::gc::{GcCell, Trace};
+use crate::gc::GcCell;
 use crate::object::ObjHeader;
 
 pub const QNAN: u64 = 0x7ffc000000000000;
@@ -34,7 +34,7 @@ impl Value {
     }
 
     pub fn from_obj(obj: GcCell<ObjHeader>) -> Self {
-        Self(SIGN_BIT | QNAN | obj.to_bits() as u64)
+        Self(SIGN_BIT | QNAN | obj.to_bits())
     }
 
     pub fn is_number(&self) -> bool {
@@ -54,19 +54,11 @@ impl Value {
     }
 
     pub fn as_obj(&self) -> GcCell<ObjHeader> {
-        unsafe { GcCell::from_bits(((self.0) & !(SIGN_BIT | QNAN)) as usize) }
+        unsafe { GcCell::from_bits((self.0) & !(SIGN_BIT | QNAN)) }
     }
 
     pub fn to_bits(&self) -> u64 {
         self.0
-    }
-}
-
-impl Trace for Value {
-    fn trace(&self) {
-        if self.is_obj() {
-            self.as_obj().trace()
-        }
     }
 }
 

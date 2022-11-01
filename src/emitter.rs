@@ -1,6 +1,14 @@
+use crate::gc::{intern_string, register_object};
+use crate::object::{ObjClosure, ObjString, ObjType};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
+
+static mut GLOBALS: Vec<u64> = Vec::new();
+
+pub fn global_vars() -> &'static [Value] {
+    unsafe { std::mem::transmute(&GLOBALS[9..]) }
+}
 
 macro_rules! my_dynasm {
     ($ops:expr, $($t:tt)*) => {
@@ -19,6 +27,22 @@ macro_rules! call_extern {
         dynasm!($ops
             ; push rbp
             ; mov rbp, rsp
+            ; and spl, BYTE 0xF0 as _
+            ; mov rax, QWORD $fun as _
+            ; call rax
+            ; mov rsp, rbp
+            ; pop rbp
+        )
+    };
+}
+
+macro_rules! call_extern_alloc {
+    ($ops:expr, $fun:expr) => {
+        dynasm!($ops
+            ; push rbp
+            ; mov rbp, rsp
+            ; mov rdx, [r12+0x40]
+            ; mov rcx, rsp
             ; and spl, BYTE 0xF0 as _
             ; mov rax, QWORD $fun as _
             ; call rax
@@ -67,7 +91,6 @@ macro_rules! eq {
 }
 
 enum BinaryOp {
-    Add,
     Sub,
     Mul,
     Div,
@@ -83,7 +106,6 @@ pub struct GlobalVarIndex(i32);
 pub struct Emitter {
     ops: Assembler,
     start: AssemblyOffset,
-    globals: Vec<u64>,
 }
 
 impl Emitter {
@@ -100,6 +122,12 @@ impl Emitter {
             ; -> qnan:
             ; .qword QNAN as _
 
+            ; -> tag_obj:
+            ; .qword (SIGN_BIT | QNAN) as _
+
+            ; -> tag_obj_not:
+            ; .qword !(SIGN_BIT | QNAN) as _
+
             ; -> print_value:
             ; .qword print_value as _
 
@@ -108,11 +136,23 @@ impl Emitter {
             ; jmp ->exit_error
 
             ; -> expected_add_operands:
+            ;; call_extern!(ops, expected_numbers_or_strings)
+            ; jmp ->exit_error
+
+            ; -> expected_callable:
+            ;; call_extern!(ops, expected_callable)
+            ; jmp ->exit_error
+
+            ; -> expected_numbers:
             ;; call_extern!(ops, expected_numbers)
             ; jmp ->exit_error
 
             ; -> uninit_global:
             ;; call_extern!(ops, uninit_global)
+            ; jmp ->exit_error
+
+            ; -> fn_arity_mismatch:
+            ;; call_extern!(ops, fn_arity_mismatch)
             ; jmp ->exit_error
 
             ; ->exit_error:
@@ -159,22 +199,20 @@ impl Emitter {
             ; mov false_val, QWORD FALSE_VAL.to_bits() as _
             ; mov nil_val, QWORD NIL_VAL.to_bits() as _
             ; mov rbp, rsp
-            // occupy the slot for "this" (the actual value does not matter)
-            ; push rax
         );
-        Self {
-            start,
-            ops,
-            globals: vec![0; 9],
+        unsafe {
+            GLOBALS.clear();
+            GLOBALS.extend((0..9).map(|_| 0))
         }
+        Self { start, ops }
     }
 
     pub fn add_global(&mut self) -> GlobalVarIndex {
-        if self.globals.len() * 8 > i32::MAX as usize {
+        if unsafe { GLOBALS.len() } * 8 > i32::MAX as usize {
             panic!("Too many globals");
         }
-        self.globals.push(UNINIT_VAL.to_bits());
-        GlobalVarIndex((self.globals.len() - 1) as i32 * 8)
+        unsafe { GLOBALS.push(UNINIT_VAL.to_bits()) };
+        GlobalVarIndex((unsafe { GLOBALS.len() } - 1) as i32 * 8)
     }
 
     pub fn get_global(&mut self, index: GlobalVarIndex) {
@@ -199,7 +237,7 @@ impl Emitter {
 
     pub fn define_global(&mut self, index: GlobalVarIndex) {
         dynasm!(self.ops
-            ; mov rax, [rsp]
+            ; pop rax
             ; mov [r12 + index.0], rax
         )
     }
@@ -224,6 +262,9 @@ impl Emitter {
         )
     }
 
+    pub fn value(&mut self, value: Value) {
+        self.push_const(value.to_bits() as _);
+    }
     pub fn nil(&mut self) {
         my_dynasm!(self.ops,
             ; push nil_val
@@ -254,7 +295,52 @@ impl Emitter {
         )
     }
     pub fn add(&mut self) {
-        self.numeric_binary(BinaryOp::Add)
+        dynasm!(self.ops
+            ; mov rax, [rsp]
+            ; movq xmm1, rax
+            ; and rax, [->qnan]
+            ; cmp rax, [->qnan]
+            ; je >add_strings
+
+            ; mov rcx, [rsp+8]
+            ; movq xmm0, rcx
+            ; and rcx, [->qnan]
+            ; cmp rcx, [->qnan]
+            ; je >add_strings
+
+            ; add rsp, 8
+            ; addsd xmm0, xmm1
+            ; movq [rsp], xmm0
+            ; jmp >end
+
+            ; add_strings:
+            ; mov r9, [rsp]
+            ; mov r8, [rsp+8]
+
+            ; mov rax, r8
+            ; and rax, [->tag_obj]
+            ; cmp rax, [->tag_obj]
+            ; jne ->expected_add_operands
+
+            ; and r8, [->tag_obj_not]
+            ; cmp [r8], BYTE ObjType::ObjString as _
+            ; jne ->expected_add_operands
+
+            ; mov rax, r9
+            ; and rax, [->tag_obj]
+            ; cmp rax, [->tag_obj]
+            ; jne ->expected_add_operands
+
+            ; and r9, [->tag_obj_not]
+            ; cmp [r9], BYTE ObjType::ObjString as _
+            ; jne ->expected_add_operands
+
+            ; add rsp, 8
+            ;; call_extern_alloc!(self.ops, concat_strings)
+            ; mov [rsp], rax
+
+            ; end:
+        );
     }
     pub fn sub(&mut self) {
         self.numeric_binary(BinaryOp::Sub)
@@ -271,13 +357,13 @@ impl Emitter {
             ; movq xmm1, rax
             ; and rax, [->qnan]
             ; cmp rax, [->qnan]
-            ; je ->expected_add_operands
+            ; je ->expected_numbers
 
             ; mov rcx, [rsp+8]
             ; movq xmm0, rcx
             ; and rcx, [->qnan]
             ; cmp rcx, [->qnan]
-            ; je ->expected_add_operands
+            ; je ->expected_numbers
 
             ; add rsp, 8
         );
@@ -291,9 +377,6 @@ impl Emitter {
         }
 
         match op {
-            BinaryOp::Add => dynasm!(self.ops
-                ; addsd xmm0, xmm1
-            ),
             BinaryOp::Sub => dynasm!(self.ops
                 ; subsd xmm0, xmm1
             ),
@@ -333,7 +416,7 @@ impl Emitter {
             }
         }
         match op {
-            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => {
+            BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => {
                 dynasm!(self.ops
                     ; movq [rsp], xmm0
                 )
@@ -376,6 +459,53 @@ impl Emitter {
             ; je >end
             ; mov rax, false_val
             ; end:
+            ; mov [rsp], rax
+        )
+    }
+
+    pub fn start_fn(&mut self, arity: u8) -> DynamicLabel {
+        let label = self.ops.new_dynamic_label();
+        dynasm!(self.ops
+            ; =>label
+            ; push rbp
+            ; lea rbp, [rsp + (arity * 8 + 0x10) as _]
+            ; cmp rcx, arity as _
+            ; jne ->fn_arity_mismatch
+        );
+        label
+    }
+    pub fn end_fn(&mut self, start: DynamicLabel) {
+        dynasm!(self.ops
+            ; lea r8, [=>start]
+            ;; call_extern_alloc!(self.ops, alloc_closure)
+            ; push rax
+        )
+    }
+    pub fn ret(&mut self, arity: u8) {
+        dynasm!(self.ops
+            ; pop rax
+            ; lea rsp, [rbp - ((arity * 8 + 0x10) as i32)]
+            ; pop rbp
+            ; ret
+        )
+    }
+    pub fn call(&mut self, arity: u8) {
+        dynasm!(self.ops
+            ; mov rax, [rsp + (arity * 8) as _]
+            ; mov rcx, arity as _
+
+            ; mov r8, rax
+            ; and r8, [->tag_obj]
+            ; cmp r8, [->tag_obj]
+            ; jne ->expected_callable
+
+            ; and rax, [->tag_obj_not]
+            ; cmp [rax], BYTE ObjType::ObjClosure as _
+            ; jne ->expected_callable
+
+            ; mov rax, [rax + 8]
+            ; call rax
+            ; add rsp, (arity * 8) as _
             ; mov [rsp], rax
         )
     }
@@ -436,7 +566,7 @@ impl Emitter {
                 executable_buffer.ptr(self.start),
             )
         };
-        fun(self.globals.as_mut_ptr())
+        fun(unsafe { GLOBALS.as_mut_ptr() })
     }
 }
 
@@ -454,16 +584,50 @@ extern "win64" fn print_value(value: Value) {
     }
 }
 
+extern "win64" fn alloc_closure(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    ptr: *const u8,
+) -> u64 {
+    let closure = ObjClosure::new(ptr, Box::new([]));
+    Value::from(register_object(closure, stack_start..stack_end)).to_bits()
+}
+
+extern "win64" fn concat_strings(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    ptr_a: *const ObjString,
+    ptr_b: *const ObjString,
+) -> u64 {
+    let new_str = unsafe {
+        let a_str = &(*ptr_a).string;
+        let b_str = &(*ptr_b).string;
+        let mut new_str = String::with_capacity(a_str.len() + b_str.len());
+        new_str.push_str(a_str);
+        new_str.push_str(b_str);
+        new_str
+    };
+    Value::from(intern_string(new_str, stack_start..stack_end)).to_bits()
+}
+
 extern "win64" fn expected_number() {
     eprintln!("Operand must be a number.");
 }
 extern "win64" fn expected_numbers() {
     eprintln!("Operands must be numbers.");
 }
+extern "win64" fn expected_numbers_or_strings() {
+    eprintln!("Operands must be numbers or strings.");
+}
 extern "win64" fn uninit_global() {
     eprintln!("Unitialized global variable.");
 }
-
+extern "win64" fn fn_arity_mismatch() {
+    eprintln!("Function arity mismatch.");
+}
+extern "win64" fn expected_callable() {
+    eprintln!("Can only call functions.");
+}
 #[cfg(test)]
 mod tests {
     use super::*;

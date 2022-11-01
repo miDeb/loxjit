@@ -1,1 +1,11 @@
-print false;
+fun foo() {
+    print "0";
+    fun bar() {
+        print "1";
+        return 2;
+    }
+    return bar;
+}
+
+print foo()();
+print fasdf;

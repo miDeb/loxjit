@@ -7,8 +7,7 @@ use std::mem::MaybeUninit;
 use rustc_hash::FxHashMap;
 
 use crate::chunk::Chunk;
-use crate::gc::{GcCell, GcFreeHandle, NoTrace, Trace};
-use crate::interned_strings::InternedString;
+use crate::gc::GcCell;
 use crate::value::Value;
 
 macro_rules! objImpl {
@@ -39,11 +38,11 @@ macro_rules! objImpl {
 
         impl Value {
             pub fn $is_fn(&self) -> bool {
-                self.is_obj() && self.as_obj().borrow().obj_type == ObjType::$obj_name
+                self.is_obj() && self.as_obj().obj_type == ObjType::$obj_name
             }
 
             pub fn $as_fn(&self) -> GcCell<$obj_name> {
-                debug_assert_eq!(self.as_obj().borrow().obj_type, ObjType::$obj_name);
+                debug_assert_eq!(self.as_obj().obj_type, ObjType::$obj_name);
                 unsafe { self.as_obj().cast() }
             }
         }
@@ -97,6 +96,7 @@ objImpl!(
 );
 
 #[derive(PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum ObjType {
     ObjFunction,
     NativeFn,
@@ -112,21 +112,6 @@ pub enum ObjType {
 #[repr(C)]
 pub struct ObjHeader {
     pub obj_type: ObjType,
-}
-
-impl Trace for ObjHeader {
-    fn trace(&self) {
-        match self.obj_type {
-            ObjType::ObjFunction => self.as_obj_function().trace(),
-            ObjType::NativeFn => self.as_native_fn().trace(),
-            ObjType::ObjString => self.as_obj_string().trace(),
-            ObjType::ObjClosure => self.as_obj_closure().trace(),
-            ObjType::ObjUpvalue => self.as_obj_upvalue().trace(),
-            ObjType::ObjClass => self.as_obj_class().trace(),
-            ObjType::ObjInstance => self.as_obj_instance().trace(),
-            ObjType::ObjBoundMethod => self.as_obj_bound_method().trace(),
-        }
-    }
 }
 
 impl Display for ObjHeader {
@@ -166,10 +151,6 @@ impl ObjString {
         }
     }
 }
-
-impl InternedString for ObjString {}
-
-impl NoTrace for ObjString {}
 
 impl Display for ObjString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -213,12 +194,6 @@ impl ObjFunction {
     }
 }
 
-impl Trace for ObjFunction {
-    fn trace(&self) {
-        self.chunk.trace()
-    }
-}
-
 impl Display for ObjFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(name) = &self.name {
@@ -247,8 +222,6 @@ impl NativeFn {
     }
 }
 
-impl NoTrace for NativeFn {}
-
 impl Display for NativeFn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<native fn>")
@@ -259,30 +232,23 @@ impl Display for NativeFn {
 pub struct ObjClosure {
     header: ObjHeader,
 
-    pub function: GcCell<ObjFunction>,
+    pub function: *const u8,
     pub upvalues: Box<[Option<GcCell<ObjUpvalue>>]>,
 }
 
-impl From<GcCell<ObjFunction>> for ObjClosure {
-    fn from(fun: GcCell<ObjFunction>) -> Self {
+impl ObjClosure {
+    pub fn new(function: *const u8, upvalues: Box<[Option<GcCell<ObjUpvalue>>]>) -> Self {
         Self {
             header: Self::header(),
-            upvalues: vec![None; fun.borrow().upvalue_count].into_boxed_slice(),
-            function: fun,
+            function,
+            upvalues,
         }
     }
 }
 
 impl Display for ObjClosure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", *self.function.borrow())
-    }
-}
-
-impl Trace for ObjClosure {
-    fn trace(&self) {
-        self.function.trace();
-        self.upvalues.trace();
+        write!(f, "closure")
     }
 }
 
@@ -295,12 +261,6 @@ pub struct ObjUpvalue {
     pub closed: MaybeUninit<Value>,
 }
 
-impl Trace for ObjUpvalue {
-    fn trace(&self) {
-        unsafe { &*self.location }.trace()
-    }
-}
-
 impl Display for ObjUpvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "upvalue")
@@ -310,7 +270,7 @@ impl Display for ObjUpvalue {
 #[repr(C)]
 pub struct ObjClass {
     header: ObjHeader,
-    name: GcCell<ObjString>,
+    pub name: GcCell<ObjString>,
     pub methods: FxHashMap<GcCell<ObjString>, GcCell<ObjClosure>>,
 }
 
@@ -321,14 +281,6 @@ impl ObjClass {
             name,
             methods: Default::default(),
         }
-    }
-}
-
-impl Trace for ObjClass {
-    fn trace(&self) {
-        self.name.trace();
-        self.methods.keys().for_each(Trace::trace);
-        self.methods.values().for_each(Trace::trace);
     }
 }
 
@@ -351,16 +303,6 @@ impl ObjInstance {
             header: Self::header(),
             class,
             fields: Default::default(),
-        }
-    }
-}
-
-impl Trace for ObjInstance {
-    fn trace(&self) {
-        self.class.trace();
-        for (key, value) in self.fields.iter() {
-            key.trace();
-            value.trace();
         }
     }
 }
@@ -388,30 +330,8 @@ impl ObjBoundMethod {
     }
 }
 
-impl Trace for ObjBoundMethod {
-    fn trace(&self) {
-        self.receiver.trace();
-        self.method.trace();
-    }
-}
-
 impl Display for ObjBoundMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.method.borrow().function)
-    }
-}
-
-pub fn free_obj(handle: GcFreeHandle<ObjString>) {
-    unsafe {
-        match handle.get::<ObjHeader>().obj_type {
-            ObjType::ObjFunction => handle.free::<ObjFunction>(),
-            ObjType::NativeFn => handle.free::<NativeFn>(),
-            ObjType::ObjString => handle.free_interned_string(),
-            ObjType::ObjClosure => handle.free::<ObjClosure>(),
-            ObjType::ObjUpvalue => handle.free::<ObjUpvalue>(),
-            ObjType::ObjClass => handle.free::<ObjClass>(),
-            ObjType::ObjInstance => handle.free::<ObjInstance>(),
-            ObjType::ObjBoundMethod => handle.free::<ObjBoundMethod>(),
-        }
+        write!(f, "objBoundMethod")
     }
 }

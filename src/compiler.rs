@@ -5,16 +5,16 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use replace_with::replace_with_or_abort;
 
 use crate::emitter::GlobalVarIndex;
+use crate::gc::intern_const_string;
 use crate::{
     chunk::{Chunk, OpCode},
     common::DEBUG_PRINT_CODE,
     emitter::Emitter,
     errors::{CompileError, CompileResult},
-    gc::{GarbageCollector, GcCell},
+    gc::GcCell,
     object::{ObjFunction, ObjString},
     scanner::{Scanner, Token, TokenType},
     value::Value,
-    vm::Vm,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive)]
@@ -33,20 +33,20 @@ enum Precedence {
     Primary,
 }
 
-type ParseFn<'a, 'b> = fn(&mut Parser<'a, 'b>, can_assign: bool) -> CompileResult<()>;
+type ParseFn<'a> = fn(&mut Parser<'a>, can_assign: bool) -> CompileResult<()>;
 
-struct ParseRule<'a, 'b> {
-    prefix: Option<ParseFn<'a, 'b>>,
-    infix: Option<ParseFn<'a, 'b>>,
+struct ParseRule<'a> {
+    prefix: Option<ParseFn<'a>>,
+    infix: Option<ParseFn<'a>>,
     precedence: Precedence,
 }
 
-impl<'a, 'b> ParseRule<'a, 'b> {
-    fn get_rule(token_type: TokenType) -> ParseRule<'a, 'b> {
+impl<'a> ParseRule<'a> {
+    fn get_rule(token_type: TokenType) -> ParseRule<'a> {
         match token_type {
             TokenType::LeftParen => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::grouping),
-                infix: Some(Parser::<'a, 'b>::call),
+                prefix: Some(Parser::<'a>::grouping),
+                infix: Some(Parser::<'a>::call),
                 precedence: Precedence::Call,
             },
             TokenType::RightParen => ParseRule {
@@ -71,17 +71,17 @@ impl<'a, 'b> ParseRule<'a, 'b> {
             },
             TokenType::Dot => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::dot),
+                infix: Some(Parser::<'a>::dot),
                 precedence: Precedence::Call,
             },
             TokenType::Minus => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::unary),
-                infix: Some(Parser::<'a, 'b>::binary),
+                prefix: Some(Parser::<'a>::unary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Term,
             },
             TokenType::Plus => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Term,
             },
             TokenType::Semicolon => ParseRule {
@@ -91,22 +91,22 @@ impl<'a, 'b> ParseRule<'a, 'b> {
             },
             TokenType::Slash => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Factor,
             },
             TokenType::Star => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Factor,
             },
             TokenType::Bang => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::unary),
+                prefix: Some(Parser::<'a>::unary),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::BangEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Equality,
             },
             TokenType::Equal => ParseRule {
@@ -116,47 +116,47 @@ impl<'a, 'b> ParseRule<'a, 'b> {
             },
             TokenType::EqualEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Equality,
             },
             TokenType::Greater => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::GreaterEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::Less => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::LessEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::binary),
+                infix: Some(Parser::<'a>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::Identifier => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::variable),
+                prefix: Some(Parser::<'a>::variable),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::String => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::string),
+                prefix: Some(Parser::<'a>::string),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::Number => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::number),
+                prefix: Some(Parser::<'a>::number),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::And => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::and),
+                infix: Some(Parser::<'a>::and),
                 precedence: Precedence::And,
             },
             TokenType::Class => ParseRule {
@@ -170,7 +170,7 @@ impl<'a, 'b> ParseRule<'a, 'b> {
                 precedence: Precedence::None,
             },
             TokenType::False => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::literal),
+                prefix: Some(Parser::<'a>::literal),
                 infix: None,
                 precedence: Precedence::None,
             },
@@ -190,13 +190,13 @@ impl<'a, 'b> ParseRule<'a, 'b> {
                 precedence: Precedence::None,
             },
             TokenType::Nil => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::literal),
+                prefix: Some(Parser::<'a>::literal),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::Or => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a, 'b>::or),
+                infix: Some(Parser::<'a>::or),
                 precedence: Precedence::Or,
             },
             TokenType::Print => ParseRule {
@@ -210,17 +210,17 @@ impl<'a, 'b> ParseRule<'a, 'b> {
                 precedence: Precedence::None,
             },
             TokenType::Super => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::super_),
+                prefix: Some(Parser::<'a>::super_),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::This => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::this),
+                prefix: Some(Parser::<'a>::this),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::True => ParseRule {
-                prefix: Some(Parser::<'a, 'b>::literal),
+                prefix: Some(Parser::<'a>::literal),
                 infix: None,
                 precedence: Precedence::None,
             },
@@ -339,7 +339,7 @@ impl<'a> Compiler<'a> {
         fun_name: Option<Box<str>>,
         enclosing: Option<Box<Compiler<'a>>>,
     ) -> Self {
-        let mut compiler = Self {
+        let compiler = Self {
             function: Box::new(ObjFunction::new(0, Chunk::new(), fun_name)),
             fun_type,
             locals: Vec::with_capacity(u8::MAX as usize + 1),
@@ -348,7 +348,7 @@ impl<'a> Compiler<'a> {
             upvalues: [MaybeUninit::uninit(); 256],
         };
 
-        compiler.locals.push(Local {
+        /* compiler.locals.push(Local {
             name: if fun_type == FunctionType::Function {
                 ""
             } else {
@@ -356,7 +356,7 @@ impl<'a> Compiler<'a> {
             },
             depth: 0,
             is_captured: false,
-        });
+        }); */
 
         compiler
     }
@@ -367,20 +367,19 @@ struct ClassCompiler {
     has_superclass: bool,
 }
 
-pub struct Parser<'a, 'b> {
+pub struct Parser<'a> {
     current: Token<'a>,
     previous: Token<'a>,
     scanner: Scanner<'a>,
     had_error: bool,
     compiler: Box<Compiler<'a>>,
     class_compiler: Option<Box<ClassCompiler>>,
-    gc: &'b mut GarbageCollector<Vm, ObjString>,
     emitter: Emitter,
     globals: HashMap<GcCell<ObjString>, GlobalVarIndex>,
 }
 
-impl<'a, 'b> Parser<'a, 'b> {
-    pub fn new(source: &'a str, gc: &'b mut GarbageCollector<Vm, ObjString>) -> Self {
+impl<'a> Parser<'a> {
+    pub fn new(source: &'a str) -> Self {
         Self {
             current: Token {
                 token_type: TokenType::Error,
@@ -395,7 +394,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             scanner: Scanner::new(source),
             had_error: false,
             compiler: Box::new(Compiler::new(FunctionType::Script, None, None)),
-            gc,
             class_compiler: None,
             emitter: Emitter::new(),
             globals: HashMap::new(),
@@ -457,7 +455,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn emit_byte(&mut self, byte: impl Into<u8>) {
         let line = self.previous.line;
         self.current_chunk().push(byte.into(), line);
-        unreachable!("Should not be called while developing the compiler!");
+        panic!("Should not be called while developing the compiler!");
     }
 
     fn emit_bytes(&mut self, byte1: impl Into<u8>, byte2: impl Into<u8>) {
@@ -507,12 +505,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn emit_return(&mut self) {
         match self.compiler.fun_type {
-            FunctionType::Function | FunctionType::Method => self.emit_bytes(OpCode::GetLocal, 0),
-            FunctionType::Initializer => self.emit_byte(OpCode::Nil),
+            FunctionType::Initializer => self.emit_bytes(OpCode::GetLocal, 0),
+            FunctionType::Function | FunctionType::Method => self.emitter.nil(),
             FunctionType::Script => return,
         }
 
-        self.emit_byte(OpCode::Return)
+        self.emitter.ret(self.compiler.function.arity)
     }
 
     fn expression(&mut self) -> CompileResult<()> {
@@ -592,7 +590,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn call(&mut self, _can_assign: bool) -> CompileResult<()> {
         let arg_count = self.argument_list()?;
-        self.emit_bytes(OpCode::Call, arg_count);
+        self.emitter.call(arg_count);
         Ok(())
     }
 
@@ -633,10 +631,11 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn string(&mut self, _can_assign: bool) -> CompileResult<()> {
-        let obj = self.gc.intern_string(ObjString::new(
+        let obj = intern_const_string(
             self.previous.source[1..self.previous.source.len() - 1].to_string(),
-        ));
-        self.emit_constant(Value::from_obj(unsafe { obj.cast() }))
+        );
+        self.emitter.value(Value::from_obj(unsafe { obj.cast() }));
+        Ok(())
     }
 
     fn variable(&mut self, can_assign: bool) -> CompileResult<()> {
@@ -735,8 +734,10 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn identifier_constant(&mut self, name: &str) -> CompileResult<u8> {
-        let obj = self.gc.intern_string(ObjString::new(name.to_string()));
-        self.make_constant(Value::from_obj(unsafe { obj.cast() }))
+        let obj = intern_const_string(name.to_string());
+        let value: Value = obj.into();
+        assert!(value.is_obj_string());
+        self.make_constant(value)
     }
 
     fn add_local(&mut self, name: &'a str) -> CompileResult<()> {
@@ -870,7 +871,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         } else {
             self.expression()?;
             self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
-            self.emit_byte(OpCode::Return);
+            self.emitter.ret(self.compiler.function.arity);
             Ok(())
         }
     }
@@ -908,6 +909,9 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn function(&mut self, function_type: FunctionType) -> CompileResult<()> {
+        let jmp = self.emitter.get_new_label();
+        self.emitter.jump(jmp);
+
         replace_with_or_abort(&mut self.compiler, |compiler| {
             Box::new(Compiler::new(
                 function_type,
@@ -933,6 +937,20 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
             }
         }
+        let label = self.emitter.start_fn(self.compiler.function.arity);
+
+        // JIT needs to preserve rbp and rip here. Don't use those spots.
+        self.compiler.locals.push(Local {
+            name: "",
+            depth: 0,
+            is_captured: false,
+        });
+        self.compiler.locals.push(Local {
+            name: "",
+            depth: 0,
+            is_captured: false,
+        });
+
         self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
         self.consume(TokenType::LeftBrace, "Expect '{' before function body.")?;
         self.block()?;
@@ -942,11 +960,13 @@ impl<'a, 'b> Parser<'a, 'b> {
         let compiler = std::mem::replace(&mut self.compiler, enclosing.unwrap());
         let upvalue_count = compiler.function.upvalue_count;
 
-        let value =
+        /*let value =
             Value::from_obj(unsafe { GcCell::new(*compiler.function, &mut self.gc).cast() });
-        let byte2 = self.make_constant(value)?;
+        let byte2 = self.make_constant(value)?;*/
 
-        self.emit_bytes(OpCode::Closure, byte2);
+        self.emitter.set_jump_target(jmp);
+
+        self.emitter.end_fn(label);
 
         for i in 0..upvalue_count {
             let upvalue = unsafe { compiler.upvalues[i].assume_init_ref() };
@@ -1130,12 +1150,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         } else {
             Ok(())
         }
-    }
-
-    fn emit_constant(&mut self, value: Value) -> CompileResult<()> {
-        let constant = self.make_constant(value)?;
-        self.emit_bytes(OpCode::Constant, constant);
-        Ok(())
     }
 
     fn make_constant(&mut self, value: Value) -> CompileResult<u8> {
