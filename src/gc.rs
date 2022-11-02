@@ -90,7 +90,7 @@ impl GC {
         }
     }
 
-    fn register_object<T>(&mut self, val: T, stack: Option<Range<*const Value>>) -> GcCell<T> {
+    fn register_object<T>(&mut self, value: T, stack: Option<Range<*const Value>>) -> GcCell<T> {
         self.occupied += std::mem::size_of::<GcInner<T>>();
 
         if let Some(stack) = stack && (self.occupied > self.next_gc || DEBUG_STRESS_GC) {
@@ -100,7 +100,7 @@ impl GC {
         let mut next = Box::new(GcInner {
             flag: GcFlags::Unmarked,
             next: self.first,
-            value: val,
+            value,
         });
         let ptr = NonNull::from(&mut next.value);
 
@@ -214,8 +214,16 @@ impl GC {
                 ObjType::ObjFunction | ObjType::NativeFn | ObjType::ObjString => {}
                 ObjType::ObjClosure => {
                     let closure = obj.as_obj_closure();
+                    let upvalues = unsafe {
+                        Vec::from_raw_parts(
+                            closure.upvalues.0,
+                            closure.upvalues.1,
+                            closure.upvalues.2,
+                        )
+                    };
                     self.gray_objects
-                        .extend(closure.upvalues.iter().flatten().map(|v| Value::from(*v)));
+                        .extend(upvalues.iter().map(|v| Value::from(*v)));
+                    std::mem::forget(upvalues);
                 }
                 ObjType::ObjUpvalue => {
                     let upvalue = obj.as_obj_upvalue();

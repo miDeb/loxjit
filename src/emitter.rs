@@ -1,5 +1,8 @@
-use crate::gc::{intern_string, register_object};
-use crate::object::{ObjClosure, ObjString, ObjType};
+use std::mem::MaybeUninit;
+use std::ops::Range;
+
+use crate::gc::{intern_string, register_object, GcCell};
+use crate::object::{ObjClosure, ObjString, ObjType, ObjUpvalue};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
@@ -102,6 +105,13 @@ enum BinaryOp {
 
 #[derive(Clone, Copy)]
 pub struct GlobalVarIndex(i32);
+
+#[derive(Clone, Copy)]
+pub struct FnInfo {
+    start: DynamicLabel,
+    epilogue: DynamicLabel,
+    arity: u8,
+}
 
 pub struct Emitter {
     ops: Assembler,
@@ -252,6 +262,45 @@ impl Emitter {
     pub fn get_local(&mut self, index: u8) {
         dynasm!(self.ops
             ; push QWORD [rbp - (index as i32 * 8 + 8)]
+        )
+    }
+
+    pub fn set_upvalue(&mut self, index: u8) {
+        dynasm!(self.ops
+            ; mov rax, [rbp]
+            // rax: ptr to ObjClosure
+            ; and rax, [->tag_obj_not]
+
+            // rax: ptr to GcCell<Upvalue>s
+            ; mov rax, [rax + 0x10]
+
+            // rax: ptr to Upvalue
+            ; mov rax, [rax + 0x8 * index as i32]
+
+            // rax: ptr to actual value
+            ; mov rax, [rax + 0x8]
+
+            ; mov rcx, [rsp]
+            ; mov [rax], rcx
+        )
+    }
+
+    pub fn get_upvalue(&mut self, index: u8) {
+        dynasm!(self.ops
+            ; mov rax, [rbp]
+            // rax: ptr to ObjClosure
+            ; and rax, [->tag_obj_not]
+
+            // rax: ptr to GcCell<Upvalue>s
+            ; mov rax, [rax + 0x10]
+
+            // rax: ptr to Upvalue
+            ; mov rax, [rax + 0x8 * index as i32]
+
+            // rax: ptr to actual value
+            ; mov rax, [rax + 0x8]
+
+            ; push QWORD [rax]
         )
     }
 
@@ -463,30 +512,65 @@ impl Emitter {
         )
     }
 
-    pub fn start_fn(&mut self, arity: u8) -> DynamicLabel {
-        let label = self.ops.new_dynamic_label();
+    pub fn start_fn(&mut self, arity: u8) -> FnInfo {
+        let start = self.ops.new_dynamic_label();
         dynasm!(self.ops
-            ; =>label
+            ; =>start
             ; push rbp
             ; lea rbp, [rsp + (arity * 8 + 0x10) as _]
             ; cmp rcx, arity as _
             ; jne ->fn_arity_mismatch
         );
-        label
+        FnInfo {
+            arity,
+            start,
+            epilogue: self.ops.new_dynamic_label(),
+        }
     }
-    pub fn end_fn(&mut self, start: DynamicLabel) {
+    pub fn fn_epilogue(&mut self, fn_info: FnInfo) {
         dynasm!(self.ops
-            ; lea r8, [=>start]
+            ; => fn_info.epilogue
+            ; mov rcx, rbp
+            ;; call_extern!(self.ops, close_upvalues)
+            ; pop rax
+            ; lea rsp, [rbp - ((fn_info.arity * 8 + 0x10) as i32)]
+            ; pop rbp
+            ; ret
+        )
+    }
+    pub fn close_upvalue(&mut self) {
+        dynasm!(self.ops
+            ; mov rcx, rsp
+            ;; call_extern!(self.ops, close_upvalues)
+            ; add rsp, 0x8
+        );
+    }
+    pub fn end_fn(
+        &mut self,
+        fn_info: FnInfo,
+        upvalues: impl ExactSizeIterator<Item = (bool, u8)> + DoubleEndedIterator<Item = (bool, u8)>,
+    ) {
+        let len = upvalues.len();
+        for (is_local, index) in upvalues.rev() {
+            dynasm!(self.ops
+                ; push is_local as _
+                ; push index as _
+            )
+        }
+        dynasm!(self.ops
+            ; lea r8, [=>fn_info.start]
+            ; push rbp
+            ; push r8
+            ; mov r8, rsp
+            ; mov r9, len as _
             ;; call_extern_alloc!(self.ops, alloc_closure)
+            ; add rsp, 0x10 + 0x10 * len as i32
             ; push rax
         )
     }
-    pub fn ret(&mut self, arity: u8) {
+    pub fn ret(&mut self, fn_info: FnInfo) {
         dynasm!(self.ops
-            ; pop rax
-            ; lea rsp, [rbp - ((arity * 8 + 0x10) as i32)]
-            ; pop rbp
-            ; ret
+            ; jmp =>fn_info.epilogue
         )
     }
     pub fn call(&mut self, arity: u8) {
@@ -584,12 +668,50 @@ extern "win64" fn print_value(value: Value) {
     }
 }
 
+extern "win64" fn close_upvalues(last: *mut Value) {
+    while let Some(upvalue) = &mut unsafe{OPEN_UPVALUES} && upvalue.location <= last {
+        let value = unsafe { *upvalue.location };
+        upvalue.closed.write(value);
+        upvalue.location = upvalue.closed.as_mut_ptr();
+        unsafe{ OPEN_UPVALUES = upvalue.next; }
+    }
+}
+
 extern "win64" fn alloc_closure(
     stack_start: *const Value,
     stack_end: *const Value,
-    ptr: *const u8,
+    args_ptr: *mut u8,
+    args_count: i32,
 ) -> u64 {
-    let closure = ObjClosure::new(ptr, Box::new([]));
+    let instructions_ptr: *const u8 = unsafe { *args_ptr.cast() };
+
+    let mut upvalues = Vec::with_capacity(args_count as usize);
+
+    for i in 0..(args_count as usize) {
+        let base_ptr = unsafe { *args_ptr.add(0x8).cast::<*mut u8>() };
+        let index = unsafe { *args_ptr.add(0x10 + i * 0x10).cast::<i32>() };
+        let is_local = unsafe { *args_ptr.add(0x18 + i * 0x10).cast::<i32>() } != 0;
+
+        upvalues.push(if is_local {
+            let upvalue = capture_upvalue(
+                unsafe { base_ptr.sub(index as usize * 0x8 + 0x8).cast() },
+                stack_start..stack_end,
+            );
+            unsafe {
+                // Write the upvalue to the stack (temporarily) so it is not gc'ed
+                args_ptr
+                    .add(0x10 + i * 0x10)
+                    .cast::<Value>()
+                    .write(upvalue.into());
+            }
+            upvalue
+        } else {
+            let closure = unsafe { *base_ptr.cast::<Value>() }.as_obj_closure();
+            unsafe { *closure.upvalues.0.add(index as usize) }
+        })
+    }
+
+    let closure = ObjClosure::new(instructions_ptr, upvalues);
     Value::from(register_object(closure, stack_start..stack_end)).to_bits()
 }
 
@@ -627,6 +749,41 @@ extern "win64" fn fn_arity_mismatch() {
 }
 extern "win64" fn expected_callable() {
     eprintln!("Can only call functions.");
+}
+
+static mut OPEN_UPVALUES: Option<GcCell<ObjUpvalue>> = None;
+
+fn capture_upvalue(local: *mut Value, stack: Range<*const Value>) -> GcCell<ObjUpvalue> {
+    let mut prev_upvalue = None;
+    let mut upvalue = unsafe { OPEN_UPVALUES };
+    while let Some(current_upvalue) = &mut upvalue && current_upvalue.location > local {
+        prev_upvalue = Some(*current_upvalue);
+        upvalue = current_upvalue.next;
+    }
+
+    if let Some(upvalue) = upvalue && upvalue.location == local {
+        return upvalue;
+    }
+
+    let created_upvalue = register_object(
+        ObjUpvalue {
+            header: ObjUpvalue::header(),
+            location: local,
+            next: None,
+            closed: MaybeUninit::uninit(),
+        },
+        stack,
+    );
+
+    if let Some(prev_upvalue) = &mut prev_upvalue {
+        prev_upvalue.next = Some(created_upvalue);
+    } else {
+        unsafe {
+            OPEN_UPVALUES = Some(created_upvalue);
+        }
+    }
+
+    created_upvalue
 }
 #[cfg(test)]
 mod tests {

@@ -1,11 +1,31 @@
-fun foo() {
-    print "0";
-    fun bar() {
-        print "1";
-        return 2;
-    }
-    return bar;
+fun clobber () {
+	var a = 12345;
+	var b = 12345;
+	var c = 12345;
+	var d = 12345;
+	var e = 12345;
+	var f = 12345;
 }
 
-print foo()();
-print fasdf;
+fun outer () {
+	var foo = 10;
+	fun inner () {
+		var foo2 = 5;
+		fun inner2 () {
+			print foo2;
+			print foo;
+		}
+
+		clobber();
+		return inner2;
+	}
+
+	clobber();
+	return inner;
+}
+
+var closure = outer();
+clobber();
+closure = closure();
+clobber();
+closure();

@@ -340,7 +340,7 @@ impl<'a> Compiler<'a> {
         enclosing: Option<Box<Compiler<'a>>>,
     ) -> Self {
         let compiler = Self {
-            function: Box::new(ObjFunction::new(0, Chunk::new(), fun_name)),
+            function: Box::new(ObjFunction::new(0, Chunk::new(), fun_name, None)),
             fun_type,
             locals: Vec::with_capacity(u8::MAX as usize + 1),
             scope_depth: 0,
@@ -495,7 +495,7 @@ impl<'a> Parser<'a> {
         {
             let local = self.compiler.locals.last().unwrap();
             if local.is_captured {
-                self.emit_byte(OpCode::CloseUpvalue);
+                self.emitter.close_upvalue();
             } else {
                 self.emitter.pop();
             }
@@ -510,7 +510,7 @@ impl<'a> Parser<'a> {
             FunctionType::Script => return,
         }
 
-        self.emitter.ret(self.compiler.function.arity)
+        self.emitter.ret(self.compiler.function.fn_info.unwrap())
     }
 
     fn expression(&mut self) -> CompileResult<()> {
@@ -680,33 +680,31 @@ impl<'a> Parser<'a> {
     }
 
     fn named_variable(&mut self, name: &'a str, can_assign: bool) -> CompileResult<()> {
-        let (arg, get_op, set_op) = if let Some(arg) = self.compiler.resolve_local(name)? {
+        if let Some(index) = self.compiler.resolve_local(name)? {
             if can_assign && self.match_token(TokenType::Equal)? {
                 self.expression()?;
-                self.emitter.set_local(arg);
+                self.emitter.set_local(index);
             } else {
-                self.emitter.get_local(arg);
+                self.emitter.get_local(index);
             }
-            return Ok(());
-        } else if let Some(arg) = self.compiler.resolve_upvalue(name)? {
-            (arg, OpCode::GetUpvalue, OpCode::SetUpvalue)
+        } else if let Some(index) = self.compiler.resolve_upvalue(name)? {
+            if can_assign && self.match_token(TokenType::Equal)? {
+                self.expression()?;
+                self.emitter.set_upvalue(index);
+            } else {
+                self.emitter.get_upvalue(index);
+            }
         } else {
             let constant = self.identifier_constant(name)?;
-            let var = self.get_global_var_index(constant);
+            let index = self.get_global_var_index(constant);
             if can_assign && self.match_token(TokenType::Equal)? {
                 self.expression()?;
-                self.emitter.set_global(var);
+                self.emitter.set_global(index);
             } else {
-                self.emitter.get_global(var);
+                self.emitter.get_global(index);
             }
-            return Ok(());
-        };
-        if can_assign && self.match_token(TokenType::Equal)? {
-            self.expression()?;
-            self.emit_bytes(set_op, arg);
-        } else {
-            self.emit_bytes(get_op, arg);
         }
+
         Ok(())
     }
 
@@ -871,7 +869,7 @@ impl<'a> Parser<'a> {
         } else {
             self.expression()?;
             self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
-            self.emitter.ret(self.compiler.function.arity);
+            self.emitter.ret(self.compiler.function.fn_info.unwrap());
             Ok(())
         }
     }
@@ -937,7 +935,8 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        let label = self.emitter.start_fn(self.compiler.function.arity);
+        let fn_info = self.emitter.start_fn(self.compiler.function.arity);
+        self.compiler.function.fn_info = Some(fn_info);
 
         // JIT needs to preserve rbp and rip here. Don't use those spots.
         self.compiler.locals.push(Local {
@@ -960,18 +959,17 @@ impl<'a> Parser<'a> {
         let compiler = std::mem::replace(&mut self.compiler, enclosing.unwrap());
         let upvalue_count = compiler.function.upvalue_count;
 
-        /*let value =
-            Value::from_obj(unsafe { GcCell::new(*compiler.function, &mut self.gc).cast() });
-        let byte2 = self.make_constant(value)?;*/
+        self.emitter.fn_epilogue(fn_info);
 
         self.emitter.set_jump_target(jmp);
 
-        self.emitter.end_fn(label);
-
-        for i in 0..upvalue_count {
-            let upvalue = unsafe { compiler.upvalues[i].assume_init_ref() };
-            self.emit_bytes(if upvalue.is_local { 1 } else { 0 }, upvalue.index);
-        }
+        self.emitter.end_fn(
+            fn_info,
+            (0..upvalue_count).map(|i| {
+                let upvalue = unsafe { compiler.upvalues[i].assume_init_ref() };
+                (upvalue.is_local, upvalue.index)
+            }),
+        );
 
         Ok(())
     }

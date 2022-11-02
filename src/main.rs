@@ -5,6 +5,7 @@
 #![feature(cell_update)]
 #![feature(let_chains)]
 #![feature(slice_from_ptr_range)]
+#![feature(vec_into_raw_parts)]
 
 #[macro_use]
 extern crate lazy_static;

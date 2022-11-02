@@ -7,6 +7,7 @@ use std::mem::MaybeUninit;
 use rustc_hash::FxHashMap;
 
 use crate::chunk::Chunk;
+use crate::emitter::FnInfo;
 use crate::gc::GcCell;
 use crate::value::Value;
 
@@ -180,16 +181,18 @@ pub struct ObjFunction {
     pub chunk: Chunk,
     pub name: Option<Box<str>>,
     pub upvalue_count: usize,
+    pub fn_info: Option<FnInfo>,
 }
 
 impl ObjFunction {
-    pub fn new(arity: u8, chunk: Chunk, name: Option<Box<str>>) -> Self {
+    pub fn new(arity: u8, chunk: Chunk, name: Option<Box<str>>, fn_info: Option<FnInfo>) -> Self {
         Self {
             header: Self::header(),
             arity,
             chunk,
             name,
             upvalue_count: 0,
+            fn_info,
         }
     }
 }
@@ -233,15 +236,15 @@ pub struct ObjClosure {
     header: ObjHeader,
 
     pub function: *const u8,
-    pub upvalues: Box<[Option<GcCell<ObjUpvalue>>]>,
+    pub upvalues: (*mut GcCell<ObjUpvalue>, usize, usize),
 }
 
 impl ObjClosure {
-    pub fn new(function: *const u8, upvalues: Box<[Option<GcCell<ObjUpvalue>>]>) -> Self {
+    pub fn new(function: *const u8, upvalues: Vec<GcCell<ObjUpvalue>>) -> Self {
         Self {
             header: Self::header(),
             function,
-            upvalues,
+            upvalues: upvalues.into_raw_parts(),
         }
     }
 }
