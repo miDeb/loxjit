@@ -7,7 +7,7 @@ pub const QNAN: u64 = 0x7ffc000000000000;
 const TAG_NIL: u64 = 1;
 const TAG_FALSE: u64 = 2;
 const TAG_TRUE: u64 = 3;
-const TAG_UNINIT: u64 = 3;
+const TAG_UNINIT: u64 = 4;
 
 pub const SIGN_BIT: u64 = 0x8000000000000000;
 

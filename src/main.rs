@@ -56,6 +56,7 @@ fn repl() {
         // and produce wrong results in subsequent invocations.
         print!("> ");
         std::io::stdout().flush().unwrap();
+        std::io::stderr().flush().unwrap();
     }
 }
 
@@ -66,6 +67,7 @@ fn runfile(path: OsString) {
     };
     let result = interpret(&source, &mut Emitter::new(), &mut Default::default());
     std::io::stdout().flush().unwrap();
+    std::io::stderr().flush().unwrap();
     match result {
         vm::InterpretResult::CompileError => std::process::exit(65),
         vm::InterpretResult::RuntimeError => std::process::exit(70),

@@ -675,15 +675,6 @@ extern "win64" fn print_value(value: Value) {
     }
 }
 
-extern "win64" fn close_upvalues(last: *mut Value) {
-    while let Some(upvalue) = &mut unsafe{OPEN_UPVALUES} && upvalue.location <= last {
-        let value = unsafe { *upvalue.location };
-        upvalue.closed.write(value);
-        upvalue.location = upvalue.closed.as_mut_ptr();
-        unsafe{ OPEN_UPVALUES = upvalue.next; }
-    }
-}
-
 extern "win64" fn alloc_closure(
     stack_start: *const Value,
     stack_end: *const Value,
@@ -755,7 +746,7 @@ extern "win64" fn fn_arity_mismatch() {
     eprintln!("Function arity mismatch.");
 }
 extern "win64" fn expected_callable() {
-    eprintln!("Can only call functions.");
+    eprintln!("Can only call functions and classes.");
 }
 
 static mut OPEN_UPVALUES: Option<GcCell<ObjUpvalue>> = None;
@@ -763,8 +754,8 @@ static mut OPEN_UPVALUES: Option<GcCell<ObjUpvalue>> = None;
 fn capture_upvalue(local: *mut Value, stack: Range<*const Value>) -> GcCell<ObjUpvalue> {
     let mut prev_upvalue = None;
     let mut upvalue = unsafe { OPEN_UPVALUES };
-    while let Some(current_upvalue) = &mut upvalue && current_upvalue.location > local {
-        prev_upvalue = Some(*current_upvalue);
+    while let Some(current_upvalue) = upvalue && current_upvalue.location < local {
+        prev_upvalue = upvalue;
         upvalue = current_upvalue.next;
     }
 
@@ -772,7 +763,7 @@ fn capture_upvalue(local: *mut Value, stack: Range<*const Value>) -> GcCell<ObjU
         return upvalue;
     }
 
-    let created_upvalue = register_object(
+    let mut created_upvalue = register_object(
         ObjUpvalue {
             header: ObjUpvalue::header(),
             location: local,
@@ -781,6 +772,7 @@ fn capture_upvalue(local: *mut Value, stack: Range<*const Value>) -> GcCell<ObjU
         },
         stack,
     );
+    created_upvalue.next = upvalue;
 
     if let Some(prev_upvalue) = &mut prev_upvalue {
         prev_upvalue.next = Some(created_upvalue);
@@ -792,6 +784,16 @@ fn capture_upvalue(local: *mut Value, stack: Range<*const Value>) -> GcCell<ObjU
 
     created_upvalue
 }
+
+extern "win64" fn close_upvalues(last: *mut Value) {
+    while let Some(upvalue) = &mut unsafe{OPEN_UPVALUES} && upvalue.location <= last {
+        let value = unsafe { *upvalue.location };
+        upvalue.closed.write(value);
+        upvalue.location = upvalue.closed.as_mut_ptr();
+        unsafe{ OPEN_UPVALUES = upvalue.next; }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

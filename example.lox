@@ -1,31 +1,10 @@
-fun clobber () {
-	var a = 12345;
-	var b = 12345;
-	var c = 12345;
-	var d = 12345;
-	var e = 12345;
-	var f = 12345;
-}
+// Evaluate the 'then' expression if the condition is true.
+if (true) print "good"; // expect: good
+if (false) print "bad";
 
-fun outer () {
-	var foo = 10;
-	fun inner () {
-		var foo2 = 5;
-		fun inner2 () {
-			print foo2;
-			print foo;
-		}
+// Allow block body.
+if (true) { print "block"; } // expect: block
 
-		clobber();
-		return inner2;
-	}
-
-	clobber();
-	return inner;
-}
-
-var closure = outer();
-clobber();
-closure = closure();
-clobber();
-closure();
+// Assignment in if condition.
+var a = false;
+if (a = true) print a; // expect: true

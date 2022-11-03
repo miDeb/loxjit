@@ -448,7 +448,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         match token.token_type {
             TokenType::Eof => write!(&mut error, " at end").unwrap(),
             TokenType::Error => {}
-            _ => write!(&mut error, " at {}", token.source).unwrap(),
+            _ => write!(&mut error, " at '{}'", token.source).unwrap(),
         }
         write!(&mut error, ": {}", message).unwrap();
         let mut error: CompileError = error.into();
@@ -514,7 +514,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             FunctionType::Script => return,
         }
 
-        self.emitter.ret(self.compiler.function.fn_info.unwrap())
+        if let Some(fn_info) = self.compiler.function.fn_info {
+            self.emitter.ret(fn_info);
+        } else {
+            assert!(self.had_error);
+        }
     }
 
     fn expression(&mut self) -> CompileResult<()> {
@@ -767,7 +771,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
 
             if local.name == name {
-                return Err("Already a variable with this name in this scope.".into());
+                eprintln!(
+                    "{}",
+                    self.error("Already a variable with this name in this scope.".into())
+                );
+                break;
             }
         }
 
@@ -1074,7 +1082,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         } else if self.match_token(TokenType::Var)? {
             self.var_declaration()?;
         } else {
-            self.expression()?;
+            self.expression_statement()?;
         }
 
         let mut loop_start = self.emitter.get_new_label();
