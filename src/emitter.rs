@@ -6,6 +6,8 @@ use crate::object::{ObjClosure, ObjString, ObjType, ObjUpvalue};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
+use libc::{sigaction, siginfo_t};
+use nix::sys::signal;
 
 static mut GLOBALS: Vec<u64> = Vec::new();
 
@@ -212,7 +214,14 @@ impl Emitter {
         );
 
         let start = ops.offset();
+
         entrypoint_prologue(&mut ops);
+
+        dynasm!(ops
+            ; lea rcx, [->exit_error]
+            ; mov rdx, rsp
+            ;; call_extern!(ops, register_signal_handler)
+        );
 
         unsafe {
             GLOBALS.clear();
@@ -657,6 +666,7 @@ impl Emitter {
         };
         self.start = self.ops.offset();
         entrypoint_prologue(&mut self.ops);
+
         fun(unsafe { GLOBALS.as_mut_ptr() })
     }
 }
@@ -792,6 +802,67 @@ extern "win64" fn close_upvalues(last: *mut Value) {
         upvalue.location = upvalue.closed.as_mut_ptr();
         unsafe{ OPEN_UPVALUES = upvalue.next; }
     }
+}
+
+extern "win64" fn register_signal_handler(ptr: *const u8, stack_ptr: *const u8) {
+    unsafe {
+        VM_EPILOGUE_PTR = Some(ptr);
+        VM_SOMEWHERE_ON_THE_STACK_PTR = Some(stack_ptr);
+
+        // Shamelessly copied from https://github.com/matklad/backtrace-on-stack-overflow/blob/master/src/lib.rs
+        // Might implode or otherwise fail.
+        let buf = Vec::leak(vec![0u128; 4096]);
+        let stack = libc::stack_t {
+            ss_sp: buf.as_ptr() as *mut libc::c_void,
+            ss_flags: 0,
+            ss_size: buf.len() * std::mem::size_of::<u128>(),
+        };
+        let mut old = libc::stack_t {
+            ss_sp: std::ptr::null_mut(),
+            ss_flags: 0,
+            ss_size: 0,
+        };
+        let ret = libc::sigaltstack(&stack, &mut old);
+        assert_eq!(ret, 0, "sigaltstack failed");
+
+        signal::sigaction(
+            signal::SIGSEGV,
+            &signal::SigAction::new(
+                signal::SigHandler::SigAction(handle_sigsegv),
+                signal::SaFlags::SA_NODEFER | signal::SaFlags::SA_ONSTACK,
+                signal::SigSet::empty(),
+            ),
+        )
+        .unwrap();
+    }
+}
+
+static mut VM_EPILOGUE_PTR: Option<*const u8> = None;
+
+// This pointer points to *somewhere* around the start of the VM stack.
+static mut VM_SOMEWHERE_ON_THE_STACK_PTR: Option<*const u8> = None;
+
+extern "C" fn handle_sigsegv(_: i32, siginfo: *mut siginfo_t, _: *mut libc::c_void) {
+    let siginfo = unsafe { *siginfo };
+    let fault_address = unsafe { siginfo.si_addr() };
+    let offset_from_stack =
+        unsafe { VM_SOMEWHERE_ON_THE_STACK_PTR.unwrap() as i64 - fault_address as i64 };
+
+    let stack_size_max = nix::sys::resource::getrlimit(nix::sys::resource::Resource::RLIMIT_STACK)
+        .unwrap()
+        .0 as i64;
+
+    if !(0..stack_size_max).contains(&offset_from_stack) {
+        // It looks like this was not a segfault due to a stack overflow. Probably a bug in the generated code.
+        eprintln!("BUG: Segmentation fault.");
+        std::process::exit(-1);
+    }
+
+    eprintln!("Stack overflow.");
+
+    let epilogue =
+        unsafe { std::mem::transmute::<_, extern "win64" fn()>(VM_EPILOGUE_PTR.unwrap()) };
+    epilogue();
 }
 
 #[cfg(test)]

@@ -805,15 +805,7 @@ FAIL test/limit/no_reuse_constants.lox
 
 Passed: 57 Failed: 62 Skipped: 2 (test/limit/stack_overflow.lox)
 FAIL test/limit/stack_overflow.lox
-     Expected runtime error 'Stack overflow.' and got:
-     
-     Expected stack trace and got:
-     thread 'main' has overflowed its stack
-     fatal runtime error: stack overflow
-     Expected return code 70 and got -6. Stderr:
-     
-     thread 'main' has overflowed its stack
-     fatal runtime error: stack overflow
+     Expected runtime error 'Stack overflow.' and got none.
 
 
 Passed: 57 Failed: 63 Skipped: 2 (test/limit/too_many_constants.lox)
