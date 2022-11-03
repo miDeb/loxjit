@@ -1437,17 +1437,12 @@ FAIL test/this/this_in_method.lox
 Passed: 91 Failed: 124 Skipped: 8 (test/this/this_in_top_level_function.lox)
 Passed: 92 Failed: 124 Skipped: 8 (test/unexpected_character.lox)
 Passed: 93 Failed: 124 Skipped: 8 (test/variable/collide_with_parameter.lox)
-FAIL test/variable/collide_with_parameter.lox
-     Missing expected error: [2] Error at 'a': Already a variable with this name in this scope.
-     Expected return code 65 and got 0. Stderr:
-
-
-Passed: 93 Failed: 125 Skipped: 8 (test/variable/duplicate_local.lox)
-Passed: 94 Failed: 125 Skipped: 8 (test/variable/duplicate_parameter.lox)
-Passed: 95 Failed: 125 Skipped: 8 (test/variable/early_bound.lox)
-Passed: 96 Failed: 125 Skipped: 8 (test/variable/in_middle_of_block.lox)
-Passed: 97 Failed: 125 Skipped: 8 (test/variable/in_nested_block.lox)
-Passed: 98 Failed: 125 Skipped: 8 (test/variable/local_from_method.lox)
+Passed: 94 Failed: 124 Skipped: 8 (test/variable/duplicate_local.lox)
+Passed: 95 Failed: 124 Skipped: 8 (test/variable/duplicate_parameter.lox)
+Passed: 96 Failed: 124 Skipped: 8 (test/variable/early_bound.lox)
+Passed: 97 Failed: 124 Skipped: 8 (test/variable/in_middle_of_block.lox)
+Passed: 98 Failed: 124 Skipped: 8 (test/variable/in_nested_block.lox)
+Passed: 99 Failed: 124 Skipped: 8 (test/variable/local_from_method.lox)
 FAIL test/variable/local_from_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:462:9
@@ -1459,34 +1454,34 @@ FAIL test/variable/local_from_method.lox
      Missing expected output 'variable' on line 9.
 
 
-Passed: 98 Failed: 126 Skipped: 8 (test/variable/redeclare_global.lox)
-Passed: 99 Failed: 126 Skipped: 8 (test/variable/redefine_global.lox)
-Passed: 100 Failed: 126 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
-Passed: 101 Failed: 126 Skipped: 8 (test/variable/shadow_and_local.lox)
-Passed: 102 Failed: 126 Skipped: 8 (test/variable/shadow_global.lox)
-Passed: 103 Failed: 126 Skipped: 8 (test/variable/shadow_local.lox)
-Passed: 104 Failed: 126 Skipped: 8 (test/variable/undefined_global.lox)
+Passed: 99 Failed: 125 Skipped: 8 (test/variable/redeclare_global.lox)
+Passed: 100 Failed: 125 Skipped: 8 (test/variable/redefine_global.lox)
+Passed: 101 Failed: 125 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
+Passed: 102 Failed: 125 Skipped: 8 (test/variable/shadow_and_local.lox)
+Passed: 103 Failed: 125 Skipped: 8 (test/variable/shadow_global.lox)
+Passed: 104 Failed: 125 Skipped: 8 (test/variable/shadow_local.lox)
+Passed: 105 Failed: 125 Skipped: 8 (test/variable/undefined_global.lox)
 FAIL test/variable/undefined_global.lox
      Expected runtime error 'Undefined variable 'notDefined'.' and got none.
 
 
-Passed: 104 Failed: 127 Skipped: 8 (test/variable/undefined_local.lox)
+Passed: 105 Failed: 126 Skipped: 8 (test/variable/undefined_local.lox)
 FAIL test/variable/undefined_local.lox
      Expected runtime error 'Undefined variable 'notDefined'.' and got none.
 
 
-Passed: 104 Failed: 128 Skipped: 8 (test/variable/uninitialized.lox)
-Passed: 105 Failed: 128 Skipped: 8 (test/variable/unreached_undefined.lox)
-Passed: 106 Failed: 128 Skipped: 8 (test/variable/use_false_as_var.lox)
-Passed: 107 Failed: 128 Skipped: 8 (test/variable/use_global_in_initializer.lox)
-Passed: 108 Failed: 128 Skipped: 8 (test/variable/use_local_in_initializer.lox)
-Passed: 109 Failed: 128 Skipped: 8 (test/variable/use_nil_as_var.lox)
-Passed: 110 Failed: 128 Skipped: 8 (test/variable/use_this_as_var.lox)
-Passed: 111 Failed: 128 Skipped: 8 (test/while/class_in_body.lox)
-Passed: 112 Failed: 128 Skipped: 8 (test/while/closure_in_body.lox)
-Passed: 113 Failed: 128 Skipped: 8 (test/while/fun_in_body.lox)
-Passed: 114 Failed: 128 Skipped: 8 (test/while/return_closure.lox)
-Passed: 115 Failed: 128 Skipped: 8 (test/while/return_inside.lox)
-Passed: 116 Failed: 128 Skipped: 8 (test/while/syntax.lox)
-Passed: 117 Failed: 128 Skipped: 8 (test/while/var_in_body.lox)
-118 tests passed. 128 tests failed.
+Passed: 105 Failed: 127 Skipped: 8 (test/variable/uninitialized.lox)
+Passed: 106 Failed: 127 Skipped: 8 (test/variable/unreached_undefined.lox)
+Passed: 107 Failed: 127 Skipped: 8 (test/variable/use_false_as_var.lox)
+Passed: 108 Failed: 127 Skipped: 8 (test/variable/use_global_in_initializer.lox)
+Passed: 109 Failed: 127 Skipped: 8 (test/variable/use_local_in_initializer.lox)
+Passed: 110 Failed: 127 Skipped: 8 (test/variable/use_nil_as_var.lox)
+Passed: 111 Failed: 127 Skipped: 8 (test/variable/use_this_as_var.lox)
+Passed: 112 Failed: 127 Skipped: 8 (test/while/class_in_body.lox)
+Passed: 113 Failed: 127 Skipped: 8 (test/while/closure_in_body.lox)
+Passed: 114 Failed: 127 Skipped: 8 (test/while/fun_in_body.lox)
+Passed: 115 Failed: 127 Skipped: 8 (test/while/return_closure.lox)
+Passed: 116 Failed: 127 Skipped: 8 (test/while/return_inside.lox)
+Passed: 117 Failed: 127 Skipped: 8 (test/while/syntax.lox)
+Passed: 118 Failed: 127 Skipped: 8 (test/while/var_in_body.lox)
+119 tests passed. 127 tests failed.

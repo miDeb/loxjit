@@ -953,12 +953,12 @@ impl<'a, 'b> Parser<'a, 'b> {
         // JIT needs to preserve rbp and rip here. Don't use those spots.
         self.compiler.locals.push(Local {
             name: "",
-            depth: 0,
+            depth: -1,
             is_captured: false,
         });
         self.compiler.locals.push(Local {
             name: "",
-            depth: 0,
+            depth: -1,
             is_captured: false,
         });
 
