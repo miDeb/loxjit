@@ -93,6 +93,25 @@ macro_rules! eq {
     };
 }
 
+fn entrypoint_prologue(ops: &mut Assembler) {
+    my_dynasm!(ops,
+        ; mov [rcx], r15
+        ; mov [rcx+0x8], r14
+        ; mov [rcx+0x10], r13
+        ; mov [rcx+0x18], r12
+        ; mov [rcx+0x20], rsi
+        ; mov [rcx+0x28], rdi
+        ; mov [rcx+0x30], rbp
+        ; mov [rcx+0x38], rbx
+        ; mov [rcx+0x40], rsp
+        ; mov r12, rcx
+        ; mov true_val, QWORD TRUE_VAL.to_bits() as _
+        ; mov false_val, QWORD FALSE_VAL.to_bits() as _
+        ; mov nil_val, QWORD NIL_VAL.to_bits() as _
+        ; mov rbp, rsp
+    );
+}
+
 enum BinaryOp {
     Sub,
     Mul,
@@ -193,23 +212,8 @@ impl Emitter {
         );
 
         let start = ops.offset();
+        entrypoint_prologue(&mut ops);
 
-        my_dynasm!(ops,
-            ; mov [rcx], r15
-            ; mov [rcx+0x8], r14
-            ; mov [rcx+0x10], r13
-            ; mov [rcx+0x18], r12
-            ; mov [rcx+0x20], rsi
-            ; mov [rcx+0x28], rdi
-            ; mov [rcx+0x30], rbp
-            ; mov [rcx+0x38], rbx
-            ; mov [rcx+0x40], rsp
-            ; mov r12, rcx
-            ; mov true_val, QWORD TRUE_VAL.to_bits() as _
-            ; mov false_val, QWORD FALSE_VAL.to_bits() as _
-            ; mov nil_val, QWORD NIL_VAL.to_bits() as _
-            ; mov rbp, rsp
-        );
         unsafe {
             GLOBALS.clear();
             GLOBALS.extend((0..9).map(|_| 0))
@@ -640,16 +644,19 @@ impl Emitter {
         )
     }
 
-    pub fn run(mut self) -> bool {
+    pub fn run(&mut self) -> bool {
         dynasm!(self.ops
             ; jmp -> exit_success
         );
-        let executable_buffer = self.ops.finalize().unwrap();
+
+        self.ops.commit().unwrap();
         let fun = unsafe {
             std::mem::transmute::<_, extern "win64" fn(*mut u64) -> bool>(
-                executable_buffer.ptr(self.start),
+                self.ops.reader().lock().ptr(self.start),
             )
         };
+        self.start = self.ops.offset();
+        entrypoint_prologue(&mut self.ops);
         fun(unsafe { GLOBALS.as_mut_ptr() })
     }
 }

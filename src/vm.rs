@@ -1,4 +1,11 @@
-use crate::compiler::Parser;
+use std::collections::HashMap;
+
+use crate::{
+    compiler::Parser,
+    emitter::{Emitter, GlobalVarIndex},
+    gc::GcCell,
+    object::ObjString,
+};
 
 pub enum InterpretResult {
     Ok,
@@ -6,11 +13,15 @@ pub enum InterpretResult {
     RuntimeError,
 }
 
-pub fn interpret(source: &str) -> InterpretResult {
-    let parser = Parser::new(source);
+pub fn interpret(
+    source: &str,
+    emitter: &mut Emitter,
+    globals: &mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
+) -> InterpretResult {
+    let parser = Parser::new(source, emitter, globals);
     match parser.compile() {
         Err(_) => InterpretResult::CompileError,
-        Ok(emitter) => {
+        Ok(_) => {
             if emitter.run() {
                 InterpretResult::Ok
             } else {

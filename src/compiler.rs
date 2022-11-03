@@ -33,20 +33,20 @@ enum Precedence {
     Primary,
 }
 
-type ParseFn<'a> = fn(&mut Parser<'a>, can_assign: bool) -> CompileResult<()>;
+type ParseFn<'a, 'b> = fn(&mut Parser<'a, 'b>, can_assign: bool) -> CompileResult<()>;
 
-struct ParseRule<'a> {
-    prefix: Option<ParseFn<'a>>,
-    infix: Option<ParseFn<'a>>,
+struct ParseRule<'a, 'b> {
+    prefix: Option<ParseFn<'a, 'b>>,
+    infix: Option<ParseFn<'a, 'b>>,
     precedence: Precedence,
 }
 
-impl<'a> ParseRule<'a> {
-    fn get_rule(token_type: TokenType) -> ParseRule<'a> {
+impl<'a, 'b> ParseRule<'a, 'b> {
+    fn get_rule(token_type: TokenType) -> ParseRule<'a, 'b> {
         match token_type {
             TokenType::LeftParen => ParseRule {
-                prefix: Some(Parser::<'a>::grouping),
-                infix: Some(Parser::<'a>::call),
+                prefix: Some(Parser::<'a, 'b>::grouping),
+                infix: Some(Parser::<'a, 'b>::call),
                 precedence: Precedence::Call,
             },
             TokenType::RightParen => ParseRule {
@@ -71,17 +71,17 @@ impl<'a> ParseRule<'a> {
             },
             TokenType::Dot => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::dot),
+                infix: Some(Parser::<'a, 'b>::dot),
                 precedence: Precedence::Call,
             },
             TokenType::Minus => ParseRule {
-                prefix: Some(Parser::<'a>::unary),
-                infix: Some(Parser::<'a>::binary),
+                prefix: Some(Parser::<'a, 'b>::unary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Term,
             },
             TokenType::Plus => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Term,
             },
             TokenType::Semicolon => ParseRule {
@@ -91,22 +91,22 @@ impl<'a> ParseRule<'a> {
             },
             TokenType::Slash => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Factor,
             },
             TokenType::Star => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Factor,
             },
             TokenType::Bang => ParseRule {
-                prefix: Some(Parser::<'a>::unary),
+                prefix: Some(Parser::<'a, 'b>::unary),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::BangEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Equality,
             },
             TokenType::Equal => ParseRule {
@@ -116,47 +116,47 @@ impl<'a> ParseRule<'a> {
             },
             TokenType::EqualEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Equality,
             },
             TokenType::Greater => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::GreaterEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::Less => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::LessEqual => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::binary),
+                infix: Some(Parser::<'a, 'b>::binary),
                 precedence: Precedence::Comparison,
             },
             TokenType::Identifier => ParseRule {
-                prefix: Some(Parser::<'a>::variable),
+                prefix: Some(Parser::<'a, 'b>::variable),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::String => ParseRule {
-                prefix: Some(Parser::<'a>::string),
+                prefix: Some(Parser::<'a, 'b>::string),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::Number => ParseRule {
-                prefix: Some(Parser::<'a>::number),
+                prefix: Some(Parser::<'a, 'b>::number),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::And => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::and),
+                infix: Some(Parser::<'a, 'b>::and),
                 precedence: Precedence::And,
             },
             TokenType::Class => ParseRule {
@@ -170,7 +170,7 @@ impl<'a> ParseRule<'a> {
                 precedence: Precedence::None,
             },
             TokenType::False => ParseRule {
-                prefix: Some(Parser::<'a>::literal),
+                prefix: Some(Parser::<'a, 'b>::literal),
                 infix: None,
                 precedence: Precedence::None,
             },
@@ -190,13 +190,13 @@ impl<'a> ParseRule<'a> {
                 precedence: Precedence::None,
             },
             TokenType::Nil => ParseRule {
-                prefix: Some(Parser::<'a>::literal),
+                prefix: Some(Parser::<'a, 'b>::literal),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::Or => ParseRule {
                 prefix: None,
-                infix: Some(Parser::<'a>::or),
+                infix: Some(Parser::<'a, 'b>::or),
                 precedence: Precedence::Or,
             },
             TokenType::Print => ParseRule {
@@ -210,17 +210,17 @@ impl<'a> ParseRule<'a> {
                 precedence: Precedence::None,
             },
             TokenType::Super => ParseRule {
-                prefix: Some(Parser::<'a>::super_),
+                prefix: Some(Parser::<'a, 'b>::super_),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::This => ParseRule {
-                prefix: Some(Parser::<'a>::this),
+                prefix: Some(Parser::<'a, 'b>::this),
                 infix: None,
                 precedence: Precedence::None,
             },
             TokenType::True => ParseRule {
-                prefix: Some(Parser::<'a>::literal),
+                prefix: Some(Parser::<'a, 'b>::literal),
                 infix: None,
                 precedence: Precedence::None,
             },
@@ -367,19 +367,23 @@ struct ClassCompiler {
     has_superclass: bool,
 }
 
-pub struct Parser<'a> {
+pub struct Parser<'a, 'b> {
     current: Token<'a>,
     previous: Token<'a>,
     scanner: Scanner<'a>,
     had_error: bool,
     compiler: Box<Compiler<'a>>,
     class_compiler: Option<Box<ClassCompiler>>,
-    emitter: Emitter,
-    globals: HashMap<GcCell<ObjString>, GlobalVarIndex>,
+    emitter: &'b mut Emitter,
+    globals: &'b mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(source: &'a str) -> Self {
+impl<'a, 'b> Parser<'a, 'b> {
+    pub fn new(
+        source: &'a str,
+        emitter: &'b mut Emitter,
+        globals: &'b mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
+    ) -> Self {
         Self {
             current: Token {
                 token_type: TokenType::Error,
@@ -395,8 +399,8 @@ impl<'a> Parser<'a> {
             had_error: false,
             compiler: Box::new(Compiler::new(FunctionType::Script, None, None)),
             class_compiler: None,
-            emitter: Emitter::new(),
-            globals: HashMap::new(),
+            emitter,
+            globals,
         }
     }
 
@@ -1189,7 +1193,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn compile(mut self) -> Result<Emitter, ()> {
+    pub fn compile(mut self) -> Result<(), ()> {
         let result: CompileResult<()> = (|| {
             self.advance()?;
             while !self.match_token(TokenType::Eof)? {
@@ -1205,7 +1209,7 @@ impl<'a> Parser<'a> {
                 if self.had_error {
                     Err(())
                 } else {
-                    Ok(self.emitter)
+                    Ok(())
                 }
             }
             Err(e) => {
