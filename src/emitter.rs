@@ -1,6 +1,7 @@
 use std::arch::asm;
 use std::mem::MaybeUninit;
 use std::ops::Range;
+use std::ptr::null_mut;
 use std::time::Instant;
 
 use crate::gc::{intern_string, register_object, GcCell};
@@ -285,12 +286,13 @@ impl Emitter {
             ; over:
 
             ; push rbp
+            ; push null_mut::<ObjString>() as i32
             ; lea r8, [<clock]
             ; push r8
             ; mov r8, rsp
             ; mov r9, 0
             ;; call_extern_alloc!(self.ops, alloc_closure)
-            ; add rsp, 0x10
+            ; add rsp, 0x18
             ; push rax
         );
     }
@@ -610,6 +612,7 @@ impl Emitter {
     pub fn end_fn(
         &mut self,
         fn_info: FnInfo,
+        name: GcCell<ObjString>,
         upvalues: impl ExactSizeIterator<Item = (bool, u8)> + DoubleEndedIterator<Item = (bool, u8)>,
     ) {
         let len = upvalues.len();
@@ -620,13 +623,15 @@ impl Emitter {
             )
         }
         dynasm!(self.ops
-            ; lea r8, [=>fn_info.start]
             ; push rbp
+            ; mov r8, QWORD name.to_bits() as _
+            ; push r8
+            ; lea r8, [=>fn_info.start]
             ; push r8
             ; mov r8, rsp
             ; mov r9, len as _
             ;; call_extern_alloc!(self.ops, alloc_closure)
-            ; add rsp, 0x10 + 0x10 * len as i32
+            ; add rsp, 0x18 + 0x10 * len as i32
             ; push rax
         )
     }
@@ -696,7 +701,7 @@ impl Emitter {
     }
     pub fn pop(&mut self) {
         dynasm!(self.ops
-            ; pop r11
+            ; add rsp, 0x8
         )
     }
 
@@ -711,7 +716,7 @@ impl Emitter {
         unsafe { &mut SOURCE_MAPPING }.set_line(self.ops.offset(), line)
     }
 
-    pub fn enter_function_scope(&self, name: Option<Box<str>>, args_count: u8) {
+    pub fn enter_function_scope(&self, name: Option<GcCell<ObjString>>, args_count: u8) {
         unsafe { &mut SOURCE_MAPPING }
             .begin_function(self.ops.offset(), FnSourceInfo::new(name, args_count))
     }
@@ -759,13 +764,14 @@ extern "win64" fn alloc_closure(
     args_count: i32,
 ) -> u64 {
     let instructions_ptr: *const u8 = unsafe { *args_ptr.cast() };
+    let name_ptr: *mut ObjString = unsafe { *args_ptr.add(0x8).cast() };
 
     let mut upvalues = Vec::with_capacity(args_count as usize);
 
     for i in 0..(args_count as usize) {
-        let base_ptr = unsafe { *args_ptr.add(0x8).cast::<*mut u8>() };
-        let index = unsafe { *args_ptr.add(0x10 + i * 0x10).cast::<i32>() };
-        let is_local = unsafe { *args_ptr.add(0x18 + i * 0x10).cast::<i32>() } != 0;
+        let base_ptr = unsafe { *args_ptr.add(0x10).cast::<*mut u8>() };
+        let index = unsafe { *args_ptr.add(0x18 + i * 0x10).cast::<i32>() };
+        let is_local = unsafe { *args_ptr.add(0x20 + i * 0x10).cast::<i32>() } != 0;
 
         upvalues.push(if is_local {
             let upvalue = capture_upvalue(
@@ -775,7 +781,7 @@ extern "win64" fn alloc_closure(
             unsafe {
                 // Write the upvalue to the stack (temporarily) so it is not gc'ed
                 args_ptr
-                    .add(0x10 + i * 0x10)
+                    .add(0x18 + i * 0x10)
                     .cast::<Value>()
                     .write(upvalue.into());
             }
@@ -786,7 +792,15 @@ extern "win64" fn alloc_closure(
         })
     }
 
-    let closure = ObjClosure::new(instructions_ptr, upvalues);
+    let closure = ObjClosure::new(
+        instructions_ptr,
+        if name_ptr == null_mut() {
+            None
+        } else {
+            Some(unsafe { GcCell::from_bits(name_ptr as _) })
+        },
+        upvalues,
+    );
     Value::from(register_object(closure, stack_start..stack_end)).to_bits()
 }
 

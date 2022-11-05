@@ -8,7 +8,6 @@ use crate::emitter::GlobalVarIndex;
 use crate::gc::intern_const_string;
 use crate::{
     chunk::{Chunk, OpCode},
-    common::DEBUG_PRINT_CODE,
     emitter::Emitter,
     errors::{CompileError, CompileResult},
     gc::GcCell,
@@ -336,7 +335,7 @@ impl<'a> Compiler<'a> {
 impl<'a> Compiler<'a> {
     fn new(
         fun_type: FunctionType,
-        fun_name: Option<Box<str>>,
+        fun_name: Option<GcCell<ObjString>>,
         enclosing: Option<Box<Compiler<'a>>>,
     ) -> Self {
         let compiler = Self {
@@ -478,18 +477,6 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn end_compiler(&mut self) {
         self.emit_return();
-        if DEBUG_PRINT_CODE {
-            if !self.had_error {
-                let name = self
-                    .compiler
-                    .function
-                    .name
-                    .as_deref()
-                    .unwrap_or("<script>")
-                    .to_owned();
-                self.current_chunk().disassemble(&name)
-            }
-        }
     }
 
     fn begin_scope(&mut self) {
@@ -931,12 +918,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         let jmp = self.emitter.get_new_label();
         self.emitter.jump(jmp);
 
+        let fn_name = intern_const_string(self.previous.source.to_owned());
+
         replace_with_or_abort(&mut self.compiler, |compiler| {
-            Box::new(Compiler::new(
-                function_type,
-                Some(self.previous.source.to_owned().into_boxed_str()),
-                Some(compiler),
-            ))
+            Box::new(Compiler::new(function_type, Some(fn_name), Some(compiler)))
         });
 
         self.begin_scope();
@@ -956,10 +941,8 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
             }
         }
-        self.emitter.enter_function_scope(
-            self.compiler.function.name.clone(),
-            self.compiler.function.arity,
-        );
+        self.emitter
+            .enter_function_scope(self.compiler.function.name, self.compiler.function.arity);
 
         let fn_info = self.emitter.start_fn(self.compiler.function.arity);
         self.compiler.function.fn_info = Some(fn_info);
@@ -996,6 +979,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.emitter.end_fn(
             fn_info,
+            fn_name,
             (0..upvalue_count).map(|i| {
                 let upvalue = unsafe { compiler.upvalues[i].assume_init_ref() };
                 (upvalue.is_local, upvalue.index)

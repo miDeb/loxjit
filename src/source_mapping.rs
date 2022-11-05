@@ -1,5 +1,7 @@
 use dynasmrt::AssemblyOffset;
 
+use crate::{gc::GcCell, object::ObjString};
+
 pub struct SourceMapping {
     fn_infos: Vec<(AssemblyOffset, FnSourceInfo)>,
     line_infos: Vec<(AssemblyOffset, LineSourceInfo)>,
@@ -67,12 +69,12 @@ impl SourceMapping {
 
 #[derive(Clone)]
 pub struct FnSourceInfo {
-    name: Option<Box<str>>,
+    name: Option<GcCell<ObjString>>,
     arg_count: u8,
 }
 
 impl FnSourceInfo {
-    pub fn new(name: Option<Box<str>>, arg_count: u8) -> Self {
+    pub fn new(name: Option<GcCell<ObjString>>, arg_count: u8) -> Self {
         Self { name, arg_count }
     }
 }

@@ -72,6 +72,10 @@ impl GC {
 
         let obj = ObjString::new(string);
         if let Some(obj) = self.interned_strings.get(&obj) {
+            if is_const {
+                obj.to_inner().flag = GcFlags::Constant;
+            }
+
             *obj
         } else {
             let mut inner = Box::new(GcInner {

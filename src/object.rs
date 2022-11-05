@@ -179,13 +179,18 @@ pub struct ObjFunction {
 
     pub arity: u8,
     pub chunk: Chunk,
-    pub name: Option<Box<str>>,
+    pub name: Option<GcCell<ObjString>>,
     pub upvalue_count: usize,
     pub fn_info: Option<FnInfo>,
 }
 
 impl ObjFunction {
-    pub fn new(arity: u8, chunk: Chunk, name: Option<Box<str>>, fn_info: Option<FnInfo>) -> Self {
+    pub fn new(
+        arity: u8,
+        chunk: Chunk,
+        name: Option<GcCell<ObjString>>,
+        fn_info: Option<FnInfo>,
+    ) -> Self {
         Self {
             header: Self::header(),
             arity,
@@ -237,13 +242,19 @@ pub struct ObjClosure {
 
     pub function: *const u8,
     pub upvalues: (*mut GcCell<ObjUpvalue>, usize, usize),
+    name: Option<GcCell<ObjString>>,
 }
 
 impl ObjClosure {
-    pub fn new(function: *const u8, upvalues: Vec<GcCell<ObjUpvalue>>) -> Self {
+    pub fn new(
+        function: *const u8,
+        name: Option<GcCell<ObjString>>,
+        upvalues: Vec<GcCell<ObjUpvalue>>,
+    ) -> Self {
         Self {
             header: Self::header(),
             function,
+            name,
             upvalues: upvalues.into_raw_parts(),
         }
     }
@@ -251,7 +262,11 @@ impl ObjClosure {
 
 impl Display for ObjClosure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "closure")
+        if let Some(name) = self.name {
+            write!(f, "<fn {name}>")
+        } else {
+            write!(f, "<native fn>")
+        }
     }
 }
 
