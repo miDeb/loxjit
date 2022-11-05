@@ -384,6 +384,13 @@ impl<'a, 'b> Parser<'a, 'b> {
         emitter: &'b mut Emitter,
         globals: &'b mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
     ) -> Self {
+        if globals.is_empty() {
+            let name = intern_const_string("clock".to_string());
+            let index = emitter.add_global(name);
+            emitter.clock();
+            emitter.define_global(index);
+            globals.insert(name, index);
+        }
         emitter.enter_function_scope(None, 0);
         Self {
             current: Token {

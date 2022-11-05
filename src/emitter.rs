@@ -1,11 +1,13 @@
 use std::arch::asm;
 use std::mem::MaybeUninit;
 use std::ops::Range;
+use std::time::Instant;
 
 use crate::gc::{intern_string, register_object, GcCell};
 use crate::object::{ObjClosure, ObjString, ObjType, ObjUpvalue};
 use crate::source_mapping::{FnSourceInfo, SourceMapping};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
+use crate::START;
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
 use libc::siginfo_t;
@@ -272,6 +274,25 @@ impl Emitter {
             ; mov rax, [rsp]
             ; mov [r12 + index.0], rax
         )
+    }
+
+    pub fn clock(&mut self) {
+        dynasm!(self.ops
+            ; jmp >over
+            ; clock:
+            ;; call_extern!(self.ops, clock)
+            ; ret
+            ; over:
+
+            ; push rbp
+            ; lea r8, [<clock]
+            ; push r8
+            ; mov r8, rsp
+            ; mov r9, 0
+            ;; call_extern_alloc!(self.ops, alloc_closure)
+            ; add rsp, 0x10
+            ; push rax
+        );
     }
 
     pub fn define_global(&mut self, index: GlobalVarIndex) {
@@ -929,6 +950,10 @@ static mut INSTRUCTIONS_BASE_PTR: *const u8 = std::ptr::null();
 
 fn print_stacktrace(ip: *const u8, base_ptr: *const u8) {
     unsafe { SOURCE_MAPPING.print_stacktrace(INSTRUCTIONS_BASE_PTR, ip, base_ptr) }
+}
+
+extern "win64" fn clock() -> u64 {
+    (Instant::now().duration_since(*START).as_micros() as f64 / 1000000f64).to_bits()
 }
 
 #[cfg(test)]
