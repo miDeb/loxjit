@@ -12,6 +12,8 @@ use libc::siginfo_t;
 use nix::sys::signal;
 
 static mut GLOBALS: Vec<u64> = Vec::new();
+static mut GLOBALS_NAMES: Vec<GcCell<ObjString>> = Vec::new();
+const RESERVED_GLOBAL_VARS: usize = 9;
 
 pub fn global_vars() -> &'static [Value] {
     unsafe { std::mem::transmute(&GLOBALS[9..]) }
@@ -232,16 +234,17 @@ impl Emitter {
 
         unsafe {
             GLOBALS.clear();
-            GLOBALS.extend((0..9).map(|_| 0))
+            GLOBALS.extend((0..RESERVED_GLOBAL_VARS).map(|_| 0))
         }
         Self { start, ops }
     }
 
-    pub fn add_global(&mut self) -> GlobalVarIndex {
+    pub fn add_global(&mut self, name: GcCell<ObjString>) -> GlobalVarIndex {
         if unsafe { GLOBALS.len() } * 8 > i32::MAX as usize {
             panic!("Too many globals");
         }
         unsafe { GLOBALS.push(UNINIT_VAL.to_bits()) };
+        unsafe { GLOBALS_NAMES.push(name) };
         GlobalVarIndex((unsafe { GLOBALS.len() } - 1) as i32 * 8)
     }
 
@@ -251,6 +254,7 @@ impl Emitter {
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rax, rcx
             ; jne >ok
+            ; mov r8, index.0
             ; call ->uninit_global
             ; ok:
             ; push rax
@@ -262,6 +266,7 @@ impl Emitter {
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rcx, [r12 + index.0]
             ; jne >ok
+            ; mov r8, index.0
             ; call ->uninit_global
             ; ok:
             ; mov rax, [rsp]
@@ -793,8 +798,10 @@ extern "win64" fn expected_numbers_or_strings(ip: *const u8, base_ptr: *const u8
     eprintln!("Operands must be two numbers or two strings.");
     print_stacktrace(ip, base_ptr)
 }
-extern "win64" fn uninit_global(ip: *const u8, base_ptr: *const u8) {
-    eprintln!("Unitialized global variable.");
+extern "win64" fn uninit_global(ip: *const u8, base_ptr: *const u8, var_offset: usize) {
+    let index = (var_offset / 8) - RESERVED_GLOBAL_VARS;
+    let name = unsafe { GLOBALS_NAMES[index] };
+    eprintln!("Undefined variable '{name}'.");
     print_stacktrace(ip, base_ptr)
 }
 extern "win64" fn fn_arity_mismatch(ip: *const u8, base_ptr: *const u8) {

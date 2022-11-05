@@ -1,7 +1,5 @@
 use dynasmrt::AssemblyOffset;
 
-use crate::{gc::GcCell, object::ObjString};
-
 pub struct SourceMapping {
     fn_infos: Vec<(AssemblyOffset, FnSourceInfo)>,
     line_infos: Vec<(AssemblyOffset, LineSourceInfo)>,

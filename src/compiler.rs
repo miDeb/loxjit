@@ -683,7 +683,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if let Some(value) = self.globals.get(&string) {
             *value
         } else {
-            let index = self.emitter.add_global();
+            let index = self.emitter.add_global(string);
             self.globals.insert(string, index);
             index
         }
