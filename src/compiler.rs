@@ -384,6 +384,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         emitter: &'b mut Emitter,
         globals: &'b mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
     ) -> Self {
+        emitter.enter_function_scope(None, 0);
         Self {
             current: Token {
                 token_type: TokenType::Error,
@@ -410,6 +411,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn advance(&mut self) -> CompileResult<()> {
         self.previous = self.current;
+        self.emitter.set_line(self.previous.line);
         loop {
             self.current = self.scanner.scan_token();
             if !matches!(self.current.token_type, TokenType::Error) {
@@ -947,6 +949,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
             }
         }
+        self.emitter.enter_function_scope(
+            self.compiler.function.name.clone(),
+            self.compiler.function.arity,
+        );
+
         let fn_info = self.emitter.start_fn(self.compiler.function.arity);
         self.compiler.function.fn_info = Some(fn_info);
 
@@ -974,6 +981,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.emitter.fn_epilogue(fn_info);
 
         self.emitter.set_jump_target(jmp);
+
+        self.emitter.enter_function_scope(
+            self.compiler.function.name.clone(),
+            self.compiler.function.arity,
+        );
 
         self.emitter.end_fn(
             fn_info,

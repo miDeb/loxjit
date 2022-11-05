@@ -1,12 +1,14 @@
+use std::arch::asm;
 use std::mem::MaybeUninit;
 use std::ops::Range;
 
 use crate::gc::{intern_string, register_object, GcCell};
 use crate::object::{ObjClosure, ObjString, ObjType, ObjUpvalue};
+use crate::source_mapping::{FnSourceInfo, SourceMapping};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
-use libc::{sigaction, siginfo_t};
+use libc::siginfo_t;
 use nix::sys::signal;
 
 static mut GLOBALS: Vec<u64> = Vec::new();
@@ -95,6 +97,17 @@ macro_rules! eq {
     };
 }
 
+macro_rules! handle_error {
+    ($ops:expr, $fun:expr) => {
+        dynasm!($ops
+            ; mov rcx, [rsp]
+            ; mov rdx, rbp
+            ;; call_extern!($ops, $fun)
+            ; jmp ->exit_error
+        )
+    };
+}
+
 fn entrypoint_prologue(ops: &mut Assembler) {
     my_dynasm!(ops,
         ; mov [rcx], r15
@@ -163,28 +176,22 @@ impl Emitter {
             ; .qword print_value as _
 
             ; -> expected_number:
-            ;; call_extern!(ops, expected_number)
-            ; jmp ->exit_error
+            ;; handle_error!(ops, expected_number)
 
             ; -> expected_add_operands:
-            ;; call_extern!(ops, expected_numbers_or_strings)
-            ; jmp ->exit_error
+            ;; handle_error!(ops, expected_numbers_or_strings)
 
             ; -> expected_callable:
-            ;; call_extern!(ops, expected_callable)
-            ; jmp ->exit_error
+            ;; handle_error!(ops, expected_callable)
 
             ; -> expected_numbers:
-            ;; call_extern!(ops, expected_numbers)
-            ; jmp ->exit_error
+            ;; handle_error!(ops, expected_numbers)
 
             ; -> uninit_global:
-            ;; call_extern!(ops, uninit_global)
-            ; jmp ->exit_error
+            ;; handle_error!(ops, uninit_global)
 
             ; -> fn_arity_mismatch:
-            ;; call_extern!(ops, fn_arity_mismatch)
-            ; jmp ->exit_error
+            ;; handle_error!(ops, fn_arity_mismatch)
 
             ; ->exit_error:
             ; mov r15, [r12]
@@ -243,7 +250,9 @@ impl Emitter {
             ; mov rax, QWORD [r12 + index.0]
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rax, rcx
-            ; je ->uninit_global
+            ; jne >ok
+            ; call ->uninit_global
+            ; ok:
             ; push rax
         )
     }
@@ -252,7 +261,9 @@ impl Emitter {
         dynasm!(self.ops
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rcx, [r12 + index.0]
-            ; je ->uninit_global
+            ; jne >ok
+            ; call ->uninit_global
+            ; ok:
             ; mov rax, [rsp]
             ; mov [r12 + index.0], rax
         )
@@ -351,7 +362,9 @@ impl Emitter {
             ; mov rcx, rax
             ; and rcx, [->qnan]
             ; cmp rcx, [->qnan]
-            ; je ->expected_number
+            ; jne >ok
+            ; call ->expected_number
+            ; ok:
             ; xor rax, [->sign_bit]
             ; push rax
         )
@@ -382,24 +395,28 @@ impl Emitter {
             ; mov rax, r8
             ; and rax, [->tag_obj]
             ; cmp rax, [->tag_obj]
-            ; jne ->expected_add_operands
+            ; jne >fail
 
             ; and r8, [->tag_obj_not]
             ; cmp [r8], BYTE ObjType::ObjString as _
-            ; jne ->expected_add_operands
+            ; jne >fail
 
             ; mov rax, r9
             ; and rax, [->tag_obj]
             ; cmp rax, [->tag_obj]
-            ; jne ->expected_add_operands
+            ; jne >fail
 
             ; and r9, [->tag_obj_not]
             ; cmp [r9], BYTE ObjType::ObjString as _
-            ; jne ->expected_add_operands
+            ; jne >fail
 
             ; add rsp, 8
             ;; call_extern_alloc!(self.ops, concat_strings)
             ; mov [rsp], rax
+            ; jmp >end
+
+            ; fail:
+            ; call ->expected_add_operands
 
             ; end:
         );
@@ -419,14 +436,18 @@ impl Emitter {
             ; movq xmm1, rax
             ; and rax, [->qnan]
             ; cmp rax, [->qnan]
-            ; je ->expected_numbers
+            ; je >fail
 
             ; mov rcx, [rsp+8]
             ; movq xmm0, rcx
             ; and rcx, [->qnan]
             ; cmp rcx, [->qnan]
-            ; je ->expected_numbers
+            ; jne >ok
 
+            ; fail:
+            ; call ->expected_numbers
+
+            ; ok:
             ; add rsp, 8
         );
         match op {
@@ -532,7 +553,9 @@ impl Emitter {
             ; push rbp
             ; lea rbp, [rsp + (arity * 8 + 0x10) as _]
             ; cmp rcx, arity as _
-            ; jne ->fn_arity_mismatch
+            ; je >ok
+            ; call ->fn_arity_mismatch
+            ; ok:
         );
         FnInfo {
             arity,
@@ -594,16 +617,21 @@ impl Emitter {
             ; mov r8, rax
             ; and r8, [->tag_obj]
             ; cmp r8, [->tag_obj]
-            ; jne ->expected_callable
+            ; jne >fail
 
             ; and rax, [->tag_obj_not]
             ; cmp [rax], BYTE ObjType::ObjClosure as _
-            ; jne ->expected_callable
+            ; jne >fail
 
             ; mov rax, [rax + 8]
             ; call rax
             ; add rsp, (arity * 8) as _
             ; mov [rsp], rax
+            ; jmp >ok
+
+            ; fail:
+            ; call ->expected_callable
+            ; ok:
         )
     }
 
@@ -653,16 +681,29 @@ impl Emitter {
         )
     }
 
+    pub fn set_line(&self, line: usize) {
+        unsafe { &mut SOURCE_MAPPING }.set_line(self.ops.offset(), line)
+    }
+
+    pub fn enter_function_scope(&self, name: Option<Box<str>>, args_count: u8) {
+        unsafe { &mut SOURCE_MAPPING }
+            .begin_function(self.ops.offset(), FnSourceInfo::new(name, args_count))
+    }
+
     pub fn run(&mut self) -> bool {
         dynasm!(self.ops
             ; jmp -> exit_success
         );
 
         self.ops.commit().unwrap();
+
+        let reader = self.ops.reader();
+        let reader = reader.lock();
+
+        unsafe { INSTRUCTIONS_BASE_PTR = reader.as_ptr() }
+
         let fun = unsafe {
-            std::mem::transmute::<_, extern "win64" fn(*mut u64) -> bool>(
-                self.ops.reader().lock().ptr(self.start),
-            )
+            std::mem::transmute::<_, extern "win64" fn(*mut u64) -> bool>(reader.ptr(self.start))
         };
         self.start = self.ops.offset();
         entrypoint_prologue(&mut self.ops);
@@ -740,23 +781,29 @@ extern "win64" fn concat_strings(
     Value::from(intern_string(new_str, stack_start..stack_end)).to_bits()
 }
 
-extern "win64" fn expected_number() {
+extern "win64" fn expected_number(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Operand must be a number.");
+    print_stacktrace(ip, base_ptr)
 }
-extern "win64" fn expected_numbers() {
+extern "win64" fn expected_numbers(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Operands must be numbers.");
+    print_stacktrace(ip, base_ptr)
 }
-extern "win64" fn expected_numbers_or_strings() {
-    eprintln!("Operands must be numbers or strings.");
+extern "win64" fn expected_numbers_or_strings(ip: *const u8, base_ptr: *const u8) {
+    eprintln!("Operands must be two numbers or two strings.");
+    print_stacktrace(ip, base_ptr)
 }
-extern "win64" fn uninit_global() {
+extern "win64" fn uninit_global(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Unitialized global variable.");
+    print_stacktrace(ip, base_ptr)
 }
-extern "win64" fn fn_arity_mismatch() {
+extern "win64" fn fn_arity_mismatch(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Function arity mismatch.");
+    print_stacktrace(ip, base_ptr)
 }
-extern "win64" fn expected_callable() {
+extern "win64" fn expected_callable(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Can only call functions and classes.");
+    print_stacktrace(ip, base_ptr)
 }
 
 static mut OPEN_UPVALUES: Option<GcCell<ObjUpvalue>> = None;
@@ -862,7 +909,19 @@ extern "C" fn handle_sigsegv(_: i32, siginfo: *mut siginfo_t, _: *mut libc::c_vo
 
     let epilogue =
         unsafe { std::mem::transmute::<_, extern "win64" fn()>(VM_EPILOGUE_PTR.unwrap()) };
+
+    // Restore the globals pointer.
+    unsafe {
+        asm!("mov r12, {}",  in(reg) GLOBALS.as_ptr());
+    }
     epilogue();
+}
+
+static mut SOURCE_MAPPING: SourceMapping = SourceMapping::new();
+static mut INSTRUCTIONS_BASE_PTR: *const u8 = std::ptr::null();
+
+fn print_stacktrace(ip: *const u8, base_ptr: *const u8) {
+    unsafe { SOURCE_MAPPING.print_stacktrace(INSTRUCTIONS_BASE_PTR, ip, base_ptr) }
 }
 
 #[cfg(test)]

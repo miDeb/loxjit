@@ -24,6 +24,7 @@ mod errors;
 mod gc;
 mod object;
 mod scanner;
+mod source_mapping;
 mod value;
 mod vm;
 
