@@ -37,9 +37,13 @@ macro_rules! my_dynasm {
 macro_rules! call_extern {
     ($ops:expr, $fun:expr) => {
         dynasm!($ops
+            // trigger a stack overflow now if there is little stack left
+            ; mov rax, [rsp - 0x400]
+
             ; push rbp
             ; mov rbp, rsp
             ; and spl, BYTE 0xF0 as _
+
             ; mov rax, QWORD $fun as _
             ; call rax
             ; mov rsp, rbp
@@ -51,11 +55,15 @@ macro_rules! call_extern {
 macro_rules! call_extern_alloc {
     ($ops:expr, $fun:expr) => {
         dynasm!($ops
+            // trigger a stack overflow now if there is little stack left
+            ; mov rax, [rsp - 0x400]
+
             ; push rbp
             ; mov rbp, rsp
             ; mov rdx, [r12+0x40]
             ; mov rcx, rsp
             ; and spl, BYTE 0xF0 as _
+
             ; mov rax, QWORD $fun as _
             ; call rax
             ; mov rsp, rbp
@@ -642,6 +650,9 @@ impl Emitter {
     }
     pub fn call(&mut self, arity: u8) {
         dynasm!(self.ops
+            // trigger a stack overflow now if there is little stack left
+            ; mov rax, [rsp - 0x400]
+
             ; mov rax, [rsp + (arity * 8) as _]
             ; mov rcx, arity as _
 
@@ -931,9 +942,10 @@ static mut VM_EPILOGUE_PTR: Option<*const u8> = None;
 // This pointer points to *somewhere* around the start of the VM stack.
 static mut VM_SOMEWHERE_ON_THE_STACK_PTR: Option<*const u8> = None;
 
-extern "C" fn handle_sigsegv(_: i32, siginfo: *mut siginfo_t, _: *mut libc::c_void) {
+extern "C" fn handle_sigsegv(_: i32, siginfo: *mut siginfo_t, ptr: *mut libc::c_void) {
     let siginfo = unsafe { *siginfo };
     let fault_address = unsafe { siginfo.si_addr() };
+
     let offset_from_stack =
         unsafe { VM_SOMEWHERE_ON_THE_STACK_PTR.unwrap() as i64 - fault_address as i64 };
 
@@ -948,6 +960,15 @@ extern "C" fn handle_sigsegv(_: i32, siginfo: *mut siginfo_t, _: *mut libc::c_vo
     }
 
     eprintln!("Stack overflow.");
+
+    let (rip, rbp) = 
+        unsafe {
+            let gregs = ptr.cast::<libc::ucontext_t>().read().uc_mcontext.gregs;
+            (gregs[libc::REG_RIP as usize], gregs[libc::REG_RBP as usize])
+        }
+    ;
+
+    print_stacktrace(rip as _, rbp as _);
 
     let epilogue =
         unsafe { std::mem::transmute::<_, extern "win64" fn()>(VM_EPILOGUE_PTR.unwrap()) };
@@ -968,76 +989,4 @@ fn print_stacktrace(ip: *const u8, base_ptr: *const u8) {
 
 extern "win64" fn clock() -> u64 {
     (Instant::now().duration_since(*START).as_micros() as f64 / 1000000f64).to_bits()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn print_nil() {
-        let mut emitter = Emitter::new();
-        emitter.nil();
-        emitter.print();
-        assert!(emitter.run());
-    }
-
-    #[test]
-    fn negate() {
-        let mut emitter = Emitter::new();
-        emitter.number(0f64);
-        emitter.negate();
-        emitter.print();
-        assert!(emitter.run());
-    }
-
-    #[test]
-    fn negate_fail() {
-        let mut emitter = Emitter::new();
-        emitter.nil();
-        emitter.negate();
-        emitter.print();
-        assert!(!emitter.run());
-    }
-    #[test]
-    fn sub() {
-        let mut emitter = Emitter::new();
-        emitter.nil();
-        emitter.number(2f64);
-        emitter.sub();
-        emitter.print();
-        assert!(!emitter.run());
-    }
-    #[test]
-    fn eq() {
-        let mut emitter = Emitter::new();
-        emitter.number(2f64);
-        emitter.number(2f64);
-        emitter.ne();
-        emitter.print();
-        assert!(emitter.run());
-    }
-    #[test]
-    fn if_() {
-        let mut emitter = Emitter::new();
-        emitter.number(2f64);
-        let then = emitter.get_new_label();
-        emitter.jump_if_false(then);
-        emitter.pop();
-        emitter.number(1f64);
-        emitter.print();
-        emitter.set_jump_target(then);
-        emitter.pop();
-        assert!(emitter.run());
-    }
-    #[test]
-    fn global_var() {
-        let mut emitter = Emitter::new();
-        emitter.number(0f64);
-        /*  let var = emitter.add_global();
-        emitter.set_global(var);
-        emitter.get_global(var);*/
-        emitter.print();
-        assert!(emitter.run());
-    }
 }

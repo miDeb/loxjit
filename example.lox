@@ -1,16 +1,6 @@
-var f1;
-{
-  var i = 0;
-  var j = 10;
-  var k = 10;
-  fun f() {
-    print j;
-    print i;
-    print k;
-  }
-
-  f1 = f;
+fun foo() {
+  clock();
+  foo();
 }
 
-f1(); // expect: 4
-      // expect: 1
+foo();

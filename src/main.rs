@@ -56,8 +56,6 @@ fn repl() {
         // FIXME: In case of an error the compiler/emitter are left in a bad state
         // and produce wrong results in subsequent invocations.
         print!("> ");
-        std::io::stdout().flush().unwrap();
-        std::io::stderr().flush().unwrap();
     }
 }
 
@@ -67,8 +65,6 @@ fn runfile(path: OsString) {
         std::process::exit(74);
     };
     let result = interpret(&source, &mut Emitter::new(), &mut Default::default());
-    std::io::stdout().flush().unwrap();
-    std::io::stderr().flush().unwrap();
     match result {
         vm::InterpretResult::CompileError => std::process::exit(65),
         vm::InterpretResult::RuntimeError => std::process::exit(70),

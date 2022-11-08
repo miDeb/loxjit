@@ -32,21 +32,21 @@ impl SourceMapping {
         self.fn_infos.push((offset, function));
     }
 
-    pub fn print_stacktrace(&self, base_offset: *const u8, ip: *const u8, bp: *const u8) {
-        let offset = AssemblyOffset(unsafe { ip.sub_ptr(base_offset) });
+    pub fn print_stacktrace(&self, base_offset: *const u8, mut ip: *const u8, mut bp: *const u8) {
+        loop {
+            let offset = AssemblyOffset(unsafe { ip.sub_ptr(base_offset) });
 
-        let function = self.find_function_for_offset(offset);
-        let line = self.find_line_for_offset(offset);
-        eprint!("[line {}] ", line.line);
-        if let Some(name) = function.name {
-            eprintln!("in {name}()");
-            self.print_stacktrace(
-                base_offset,
-                unsafe { bp.add(function.arg_count as usize * 0x8 + 0x8) },
-                unsafe { bp.add(function.arg_count as usize * 0x8 + 0x10) },
-            )
-        } else {
-            eprintln!("in script");
+            let function = self.find_function_for_offset(offset);
+            let line = self.find_line_for_offset(offset);
+            eprint!("[line {}] ", line.line);
+            if let Some(name) = function.name {
+                eprintln!("in {name}()");
+                ip = unsafe { *bp.sub(function.arg_count as usize * 0x8 + 0x8).cast() };
+                bp = unsafe { *bp.sub(function.arg_count as usize * 0x8 + 0x10).cast() };
+            } else {
+                eprintln!("in script");
+                break;
+            }
         }
     }
 
