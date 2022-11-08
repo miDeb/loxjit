@@ -309,20 +309,20 @@ impl Emitter {
         )
     }
 
-    pub fn set_local(&mut self, index: u8) {
+    pub fn set_local(&mut self, index: usize) {
         dynasm!(self.ops
             ; mov rax, [rsp]
             ; mov QWORD [rbp - (index as i32 * 8 + 8)], rax
         )
     }
 
-    pub fn get_local(&mut self, index: u8) {
+    pub fn get_local(&mut self, index: usize) {
         dynasm!(self.ops
             ; push QWORD [rbp - (index as i32 * 8 + 8)]
         )
     }
 
-    pub fn set_upvalue(&mut self, index: u8) {
+    pub fn set_upvalue(&mut self, index: usize) {
         dynasm!(self.ops
             ; mov rax, [rbp]
             // rax: ptr to ObjClosure
@@ -342,7 +342,7 @@ impl Emitter {
         )
     }
 
-    pub fn get_upvalue(&mut self, index: u8) {
+    pub fn get_upvalue(&mut self, index: usize) {
         dynasm!(self.ops
             ; mov rax, [rbp]
             // rax: ptr to ObjClosure
@@ -625,7 +625,8 @@ impl Emitter {
         &mut self,
         fn_info: FnInfo,
         name: GcCell<ObjString>,
-        upvalues: impl ExactSizeIterator<Item = (bool, u8)> + DoubleEndedIterator<Item = (bool, u8)>,
+        upvalues: impl ExactSizeIterator<Item = (bool, usize)>
+            + DoubleEndedIterator<Item = (bool, usize)>,
     ) {
         let len = upvalues.len();
         for (is_local, index) in upvalues.rev() {

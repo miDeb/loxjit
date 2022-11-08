@@ -770,17 +770,12 @@ FAIL test/limit/too_many_constants.lox
 
 
 Passed: 67 Failed: 54 Skipped: 2 (test/limit/too_many_locals.lox)
-FAIL test/limit/too_many_locals.lox
-     Unexpected error:
-     [line 50] Error at 'vff': Too many local variables in function.
-
-
-Passed: 67 Failed: 55 Skipped: 2 (test/limit/too_many_upvalues.lox)
-Passed: 68 Failed: 55 Skipped: 2 (test/logical_operator/and.lox)
-Passed: 69 Failed: 55 Skipped: 2 (test/logical_operator/and_truth.lox)
-Passed: 70 Failed: 55 Skipped: 2 (test/logical_operator/or.lox)
-Passed: 71 Failed: 55 Skipped: 2 (test/logical_operator/or_truth.lox)
-Passed: 72 Failed: 55 Skipped: 2 (test/method/arity.lox)
+Passed: 68 Failed: 54 Skipped: 2 (test/limit/too_many_upvalues.lox)
+Passed: 69 Failed: 54 Skipped: 2 (test/logical_operator/and.lox)
+Passed: 70 Failed: 54 Skipped: 2 (test/logical_operator/and_truth.lox)
+Passed: 71 Failed: 54 Skipped: 2 (test/logical_operator/or.lox)
+Passed: 72 Failed: 54 Skipped: 2 (test/logical_operator/or_truth.lox)
+Passed: 73 Failed: 54 Skipped: 2 (test/method/arity.lox)
 FAIL test/method/arity.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -800,7 +795,7 @@ FAIL test/method/arity.lox
      Missing expected output '36' on line 22.
 
 
-Passed: 72 Failed: 56 Skipped: 2 (test/method/empty_block.lox)
+Passed: 73 Failed: 55 Skipped: 2 (test/method/empty_block.lox)
 FAIL test/method/empty_block.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -812,7 +807,7 @@ FAIL test/method/empty_block.lox
      Missing expected output 'nil' on line 5.
 
 
-Passed: 72 Failed: 57 Skipped: 2 (test/method/extra_arguments.lox)
+Passed: 73 Failed: 56 Skipped: 2 (test/method/extra_arguments.lox)
 FAIL test/method/extra_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 4.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -823,7 +818,7 @@ FAIL test/method/extra_arguments.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 72 Failed: 58 Skipped: 2 (test/method/missing_arguments.lox)
+Passed: 73 Failed: 57 Skipped: 2 (test/method/missing_arguments.lox)
 FAIL test/method/missing_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 1.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -834,7 +829,7 @@ FAIL test/method/missing_arguments.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 72 Failed: 59 Skipped: 2 (test/method/not_found.lox)
+Passed: 73 Failed: 58 Skipped: 2 (test/method/not_found.lox)
 FAIL test/method/not_found.lox
      Expected runtime error 'Undefined property 'unknown'.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -845,7 +840,7 @@ FAIL test/method/not_found.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 72 Failed: 60 Skipped: 2 (test/method/print_bound_method.lox)
+Passed: 73 Failed: 59 Skipped: 2 (test/method/print_bound_method.lox)
 FAIL test/method/print_bound_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -857,7 +852,7 @@ FAIL test/method/print_bound_method.lox
      Missing expected output '<fn method>' on line 5.
 
 
-Passed: 72 Failed: 61 Skipped: 2 (test/method/refer_to_name.lox)
+Passed: 73 Failed: 60 Skipped: 2 (test/method/refer_to_name.lox)
 FAIL test/method/refer_to_name.lox
      Expected runtime error 'Undefined variable 'method'.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -868,8 +863,8 @@ FAIL test/method/refer_to_name.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 72 Failed: 62 Skipped: 2 (test/method/too_many_arguments.lox)
-Passed: 73 Failed: 62 Skipped: 2 (test/method/too_many_parameters.lox)
+Passed: 73 Failed: 61 Skipped: 2 (test/method/too_many_arguments.lox)
+Passed: 74 Failed: 61 Skipped: 2 (test/method/too_many_parameters.lox)
 FAIL test/method/too_many_parameters.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -881,25 +876,25 @@ FAIL test/method/too_many_parameters.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 73 Failed: 63 Skipped: 2 (test/nil/literal.lox)
-Passed: 74 Failed: 63 Skipped: 2 (test/number/decimal_point_at_eof.lox)
-Passed: 75 Failed: 63 Skipped: 2 (test/number/leading_dot.lox)
-Passed: 76 Failed: 63 Skipped: 2 (test/number/literals.lox)
-Passed: 77 Failed: 63 Skipped: 2 (test/number/nan_equality.lox)
-Passed: 78 Failed: 63 Skipped: 2 (test/number/trailing_dot.lox)
-Passed: 79 Failed: 63 Skipped: 2 (test/operator/add.lox)
-Passed: 80 Failed: 63 Skipped: 2 (test/operator/add_bool_nil.lox)
-Passed: 81 Failed: 63 Skipped: 2 (test/operator/add_bool_num.lox)
-Passed: 82 Failed: 63 Skipped: 2 (test/operator/add_bool_string.lox)
-Passed: 83 Failed: 63 Skipped: 2 (test/operator/add_nil_nil.lox)
-Passed: 84 Failed: 63 Skipped: 2 (test/operator/add_num_nil.lox)
-Passed: 85 Failed: 63 Skipped: 2 (test/operator/add_string_nil.lox)
-Passed: 86 Failed: 63 Skipped: 2 (test/operator/comparison.lox)
-Passed: 87 Failed: 63 Skipped: 2 (test/operator/divide.lox)
-Passed: 88 Failed: 63 Skipped: 2 (test/operator/divide_nonnum_num.lox)
-Passed: 89 Failed: 63 Skipped: 2 (test/operator/divide_num_nonnum.lox)
-Passed: 90 Failed: 63 Skipped: 2 (test/operator/equals.lox)
-Passed: 91 Failed: 63 Skipped: 2 (test/operator/equals_class.lox)
+Passed: 74 Failed: 62 Skipped: 2 (test/nil/literal.lox)
+Passed: 75 Failed: 62 Skipped: 2 (test/number/decimal_point_at_eof.lox)
+Passed: 76 Failed: 62 Skipped: 2 (test/number/leading_dot.lox)
+Passed: 77 Failed: 62 Skipped: 2 (test/number/literals.lox)
+Passed: 78 Failed: 62 Skipped: 2 (test/number/nan_equality.lox)
+Passed: 79 Failed: 62 Skipped: 2 (test/number/trailing_dot.lox)
+Passed: 80 Failed: 62 Skipped: 2 (test/operator/add.lox)
+Passed: 81 Failed: 62 Skipped: 2 (test/operator/add_bool_nil.lox)
+Passed: 82 Failed: 62 Skipped: 2 (test/operator/add_bool_num.lox)
+Passed: 83 Failed: 62 Skipped: 2 (test/operator/add_bool_string.lox)
+Passed: 84 Failed: 62 Skipped: 2 (test/operator/add_nil_nil.lox)
+Passed: 85 Failed: 62 Skipped: 2 (test/operator/add_num_nil.lox)
+Passed: 86 Failed: 62 Skipped: 2 (test/operator/add_string_nil.lox)
+Passed: 87 Failed: 62 Skipped: 2 (test/operator/comparison.lox)
+Passed: 88 Failed: 62 Skipped: 2 (test/operator/divide.lox)
+Passed: 89 Failed: 62 Skipped: 2 (test/operator/divide_nonnum_num.lox)
+Passed: 90 Failed: 62 Skipped: 2 (test/operator/divide_num_nonnum.lox)
+Passed: 91 Failed: 62 Skipped: 2 (test/operator/equals.lox)
+Passed: 92 Failed: 62 Skipped: 2 (test/operator/equals_class.lox)
 FAIL test/operator/equals_class.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -918,7 +913,7 @@ FAIL test/operator/equals_class.lox
      Missing expected output 'false' on line 13.
 
 
-Passed: 91 Failed: 64 Skipped: 2 (test/operator/equals_method.lox)
+Passed: 92 Failed: 63 Skipped: 2 (test/operator/equals_method.lox)
 FAIL test/operator/equals_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -931,21 +926,21 @@ FAIL test/operator/equals_method.lox
      Missing expected output 'false' on line 13.
 
 
-Passed: 91 Failed: 65 Skipped: 2 (test/operator/greater_nonnum_num.lox)
-Passed: 92 Failed: 65 Skipped: 2 (test/operator/greater_num_nonnum.lox)
-Passed: 93 Failed: 65 Skipped: 2 (test/operator/greater_or_equal_nonnum_num.lox)
-Passed: 94 Failed: 65 Skipped: 2 (test/operator/greater_or_equal_num_nonnum.lox)
-Passed: 95 Failed: 65 Skipped: 2 (test/operator/less_nonnum_num.lox)
-Passed: 96 Failed: 65 Skipped: 2 (test/operator/less_num_nonnum.lox)
-Passed: 97 Failed: 65 Skipped: 2 (test/operator/less_or_equal_nonnum_num.lox)
-Passed: 98 Failed: 65 Skipped: 2 (test/operator/less_or_equal_num_nonnum.lox)
-Passed: 99 Failed: 65 Skipped: 2 (test/operator/multiply.lox)
-Passed: 100 Failed: 65 Skipped: 2 (test/operator/multiply_nonnum_num.lox)
-Passed: 101 Failed: 65 Skipped: 2 (test/operator/multiply_num_nonnum.lox)
-Passed: 102 Failed: 65 Skipped: 2 (test/operator/negate.lox)
-Passed: 103 Failed: 65 Skipped: 2 (test/operator/negate_nonnum.lox)
-Passed: 104 Failed: 65 Skipped: 2 (test/operator/not.lox)
-Passed: 105 Failed: 65 Skipped: 2 (test/operator/not_class.lox)
+Passed: 92 Failed: 64 Skipped: 2 (test/operator/greater_nonnum_num.lox)
+Passed: 93 Failed: 64 Skipped: 2 (test/operator/greater_num_nonnum.lox)
+Passed: 94 Failed: 64 Skipped: 2 (test/operator/greater_or_equal_nonnum_num.lox)
+Passed: 95 Failed: 64 Skipped: 2 (test/operator/greater_or_equal_num_nonnum.lox)
+Passed: 96 Failed: 64 Skipped: 2 (test/operator/less_nonnum_num.lox)
+Passed: 97 Failed: 64 Skipped: 2 (test/operator/less_num_nonnum.lox)
+Passed: 98 Failed: 64 Skipped: 2 (test/operator/less_or_equal_nonnum_num.lox)
+Passed: 99 Failed: 64 Skipped: 2 (test/operator/less_or_equal_num_nonnum.lox)
+Passed: 100 Failed: 64 Skipped: 2 (test/operator/multiply.lox)
+Passed: 101 Failed: 64 Skipped: 2 (test/operator/multiply_nonnum_num.lox)
+Passed: 102 Failed: 64 Skipped: 2 (test/operator/multiply_num_nonnum.lox)
+Passed: 103 Failed: 64 Skipped: 2 (test/operator/negate.lox)
+Passed: 104 Failed: 64 Skipped: 2 (test/operator/negate_nonnum.lox)
+Passed: 105 Failed: 64 Skipped: 2 (test/operator/not.lox)
+Passed: 106 Failed: 64 Skipped: 2 (test/operator/not_class.lox)
 FAIL test/operator/not_class.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -958,13 +953,13 @@ FAIL test/operator/not_class.lox
      Missing expected output 'false' on line 3.
 
 
-Passed: 105 Failed: 66 Skipped: 2 (test/operator/not_equals.lox)
-Passed: 106 Failed: 66 Skipped: 2 (test/operator/subtract.lox)
-Passed: 107 Failed: 66 Skipped: 2 (test/operator/subtract_nonnum_num.lox)
-Passed: 108 Failed: 66 Skipped: 2 (test/operator/subtract_num_nonnum.lox)
-Passed: 109 Failed: 66 Skipped: 2 (test/precedence.lox)
-Passed: 110 Failed: 66 Skipped: 2 (test/print/missing_argument.lox)
-Passed: 111 Failed: 66 Skipped: 2 (test/regression/394.lox)
+Passed: 106 Failed: 65 Skipped: 2 (test/operator/not_equals.lox)
+Passed: 107 Failed: 65 Skipped: 2 (test/operator/subtract.lox)
+Passed: 108 Failed: 65 Skipped: 2 (test/operator/subtract_nonnum_num.lox)
+Passed: 109 Failed: 65 Skipped: 2 (test/operator/subtract_num_nonnum.lox)
+Passed: 110 Failed: 65 Skipped: 2 (test/precedence.lox)
+Passed: 111 Failed: 65 Skipped: 2 (test/print/missing_argument.lox)
+Passed: 112 Failed: 65 Skipped: 2 (test/regression/394.lox)
 FAIL test/regression/394.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -976,13 +971,13 @@ FAIL test/regression/394.lox
      Missing expected output 'B' on line 4.
 
 
-Passed: 111 Failed: 67 Skipped: 2 (test/regression/40.lox)
-Passed: 112 Failed: 67 Skipped: 2 (test/return/after_else.lox)
-Passed: 113 Failed: 67 Skipped: 2 (test/return/after_if.lox)
-Passed: 114 Failed: 67 Skipped: 2 (test/return/after_while.lox)
-Passed: 115 Failed: 67 Skipped: 2 (test/return/at_top_level.lox)
-Passed: 116 Failed: 67 Skipped: 2 (test/return/in_function.lox)
-Passed: 117 Failed: 67 Skipped: 2 (test/return/in_method.lox)
+Passed: 112 Failed: 66 Skipped: 2 (test/regression/40.lox)
+Passed: 113 Failed: 66 Skipped: 2 (test/return/after_else.lox)
+Passed: 114 Failed: 66 Skipped: 2 (test/return/after_if.lox)
+Passed: 115 Failed: 66 Skipped: 2 (test/return/after_while.lox)
+Passed: 116 Failed: 66 Skipped: 2 (test/return/at_top_level.lox)
+Passed: 117 Failed: 66 Skipped: 2 (test/return/in_function.lox)
+Passed: 118 Failed: 66 Skipped: 2 (test/return/in_method.lox)
 FAIL test/return/in_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -994,18 +989,18 @@ FAIL test/return/in_method.lox
      Missing expected output 'ok' on line 8.
 
 
-Passed: 117 Failed: 68 Skipped: 2 (test/return/return_nil_if_no_value.lox)
-Passed: 118 Failed: 68 Skipped: 2 (test/scanning/identifiers.lox)
-Passed: 118 Failed: 68 Skipped: 3 (test/scanning/keywords.lox)
-Passed: 118 Failed: 68 Skipped: 4 (test/scanning/numbers.lox)
-Passed: 118 Failed: 68 Skipped: 5 (test/scanning/punctuators.lox)
-Passed: 118 Failed: 68 Skipped: 6 (test/scanning/strings.lox)
-Passed: 118 Failed: 68 Skipped: 7 (test/scanning/whitespace.lox)
-Passed: 118 Failed: 68 Skipped: 8 (test/string/error_after_multiline.lox)
-Passed: 119 Failed: 68 Skipped: 8 (test/string/literals.lox)
-Passed: 120 Failed: 68 Skipped: 8 (test/string/multiline.lox)
-Passed: 121 Failed: 68 Skipped: 8 (test/string/unterminated.lox)
-Passed: 122 Failed: 68 Skipped: 8 (test/super/bound_method.lox)
+Passed: 118 Failed: 67 Skipped: 2 (test/return/return_nil_if_no_value.lox)
+Passed: 119 Failed: 67 Skipped: 2 (test/scanning/identifiers.lox)
+Passed: 119 Failed: 67 Skipped: 3 (test/scanning/keywords.lox)
+Passed: 119 Failed: 67 Skipped: 4 (test/scanning/numbers.lox)
+Passed: 119 Failed: 67 Skipped: 5 (test/scanning/punctuators.lox)
+Passed: 119 Failed: 67 Skipped: 6 (test/scanning/strings.lox)
+Passed: 119 Failed: 67 Skipped: 7 (test/scanning/whitespace.lox)
+Passed: 119 Failed: 67 Skipped: 8 (test/string/error_after_multiline.lox)
+Passed: 120 Failed: 67 Skipped: 8 (test/string/literals.lox)
+Passed: 121 Failed: 67 Skipped: 8 (test/string/multiline.lox)
+Passed: 122 Failed: 67 Skipped: 8 (test/string/unterminated.lox)
+Passed: 123 Failed: 67 Skipped: 8 (test/super/bound_method.lox)
 FAIL test/super/bound_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1017,7 +1012,7 @@ FAIL test/super/bound_method.lox
      Missing expected output 'A.method(arg)' on line 19.
 
 
-Passed: 122 Failed: 69 Skipped: 8 (test/super/call_other_method.lox)
+Passed: 123 Failed: 68 Skipped: 8 (test/super/call_other_method.lox)
 FAIL test/super/call_other_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1030,7 +1025,7 @@ FAIL test/super/call_other_method.lox
      Missing expected output 'Base.foo()' on line 16.
 
 
-Passed: 122 Failed: 70 Skipped: 8 (test/super/call_same_method.lox)
+Passed: 123 Failed: 69 Skipped: 8 (test/super/call_same_method.lox)
 FAIL test/super/call_same_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1043,7 +1038,7 @@ FAIL test/super/call_same_method.lox
      Missing expected output 'Base.foo()' on line 16.
 
 
-Passed: 122 Failed: 71 Skipped: 8 (test/super/closure.lox)
+Passed: 123 Failed: 70 Skipped: 8 (test/super/closure.lox)
 FAIL test/super/closure.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1055,7 +1050,7 @@ FAIL test/super/closure.lox
      Missing expected output 'Base' on line 17.
 
 
-Passed: 122 Failed: 72 Skipped: 8 (test/super/constructor.lox)
+Passed: 123 Failed: 71 Skipped: 8 (test/super/constructor.lox)
 FAIL test/super/constructor.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1068,7 +1063,7 @@ FAIL test/super/constructor.lox
      Missing expected output 'Base.init(a, b)' on line 16.
 
 
-Passed: 122 Failed: 73 Skipped: 8 (test/super/extra_arguments.lox)
+Passed: 123 Failed: 72 Skipped: 8 (test/super/extra_arguments.lox)
 FAIL test/super/extra_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 4.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1080,7 +1075,7 @@ FAIL test/super/extra_arguments.lox
      Missing expected output 'Derived.foo()' on line 9.
 
 
-Passed: 122 Failed: 74 Skipped: 8 (test/super/indirectly_inherited.lox)
+Passed: 123 Failed: 73 Skipped: 8 (test/super/indirectly_inherited.lox)
 FAIL test/super/indirectly_inherited.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1093,7 +1088,7 @@ FAIL test/super/indirectly_inherited.lox
      Missing expected output 'A.foo()' on line 18.
 
 
-Passed: 122 Failed: 75 Skipped: 8 (test/super/missing_arguments.lox)
+Passed: 123 Failed: 74 Skipped: 8 (test/super/missing_arguments.lox)
 FAIL test/super/missing_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 1.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1104,7 +1099,7 @@ FAIL test/super/missing_arguments.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 122 Failed: 76 Skipped: 8 (test/super/no_superclass_bind.lox)
+Passed: 123 Failed: 75 Skipped: 8 (test/super/no_superclass_bind.lox)
 FAIL test/super/no_superclass_bind.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1116,7 +1111,7 @@ FAIL test/super/no_superclass_bind.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 122 Failed: 77 Skipped: 8 (test/super/no_superclass_call.lox)
+Passed: 123 Failed: 76 Skipped: 8 (test/super/no_superclass_call.lox)
 FAIL test/super/no_superclass_call.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1128,7 +1123,7 @@ FAIL test/super/no_superclass_call.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 122 Failed: 78 Skipped: 8 (test/super/no_superclass_method.lox)
+Passed: 123 Failed: 77 Skipped: 8 (test/super/no_superclass_method.lox)
 FAIL test/super/no_superclass_method.lox
      Expected runtime error 'Undefined property 'doesNotExist'.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1139,7 +1134,7 @@ FAIL test/super/no_superclass_method.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 122 Failed: 79 Skipped: 8 (test/super/parenthesized.lox)
+Passed: 123 Failed: 78 Skipped: 8 (test/super/parenthesized.lox)
 FAIL test/super/parenthesized.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1151,7 +1146,7 @@ FAIL test/super/parenthesized.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 122 Failed: 80 Skipped: 8 (test/super/reassign_superclass.lox)
+Passed: 123 Failed: 79 Skipped: 8 (test/super/reassign_superclass.lox)
 FAIL test/super/reassign_superclass.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1164,7 +1159,7 @@ FAIL test/super/reassign_superclass.lox
      Missing expected output 'Base.method()' on line 22.
 
 
-Passed: 122 Failed: 81 Skipped: 8 (test/super/super_at_top_level.lox)
+Passed: 123 Failed: 80 Skipped: 8 (test/super/super_at_top_level.lox)
 FAIL test/super/super_at_top_level.lox
      Unexpected error:
      [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
@@ -1174,7 +1169,7 @@ FAIL test/super/super_at_top_level.lox
      Missing expected error: [2] Error at 'super': Can't use 'super' outside of a class.
 
 
-Passed: 122 Failed: 82 Skipped: 8 (test/super/super_in_closure_in_inherited_method.lox)
+Passed: 123 Failed: 81 Skipped: 8 (test/super/super_in_closure_in_inherited_method.lox)
 FAIL test/super/super_in_closure_in_inherited_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1186,7 +1181,7 @@ FAIL test/super/super_in_closure_in_inherited_method.lox
      Missing expected output 'A' on line 26.
 
 
-Passed: 122 Failed: 83 Skipped: 8 (test/super/super_in_inherited_method.lox)
+Passed: 123 Failed: 82 Skipped: 8 (test/super/super_in_inherited_method.lox)
 FAIL test/super/super_in_inherited_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1198,14 +1193,14 @@ FAIL test/super/super_in_inherited_method.lox
      Missing expected output 'A' on line 23.
 
 
-Passed: 122 Failed: 84 Skipped: 8 (test/super/super_in_top_level_function.lox)
+Passed: 123 Failed: 83 Skipped: 8 (test/super/super_in_top_level_function.lox)
 FAIL test/super/super_in_top_level_function.lox
      Unexpected error:
      [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
      Missing expected error: [1] Error at 'super': Can't use 'super' outside of a class.
 
 
-Passed: 122 Failed: 85 Skipped: 8 (test/super/super_without_dot.lox)
+Passed: 123 Failed: 84 Skipped: 8 (test/super/super_without_dot.lox)
 FAIL test/super/super_without_dot.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1217,7 +1212,7 @@ FAIL test/super/super_without_dot.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 122 Failed: 86 Skipped: 8 (test/super/super_without_name.lox)
+Passed: 123 Failed: 85 Skipped: 8 (test/super/super_without_name.lox)
 FAIL test/super/super_without_name.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1229,7 +1224,7 @@ FAIL test/super/super_without_name.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 122 Failed: 87 Skipped: 8 (test/super/this_in_superclass_method.lox)
+Passed: 123 Failed: 86 Skipped: 8 (test/super/this_in_superclass_method.lox)
 FAIL test/super/this_in_superclass_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1242,7 +1237,7 @@ FAIL test/super/this_in_superclass_method.lox
      Missing expected output 'b' on line 16.
 
 
-Passed: 122 Failed: 88 Skipped: 8 (test/this/closure.lox)
+Passed: 123 Failed: 87 Skipped: 8 (test/this/closure.lox)
 FAIL test/this/closure.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1254,7 +1249,7 @@ FAIL test/this/closure.lox
      Missing expected output 'Foo' on line 13.
 
 
-Passed: 122 Failed: 89 Skipped: 8 (test/this/nested_class.lox)
+Passed: 123 Failed: 88 Skipped: 8 (test/this/nested_class.lox)
 FAIL test/this/nested_class.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1268,7 +1263,7 @@ FAIL test/this/nested_class.lox
      Missing expected output 'Inner instance' on line 10.
 
 
-Passed: 122 Failed: 90 Skipped: 8 (test/this/nested_closure.lox)
+Passed: 123 Failed: 89 Skipped: 8 (test/this/nested_closure.lox)
 FAIL test/this/nested_closure.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1280,8 +1275,8 @@ FAIL test/this/nested_closure.lox
      Missing expected output 'Foo' on line 19.
 
 
-Passed: 122 Failed: 91 Skipped: 8 (test/this/this_at_top_level.lox)
-Passed: 123 Failed: 91 Skipped: 8 (test/this/this_in_method.lox)
+Passed: 123 Failed: 90 Skipped: 8 (test/this/this_at_top_level.lox)
+Passed: 124 Failed: 90 Skipped: 8 (test/this/this_in_method.lox)
 FAIL test/this/this_in_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1293,15 +1288,15 @@ FAIL test/this/this_in_method.lox
      Missing expected output 'baz' on line 6.
 
 
-Passed: 123 Failed: 92 Skipped: 8 (test/this/this_in_top_level_function.lox)
-Passed: 124 Failed: 92 Skipped: 8 (test/unexpected_character.lox)
-Passed: 125 Failed: 92 Skipped: 8 (test/variable/collide_with_parameter.lox)
-Passed: 126 Failed: 92 Skipped: 8 (test/variable/duplicate_local.lox)
-Passed: 127 Failed: 92 Skipped: 8 (test/variable/duplicate_parameter.lox)
-Passed: 128 Failed: 92 Skipped: 8 (test/variable/early_bound.lox)
-Passed: 129 Failed: 92 Skipped: 8 (test/variable/in_middle_of_block.lox)
-Passed: 130 Failed: 92 Skipped: 8 (test/variable/in_nested_block.lox)
-Passed: 131 Failed: 92 Skipped: 8 (test/variable/local_from_method.lox)
+Passed: 124 Failed: 91 Skipped: 8 (test/this/this_in_top_level_function.lox)
+Passed: 125 Failed: 91 Skipped: 8 (test/unexpected_character.lox)
+Passed: 126 Failed: 91 Skipped: 8 (test/variable/collide_with_parameter.lox)
+Passed: 127 Failed: 91 Skipped: 8 (test/variable/duplicate_local.lox)
+Passed: 128 Failed: 91 Skipped: 8 (test/variable/duplicate_parameter.lox)
+Passed: 129 Failed: 91 Skipped: 8 (test/variable/early_bound.lox)
+Passed: 130 Failed: 91 Skipped: 8 (test/variable/in_middle_of_block.lox)
+Passed: 131 Failed: 91 Skipped: 8 (test/variable/in_nested_block.lox)
+Passed: 132 Failed: 91 Skipped: 8 (test/variable/local_from_method.lox)
 FAIL test/variable/local_from_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
@@ -1313,26 +1308,26 @@ FAIL test/variable/local_from_method.lox
      Missing expected output 'variable' on line 9.
 
 
-Passed: 131 Failed: 93 Skipped: 8 (test/variable/redeclare_global.lox)
-Passed: 132 Failed: 93 Skipped: 8 (test/variable/redefine_global.lox)
-Passed: 133 Failed: 93 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
-Passed: 134 Failed: 93 Skipped: 8 (test/variable/shadow_and_local.lox)
-Passed: 135 Failed: 93 Skipped: 8 (test/variable/shadow_global.lox)
-Passed: 136 Failed: 93 Skipped: 8 (test/variable/shadow_local.lox)
-Passed: 137 Failed: 93 Skipped: 8 (test/variable/undefined_global.lox)
-Passed: 138 Failed: 93 Skipped: 8 (test/variable/undefined_local.lox)
-Passed: 139 Failed: 93 Skipped: 8 (test/variable/uninitialized.lox)
-Passed: 140 Failed: 93 Skipped: 8 (test/variable/unreached_undefined.lox)
-Passed: 141 Failed: 93 Skipped: 8 (test/variable/use_false_as_var.lox)
-Passed: 142 Failed: 93 Skipped: 8 (test/variable/use_global_in_initializer.lox)
-Passed: 143 Failed: 93 Skipped: 8 (test/variable/use_local_in_initializer.lox)
-Passed: 144 Failed: 93 Skipped: 8 (test/variable/use_nil_as_var.lox)
-Passed: 145 Failed: 93 Skipped: 8 (test/variable/use_this_as_var.lox)
-Passed: 146 Failed: 93 Skipped: 8 (test/while/class_in_body.lox)
-Passed: 147 Failed: 93 Skipped: 8 (test/while/closure_in_body.lox)
-Passed: 148 Failed: 93 Skipped: 8 (test/while/fun_in_body.lox)
-Passed: 149 Failed: 93 Skipped: 8 (test/while/return_closure.lox)
-Passed: 150 Failed: 93 Skipped: 8 (test/while/return_inside.lox)
-Passed: 151 Failed: 93 Skipped: 8 (test/while/syntax.lox)
-Passed: 152 Failed: 93 Skipped: 8 (test/while/var_in_body.lox)
-153 tests passed. 93 tests failed.
+Passed: 132 Failed: 92 Skipped: 8 (test/variable/redeclare_global.lox)
+Passed: 133 Failed: 92 Skipped: 8 (test/variable/redefine_global.lox)
+Passed: 134 Failed: 92 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
+Passed: 135 Failed: 92 Skipped: 8 (test/variable/shadow_and_local.lox)
+Passed: 136 Failed: 92 Skipped: 8 (test/variable/shadow_global.lox)
+Passed: 137 Failed: 92 Skipped: 8 (test/variable/shadow_local.lox)
+Passed: 138 Failed: 92 Skipped: 8 (test/variable/undefined_global.lox)
+Passed: 139 Failed: 92 Skipped: 8 (test/variable/undefined_local.lox)
+Passed: 140 Failed: 92 Skipped: 8 (test/variable/uninitialized.lox)
+Passed: 141 Failed: 92 Skipped: 8 (test/variable/unreached_undefined.lox)
+Passed: 142 Failed: 92 Skipped: 8 (test/variable/use_false_as_var.lox)
+Passed: 143 Failed: 92 Skipped: 8 (test/variable/use_global_in_initializer.lox)
+Passed: 144 Failed: 92 Skipped: 8 (test/variable/use_local_in_initializer.lox)
+Passed: 145 Failed: 92 Skipped: 8 (test/variable/use_nil_as_var.lox)
+Passed: 146 Failed: 92 Skipped: 8 (test/variable/use_this_as_var.lox)
+Passed: 147 Failed: 92 Skipped: 8 (test/while/class_in_body.lox)
+Passed: 148 Failed: 92 Skipped: 8 (test/while/closure_in_body.lox)
+Passed: 149 Failed: 92 Skipped: 8 (test/while/fun_in_body.lox)
+Passed: 150 Failed: 92 Skipped: 8 (test/while/return_closure.lox)
+Passed: 151 Failed: 92 Skipped: 8 (test/while/return_inside.lox)
+Passed: 152 Failed: 92 Skipped: 8 (test/while/syntax.lox)
+Passed: 153 Failed: 92 Skipped: 8 (test/while/var_in_body.lox)
+154 tests passed. 92 tests failed.

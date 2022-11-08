@@ -255,7 +255,7 @@ struct Local<'a> {
 
 #[derive(Clone, Copy)]
 pub struct Upvalue {
-    index: u8,
+    index: usize,
     is_local: bool,
 }
 
@@ -279,7 +279,7 @@ struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    fn resolve_local(&mut self, name: &'a str) -> CompileResult<Option<u8>> {
+    fn resolve_local(&mut self, name: &'a str) -> CompileResult<Option<usize>> {
         if let Some((i, local)) = self
             .locals
             .iter()
@@ -290,17 +290,17 @@ impl<'a> Compiler<'a> {
             if local.depth == -1 {
                 Err("Can't read local variable in its own initializer.".into())
             } else {
-                Ok(Some(i as u8))
+                Ok(Some(i))
             }
         } else {
             Ok(None)
         }
     }
 
-    fn resolve_upvalue(&mut self, name: &'a str) -> CompileResult<Option<u8>> {
+    fn resolve_upvalue(&mut self, name: &'a str) -> CompileResult<Option<usize>> {
         if let Some(enclosing) = &mut self.enclosing {
             if let Some(local) = enclosing.resolve_local(name)? {
-                self.enclosing.as_mut().unwrap().locals[local as usize].is_captured = true;
+                self.enclosing.as_mut().unwrap().locals[local].is_captured = true;
                 return self.add_upvalue(local, true).map(Some);
             }
             if let Some(upvalue) = enclosing.resolve_upvalue(name)? {
@@ -310,13 +310,13 @@ impl<'a> Compiler<'a> {
         Ok(None)
     }
 
-    fn add_upvalue(&mut self, index: u8, is_local: bool) -> CompileResult<u8> {
+    fn add_upvalue(&mut self, index: usize, is_local: bool) -> CompileResult<usize> {
         let upvalue_count = self.function.upvalue_count;
 
         for i in 0..upvalue_count {
             let upvalue = unsafe { self.upvalues[i].assume_init_ref() };
             if upvalue.index == index && upvalue.is_local == is_local {
-                return Ok(i as u8);
+                return Ok(i);
             }
         }
 
@@ -328,7 +328,7 @@ impl<'a> Compiler<'a> {
         self.upvalues[upvalue_count].write(Upvalue { index, is_local });
 
         self.function.upvalue_count += 1;
-        Ok(upvalue_count as u8)
+        Ok(upvalue_count)
     }
 }
 
@@ -743,7 +743,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn add_local(&mut self, name: &'a str) -> CompileResult<()> {
-        if self.compiler.locals.len() == u8::MAX as usize + 1 {
+        if self.compiler.locals.len() == u8::MAX as usize + 2 {
             return Err("Too many local variables in function.".into());
         }
         self.compiler.locals.push(Local {
