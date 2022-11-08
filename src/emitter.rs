@@ -1,4 +1,3 @@
-use std::arch::asm;
 use std::mem::MaybeUninit;
 use std::ops::Range;
 use std::ptr::null_mut;
@@ -11,12 +10,12 @@ use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_V
 use crate::START;
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
-use libc::siginfo_t;
-use nix::sys::signal;
 
 static mut GLOBALS: Vec<u64> = Vec::new();
 static mut GLOBALS_NAMES: Vec<GcCell<ObjString>> = Vec::new();
 const RESERVED_GLOBAL_VARS: usize = 9;
+
+const FRAMES_MAX: u8 = 64;
 
 pub fn global_vars() -> &'static [Value] {
     unsafe { std::mem::transmute(&GLOBALS[9..]) }
@@ -137,6 +136,7 @@ fn entrypoint_prologue(ops: &mut Assembler) {
         ; mov false_val, QWORD FALSE_VAL.to_bits() as _
         ; mov nil_val, QWORD NIL_VAL.to_bits() as _
         ; mov rbp, rsp
+        ; xor edi, edi
     );
 }
 
@@ -206,6 +206,9 @@ impl Emitter {
             ; -> fn_arity_mismatch:
             ;; handle_error!(ops, fn_arity_mismatch)
 
+            ; -> stack_overflow:
+            ;; handle_error!(ops, stack_overflow)
+
             ; ->exit_error:
             ; mov r15, [r12]
             ; mov r14, [r12+0x8]
@@ -236,12 +239,6 @@ impl Emitter {
         let start = ops.offset();
 
         entrypoint_prologue(&mut ops);
-
-        dynasm!(ops
-            ; lea rcx, [->exit_error]
-            ; mov rdx, rsp
-            ;; call_extern!(ops, register_signal_handler)
-        );
 
         unsafe {
             GLOBALS.clear();
@@ -586,12 +583,18 @@ impl Emitter {
         let start = self.ops.new_dynamic_label();
         dynasm!(self.ops
             ; =>start
+            ; cmp rcx, arity as _
+            // Jump instead of calling to make the error appear on the call site.
+            ; je >ok
+            ; mov r8, rcx
+            ; mov r9, arity as _
+            ; jmp ->fn_arity_mismatch
+            ; ok:
+            ; inc edi
+            ; cmp edi, FRAMES_MAX as _
+            ; je ->stack_overflow
             ; push rbp
             ; lea rbp, [rsp + (arity * 8 + 0x10) as _]
-            ; cmp rcx, arity as _
-            ; je >ok
-            ; call ->fn_arity_mismatch
-            ; ok:
         );
         FnInfo {
             arity,
@@ -607,6 +610,7 @@ impl Emitter {
             ; pop rax
             ; lea rsp, [rbp - ((fn_info.arity * 8 + 0x10) as i32)]
             ; pop rbp
+            ; dec edi
             ; ret
         )
     }
@@ -650,9 +654,6 @@ impl Emitter {
     }
     pub fn call(&mut self, arity: u8) {
         dynasm!(self.ops
-            // trigger a stack overflow now if there is little stack left
-            ; mov rax, [rsp - 0x400]
-
             ; mov rax, [rsp + (arity * 8) as _]
             ; mov rcx, arity as _
 
@@ -850,12 +851,16 @@ extern "win64" fn uninit_global(ip: *const u8, base_ptr: *const u8, var_offset: 
     eprintln!("Undefined variable '{name}'.");
     print_stacktrace(ip, base_ptr)
 }
-extern "win64" fn fn_arity_mismatch(ip: *const u8, base_ptr: *const u8) {
-    eprintln!("Function arity mismatch.");
+extern "win64" fn fn_arity_mismatch(ip: *const u8, base_ptr: *const u8, actual: u8, expected: u8) {
+    eprintln!("Expected {expected} arguments but got {actual}.");
     print_stacktrace(ip, base_ptr)
 }
 extern "win64" fn expected_callable(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Can only call functions and classes.");
+    print_stacktrace(ip, base_ptr)
+}
+extern "win64" fn stack_overflow(ip: *const u8, base_ptr: *const u8) {
+    eprintln!("Stack overflow.");
     print_stacktrace(ip, base_ptr)
 }
 
@@ -902,82 +907,6 @@ extern "win64" fn close_upvalues(last: *mut Value) {
         upvalue.location = upvalue.closed.as_mut_ptr();
         unsafe{ OPEN_UPVALUES = upvalue.next; }
     }
-}
-
-extern "win64" fn register_signal_handler(ptr: *const u8, stack_ptr: *const u8) {
-    unsafe {
-        VM_EPILOGUE_PTR = Some(ptr);
-        VM_SOMEWHERE_ON_THE_STACK_PTR = Some(stack_ptr);
-
-        // Shamelessly copied from https://github.com/matklad/backtrace-on-stack-overflow/blob/master/src/lib.rs
-        // Might implode or otherwise fail.
-        let buf = Vec::leak(vec![0u128; 4096]);
-        let stack = libc::stack_t {
-            ss_sp: buf.as_ptr() as *mut libc::c_void,
-            ss_flags: 0,
-            ss_size: buf.len() * std::mem::size_of::<u128>(),
-        };
-        let mut old = libc::stack_t {
-            ss_sp: std::ptr::null_mut(),
-            ss_flags: 0,
-            ss_size: 0,
-        };
-        let ret = libc::sigaltstack(&stack, &mut old);
-        assert_eq!(ret, 0, "sigaltstack failed");
-
-        signal::sigaction(
-            signal::SIGSEGV,
-            &signal::SigAction::new(
-                signal::SigHandler::SigAction(handle_sigsegv),
-                signal::SaFlags::SA_NODEFER | signal::SaFlags::SA_ONSTACK,
-                signal::SigSet::empty(),
-            ),
-        )
-        .unwrap();
-    }
-}
-
-static mut VM_EPILOGUE_PTR: Option<*const u8> = None;
-
-// This pointer points to *somewhere* around the start of the VM stack.
-static mut VM_SOMEWHERE_ON_THE_STACK_PTR: Option<*const u8> = None;
-
-extern "C" fn handle_sigsegv(_: i32, siginfo: *mut siginfo_t, ptr: *mut libc::c_void) {
-    let siginfo = unsafe { *siginfo };
-    let fault_address = unsafe { siginfo.si_addr() };
-
-    let offset_from_stack =
-        unsafe { VM_SOMEWHERE_ON_THE_STACK_PTR.unwrap() as i64 - fault_address as i64 };
-
-    let stack_size_max = nix::sys::resource::getrlimit(nix::sys::resource::Resource::RLIMIT_STACK)
-        .unwrap()
-        .0 as i64;
-
-    if !(0..stack_size_max).contains(&offset_from_stack) {
-        // It looks like this was not a segfault due to a stack overflow. Probably a bug in the generated code.
-        eprintln!("BUG: Segmentation fault.");
-        std::process::exit(-1);
-    }
-
-    eprintln!("Stack overflow.");
-
-    let (rip, rbp) = 
-        unsafe {
-            let gregs = ptr.cast::<libc::ucontext_t>().read().uc_mcontext.gregs;
-            (gregs[libc::REG_RIP as usize], gregs[libc::REG_RBP as usize])
-        }
-    ;
-
-    print_stacktrace(rip as _, rbp as _);
-
-    let epilogue =
-        unsafe { std::mem::transmute::<_, extern "win64" fn()>(VM_EPILOGUE_PTR.unwrap()) };
-
-    // Restore the globals pointer.
-    unsafe {
-        asm!("mov r12, {}",  in(reg) GLOBALS.as_ptr());
-    }
-    epilogue();
 }
 
 static mut SOURCE_MAPPING: SourceMapping = SourceMapping::new();
