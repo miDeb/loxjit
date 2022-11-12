@@ -20,7 +20,6 @@ mod chunk;
 mod common;
 mod compiler;
 mod emitter;
-mod errors;
 mod gc;
 mod object;
 mod scanner;

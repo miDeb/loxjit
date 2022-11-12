@@ -9,12 +9,12 @@ Passed: 6 Failed: 0 Skipped: 0 (test/assignment/syntax.lox)
 Passed: 7 Failed: 0 Skipped: 0 (test/assignment/to_this.lox)
 FAIL test/assignment/to_this.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [3] Error at '=': Invalid assignment target.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
@@ -29,11 +29,11 @@ Passed: 14 Failed: 1 Skipped: 0 (test/call/num.lox)
 Passed: 15 Failed: 1 Skipped: 0 (test/call/object.lox)
 FAIL test/call/object.lox
      Expected runtime error 'Can only call functions and classes.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
@@ -41,11 +41,11 @@ Passed: 15 Failed: 2 Skipped: 0 (test/call/string.lox)
 Passed: 16 Failed: 2 Skipped: 0 (test/class/empty.lox)
 FAIL test/class/empty.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Foo' on line 3.
 
@@ -53,23 +53,23 @@ FAIL test/class/empty.lox
 Passed: 16 Failed: 3 Skipped: 0 (test/class/inherit_self.lox)
 FAIL test/class/inherit_self.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [1] Error at 'Foo': A class can't inherit from itself.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 16 Failed: 4 Skipped: 0 (test/class/inherited_method.lox)
 FAIL test/class/inherited_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'in foo' on line 20.
      Missing expected output 'in bar' on line 21.
@@ -79,11 +79,11 @@ FAIL test/class/inherited_method.lox
 Passed: 16 Failed: 5 Skipped: 0 (test/class/local_inherit_other.lox)
 FAIL test/class/local_inherit_other.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'B' on line 8.
 
@@ -91,24 +91,24 @@ FAIL test/class/local_inherit_other.lox
 Passed: 16 Failed: 6 Skipped: 0 (test/class/local_inherit_self.lox)
 FAIL test/class/local_inherit_self.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [2] Error at 'Foo': A class can't inherit from itself.
      Missing expected error: [5] Error at end: Expect '}' after block.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 16 Failed: 7 Skipped: 0 (test/class/local_reference_self.lox)
 FAIL test/class/local_reference_self.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Foo' on line 8.
 
@@ -116,11 +116,11 @@ FAIL test/class/local_reference_self.lox
 Passed: 16 Failed: 8 Skipped: 0 (test/class/reference_self.lox)
 FAIL test/class/reference_self.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Foo' on line 7.
 
@@ -132,11 +132,11 @@ Passed: 19 Failed: 9 Skipped: 0 (test/closure/close_over_later_variable.lox)
 Passed: 20 Failed: 9 Skipped: 0 (test/closure/close_over_method_parameter.lox)
 FAIL test/closure/close_over_method_parameter.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'param' on line 13.
 
@@ -156,11 +156,11 @@ Passed: 31 Failed: 10 Skipped: 0 (test/comments/unicode.lox)
 Passed: 32 Failed: 10 Skipped: 0 (test/constructor/arguments.lox)
 FAIL test/constructor/arguments.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'init' on line 3.
      Missing expected output '1' on line 10.
@@ -170,11 +170,11 @@ FAIL test/constructor/arguments.lox
 Passed: 32 Failed: 11 Skipped: 0 (test/constructor/call_init_early_return.lox)
 FAIL test/constructor/call_init_early_return.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'init' on line 9.
      Missing expected output 'init' on line 10.
@@ -184,11 +184,11 @@ FAIL test/constructor/call_init_early_return.lox
 Passed: 32 Failed: 12 Skipped: 0 (test/constructor/call_init_explicitly.lox)
 FAIL test/constructor/call_init_explicitly.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Foo.init(one)' on line 8.
      Missing expected output 'Foo.init(two)' on line 11.
@@ -199,11 +199,11 @@ FAIL test/constructor/call_init_explicitly.lox
 Passed: 32 Failed: 13 Skipped: 0 (test/constructor/default.lox)
 FAIL test/constructor/default.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Foo instance' on line 4.
 
@@ -211,22 +211,22 @@ FAIL test/constructor/default.lox
 Passed: 32 Failed: 14 Skipped: 0 (test/constructor/default_arguments.lox)
 FAIL test/constructor/default_arguments.lox
      Expected runtime error 'Expected 0 arguments but got 3.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 32 Failed: 15 Skipped: 0 (test/constructor/early_return.lox)
 FAIL test/constructor/early_return.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'init' on line 9.
      Missing expected output 'Foo instance' on line 10.
@@ -235,22 +235,22 @@ FAIL test/constructor/early_return.lox
 Passed: 32 Failed: 16 Skipped: 0 (test/constructor/extra_arguments.lox)
 FAIL test/constructor/extra_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 4.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 32 Failed: 17 Skipped: 0 (test/constructor/init_not_method.lox)
 FAIL test/constructor/init_not_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'not initializer' on line 12.
 
@@ -258,22 +258,22 @@ FAIL test/constructor/init_not_method.lox
 Passed: 32 Failed: 18 Skipped: 0 (test/constructor/missing_arguments.lox)
 FAIL test/constructor/missing_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 1.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 32 Failed: 19 Skipped: 0 (test/constructor/return_in_nested_function.lox)
 FAIL test/constructor/return_in_nested_function.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'bar' on line 6.
      Missing expected output 'Foo instance' on line 10.
@@ -282,12 +282,12 @@ FAIL test/constructor/return_in_nested_function.lox
 Passed: 32 Failed: 20 Skipped: 0 (test/constructor/return_value.lox)
 FAIL test/constructor/return_value.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [3] Error at 'return': Can't return a value from an initializer.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
@@ -297,11 +297,11 @@ Passed: 33 Failed: 21 Skipped: 1 (test/expressions/parse.lox)
 Passed: 33 Failed: 21 Skipped: 2 (test/field/call_function_field.lox)
 FAIL test/field/call_function_field.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'bar' on line 13.
      Missing expected output '1' on line 14.
@@ -311,22 +311,22 @@ FAIL test/field/call_function_field.lox
 Passed: 33 Failed: 22 Skipped: 2 (test/field/call_nonfunction_field.lox)
 FAIL test/field/call_nonfunction_field.lox
      Expected runtime error 'Can only call functions and classes.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 23 Skipped: 2 (test/field/get_and_set_method.lox)
 FAIL test/field/get_and_set_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'other' on line 19.
      Missing expected output '1' on line 20.
@@ -337,77 +337,77 @@ FAIL test/field/get_and_set_method.lox
 Passed: 33 Failed: 24 Skipped: 2 (test/field/get_on_bool.lox)
 FAIL test/field/get_on_bool.lox
      Expected runtime error 'Only instances have properties.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 25 Skipped: 2 (test/field/get_on_class.lox)
 FAIL test/field/get_on_class.lox
      Expected runtime error 'Only instances have properties.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 26 Skipped: 2 (test/field/get_on_function.lox)
 FAIL test/field/get_on_function.lox
      Expected runtime error 'Only instances have properties.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 27 Skipped: 2 (test/field/get_on_nil.lox)
 FAIL test/field/get_on_nil.lox
      Expected runtime error 'Only instances have properties.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 28 Skipped: 2 (test/field/get_on_num.lox)
 FAIL test/field/get_on_num.lox
      Expected runtime error 'Only instances have properties.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 29 Skipped: 2 (test/field/get_on_string.lox)
 FAIL test/field/get_on_string.lox
      Expected runtime error 'Only instances have properties.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 30 Skipped: 2 (test/field/many.lox)
 FAIL test/field/many.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'apple' on line 89.
      Missing expected output 'apricot' on line 90.
@@ -493,11 +493,11 @@ FAIL test/field/many.lox
 Passed: 33 Failed: 31 Skipped: 2 (test/field/method.lox)
 FAIL test/field/method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'got method' on line 8.
      Missing expected output 'arg' on line 9.
@@ -506,11 +506,11 @@ FAIL test/field/method.lox
 Passed: 33 Failed: 32 Skipped: 2 (test/field/method_binds_this.lox)
 FAIL test/field/method_binds_this.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'foo1' on line 18.
      Missing expected output '1' on line 19.
@@ -519,11 +519,11 @@ FAIL test/field/method_binds_this.lox
 Passed: 33 Failed: 33 Skipped: 2 (test/field/on_instance.lox)
 FAIL test/field/on_instance.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'bar value' on line 5.
      Missing expected output 'baz value' on line 6.
@@ -534,88 +534,88 @@ FAIL test/field/on_instance.lox
 Passed: 33 Failed: 34 Skipped: 2 (test/field/set_evaluation_order.lox)
 FAIL test/field/set_evaluation_order.lox
      Expected runtime error 'Undefined variable 'undefined1'.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 35 Skipped: 2 (test/field/set_on_bool.lox)
 FAIL test/field/set_on_bool.lox
      Expected runtime error 'Only instances have fields.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 36 Skipped: 2 (test/field/set_on_class.lox)
 FAIL test/field/set_on_class.lox
      Expected runtime error 'Only instances have fields.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 37 Skipped: 2 (test/field/set_on_function.lox)
 FAIL test/field/set_on_function.lox
      Expected runtime error 'Only instances have fields.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 38 Skipped: 2 (test/field/set_on_nil.lox)
 FAIL test/field/set_on_nil.lox
      Expected runtime error 'Only instances have fields.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 39 Skipped: 2 (test/field/set_on_num.lox)
 FAIL test/field/set_on_num.lox
      Expected runtime error 'Only instances have fields.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 40 Skipped: 2 (test/field/set_on_string.lox)
 FAIL test/field/set_on_string.lox
      Expected runtime error 'Only instances have fields.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
 Passed: 33 Failed: 41 Skipped: 2 (test/field/undefined.lox)
 FAIL test/field/undefined.lox
      Expected runtime error 'Undefined property 'bar'.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
@@ -631,116 +631,108 @@ Passed: 41 Failed: 42 Skipped: 2 (test/for/statement_initializer.lox)
 Passed: 42 Failed: 42 Skipped: 2 (test/for/syntax.lox)
 Passed: 43 Failed: 42 Skipped: 2 (test/for/var_in_body.lox)
 Passed: 44 Failed: 42 Skipped: 2 (test/function/body_must_be_block.lox)
-FAIL test/function/body_must_be_block.lox
-     Missing expected error: [4] Error at end: Expect '}' after block.
-
-
-Passed: 44 Failed: 43 Skipped: 2 (test/function/empty_body.lox)
-Passed: 45 Failed: 43 Skipped: 2 (test/function/extra_arguments.lox)
-Passed: 46 Failed: 43 Skipped: 2 (test/function/local_mutual_recursion.lox)
-Passed: 47 Failed: 43 Skipped: 2 (test/function/local_recursion.lox)
-Passed: 48 Failed: 43 Skipped: 2 (test/function/missing_arguments.lox)
-Passed: 49 Failed: 43 Skipped: 2 (test/function/missing_comma_in_parameters.lox)
-FAIL test/function/missing_comma_in_parameters.lox
-     Missing expected error: [4] Error at end: Expect '}' after block.
-
-
-Passed: 49 Failed: 44 Skipped: 2 (test/function/mutual_recursion.lox)
-Passed: 50 Failed: 44 Skipped: 2 (test/function/nested_call_with_arguments.lox)
-Passed: 51 Failed: 44 Skipped: 2 (test/function/parameters.lox)
-Passed: 52 Failed: 44 Skipped: 2 (test/function/print.lox)
-Passed: 53 Failed: 44 Skipped: 2 (test/function/recursion.lox)
-Passed: 54 Failed: 44 Skipped: 2 (test/function/too_many_arguments.lox)
-Passed: 55 Failed: 44 Skipped: 2 (test/function/too_many_parameters.lox)
-Passed: 56 Failed: 44 Skipped: 2 (test/if/class_in_else.lox)
-Passed: 57 Failed: 44 Skipped: 2 (test/if/class_in_then.lox)
-Passed: 58 Failed: 44 Skipped: 2 (test/if/dangling_else.lox)
-Passed: 59 Failed: 44 Skipped: 2 (test/if/else.lox)
-Passed: 60 Failed: 44 Skipped: 2 (test/if/fun_in_else.lox)
-Passed: 61 Failed: 44 Skipped: 2 (test/if/fun_in_then.lox)
-Passed: 62 Failed: 44 Skipped: 2 (test/if/if.lox)
-Passed: 63 Failed: 44 Skipped: 2 (test/if/truth.lox)
-Passed: 64 Failed: 44 Skipped: 2 (test/if/var_in_else.lox)
-Passed: 65 Failed: 44 Skipped: 2 (test/if/var_in_then.lox)
-Passed: 66 Failed: 44 Skipped: 2 (test/inheritance/constructor.lox)
+Passed: 45 Failed: 42 Skipped: 2 (test/function/empty_body.lox)
+Passed: 46 Failed: 42 Skipped: 2 (test/function/extra_arguments.lox)
+Passed: 47 Failed: 42 Skipped: 2 (test/function/local_mutual_recursion.lox)
+Passed: 48 Failed: 42 Skipped: 2 (test/function/local_recursion.lox)
+Passed: 49 Failed: 42 Skipped: 2 (test/function/missing_arguments.lox)
+Passed: 50 Failed: 42 Skipped: 2 (test/function/missing_comma_in_parameters.lox)
+Passed: 51 Failed: 42 Skipped: 2 (test/function/mutual_recursion.lox)
+Passed: 52 Failed: 42 Skipped: 2 (test/function/nested_call_with_arguments.lox)
+Passed: 53 Failed: 42 Skipped: 2 (test/function/parameters.lox)
+Passed: 54 Failed: 42 Skipped: 2 (test/function/print.lox)
+Passed: 55 Failed: 42 Skipped: 2 (test/function/recursion.lox)
+Passed: 56 Failed: 42 Skipped: 2 (test/function/too_many_arguments.lox)
+Passed: 57 Failed: 42 Skipped: 2 (test/function/too_many_parameters.lox)
+Passed: 58 Failed: 42 Skipped: 2 (test/if/class_in_else.lox)
+Passed: 59 Failed: 42 Skipped: 2 (test/if/class_in_then.lox)
+Passed: 60 Failed: 42 Skipped: 2 (test/if/dangling_else.lox)
+Passed: 61 Failed: 42 Skipped: 2 (test/if/else.lox)
+Passed: 62 Failed: 42 Skipped: 2 (test/if/fun_in_else.lox)
+Passed: 63 Failed: 42 Skipped: 2 (test/if/fun_in_then.lox)
+Passed: 64 Failed: 42 Skipped: 2 (test/if/if.lox)
+Passed: 65 Failed: 42 Skipped: 2 (test/if/truth.lox)
+Passed: 66 Failed: 42 Skipped: 2 (test/if/var_in_else.lox)
+Passed: 67 Failed: 42 Skipped: 2 (test/if/var_in_then.lox)
+Passed: 68 Failed: 42 Skipped: 2 (test/inheritance/constructor.lox)
 FAIL test/inheritance/constructor.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'value' on line 14.
 
 
-Passed: 66 Failed: 45 Skipped: 2 (test/inheritance/inherit_from_function.lox)
+Passed: 68 Failed: 43 Skipped: 2 (test/inheritance/inherit_from_function.lox)
 FAIL test/inheritance/inherit_from_function.lox
      Expected runtime error 'Superclass must be a class.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 66 Failed: 46 Skipped: 2 (test/inheritance/inherit_from_nil.lox)
+Passed: 68 Failed: 44 Skipped: 2 (test/inheritance/inherit_from_nil.lox)
 FAIL test/inheritance/inherit_from_nil.lox
      Expected runtime error 'Superclass must be a class.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 66 Failed: 47 Skipped: 2 (test/inheritance/inherit_from_number.lox)
+Passed: 68 Failed: 45 Skipped: 2 (test/inheritance/inherit_from_number.lox)
 FAIL test/inheritance/inherit_from_number.lox
      Expected runtime error 'Superclass must be a class.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 66 Failed: 48 Skipped: 2 (test/inheritance/inherit_methods.lox)
+Passed: 68 Failed: 46 Skipped: 2 (test/inheritance/inherit_methods.lox)
 FAIL test/inheritance/inherit_methods.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'foo' on line 12.
      Missing expected output 'bar' on line 13.
      Missing expected output 'bar' on line 14.
 
 
-Passed: 66 Failed: 49 Skipped: 2 (test/inheritance/parenthesized_superclass.lox)
+Passed: 68 Failed: 47 Skipped: 2 (test/inheritance/parenthesized_superclass.lox)
 FAIL test/inheritance/parenthesized_superclass.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [4] Error at '(': Expect superclass name.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 66 Failed: 50 Skipped: 2 (test/inheritance/set_fields_from_base_class.lox)
+Passed: 68 Failed: 48 Skipped: 2 (test/inheritance/set_fields_from_base_class.lox)
 FAIL test/inheritance/set_fields_from_base_class.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'foo 1' on line 28.
      Missing expected output 'foo 2' on line 29.
@@ -750,39 +742,39 @@ FAIL test/inheritance/set_fields_from_base_class.lox
      Missing expected output 'bar 2' on line 38.
 
 
-Passed: 66 Failed: 51 Skipped: 2 (test/limit/loop_too_large.lox)
+Passed: 68 Failed: 49 Skipped: 2 (test/limit/loop_too_large.lox)
 FAIL test/limit/loop_too_large.lox
      Missing expected error: [2351] Error at '}': Loop body too large.
      Expected return code 65 and got 0. Stderr:
 
 
-Passed: 66 Failed: 52 Skipped: 2 (test/limit/no_reuse_constants.lox)
+Passed: 68 Failed: 50 Skipped: 2 (test/limit/no_reuse_constants.lox)
 FAIL test/limit/no_reuse_constants.lox
      Missing expected error: [35] Error at '1': Too many constants in one chunk.
      Expected return code 65 and got 0. Stderr:
 
 
-Passed: 66 Failed: 53 Skipped: 2 (test/limit/stack_overflow.lox)
-Passed: 67 Failed: 53 Skipped: 2 (test/limit/too_many_constants.lox)
+Passed: 68 Failed: 51 Skipped: 2 (test/limit/stack_overflow.lox)
+Passed: 69 Failed: 51 Skipped: 2 (test/limit/too_many_constants.lox)
 FAIL test/limit/too_many_constants.lox
      Missing expected error: [35] Error at '"oops"': Too many constants in one chunk.
      Expected return code 65 and got 0. Stderr:
 
 
-Passed: 67 Failed: 54 Skipped: 2 (test/limit/too_many_locals.lox)
-Passed: 68 Failed: 54 Skipped: 2 (test/limit/too_many_upvalues.lox)
-Passed: 69 Failed: 54 Skipped: 2 (test/logical_operator/and.lox)
-Passed: 70 Failed: 54 Skipped: 2 (test/logical_operator/and_truth.lox)
-Passed: 71 Failed: 54 Skipped: 2 (test/logical_operator/or.lox)
-Passed: 72 Failed: 54 Skipped: 2 (test/logical_operator/or_truth.lox)
-Passed: 73 Failed: 54 Skipped: 2 (test/method/arity.lox)
+Passed: 69 Failed: 52 Skipped: 2 (test/limit/too_many_locals.lox)
+Passed: 70 Failed: 52 Skipped: 2 (test/limit/too_many_upvalues.lox)
+Passed: 71 Failed: 52 Skipped: 2 (test/logical_operator/and.lox)
+Passed: 72 Failed: 52 Skipped: 2 (test/logical_operator/and_truth.lox)
+Passed: 73 Failed: 52 Skipped: 2 (test/logical_operator/or.lox)
+Passed: 74 Failed: 52 Skipped: 2 (test/logical_operator/or_truth.lox)
+Passed: 75 Failed: 52 Skipped: 2 (test/method/arity.lox)
 FAIL test/method/arity.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'no args' on line 14.
      Missing expected output '1' on line 15.
@@ -795,113 +787,146 @@ FAIL test/method/arity.lox
      Missing expected output '36' on line 22.
 
 
-Passed: 73 Failed: 55 Skipped: 2 (test/method/empty_block.lox)
+Passed: 75 Failed: 53 Skipped: 2 (test/method/empty_block.lox)
 FAIL test/method/empty_block.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'nil' on line 5.
 
 
-Passed: 73 Failed: 56 Skipped: 2 (test/method/extra_arguments.lox)
+Passed: 75 Failed: 54 Skipped: 2 (test/method/extra_arguments.lox)
 FAIL test/method/extra_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 4.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 73 Failed: 57 Skipped: 2 (test/method/missing_arguments.lox)
+Passed: 75 Failed: 55 Skipped: 2 (test/method/missing_arguments.lox)
 FAIL test/method/missing_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 1.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 73 Failed: 58 Skipped: 2 (test/method/not_found.lox)
+Passed: 75 Failed: 56 Skipped: 2 (test/method/not_found.lox)
 FAIL test/method/not_found.lox
      Expected runtime error 'Undefined property 'unknown'.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 73 Failed: 59 Skipped: 2 (test/method/print_bound_method.lox)
+Passed: 75 Failed: 57 Skipped: 2 (test/method/print_bound_method.lox)
 FAIL test/method/print_bound_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output '<fn method>' on line 5.
 
 
-Passed: 73 Failed: 60 Skipped: 2 (test/method/refer_to_name.lox)
+Passed: 75 Failed: 58 Skipped: 2 (test/method/refer_to_name.lox)
 FAIL test/method/refer_to_name.lox
      Expected runtime error 'Undefined variable 'method'.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 73 Failed: 61 Skipped: 2 (test/method/too_many_arguments.lox)
-Passed: 74 Failed: 61 Skipped: 2 (test/method/too_many_parameters.lox)
+Passed: 75 Failed: 59 Skipped: 2 (test/method/too_many_arguments.lox)
+FAIL test/method/too_many_arguments.lox
+     Unexpected output on stderr:
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     Unexpected output on stderr:
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+     Expected return code 65 and got 101. Stderr:
+     [line 259] Error at 'a': Can't have more than 255 arguments.
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+Passed: 75 Failed: 60 Skipped: 2 (test/method/too_many_parameters.lox)
 FAIL test/method/too_many_parameters.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [258] Error at 'a': Can't have more than 255 parameters.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 74 Failed: 62 Skipped: 2 (test/nil/literal.lox)
-Passed: 75 Failed: 62 Skipped: 2 (test/number/decimal_point_at_eof.lox)
+Passed: 75 Failed: 61 Skipped: 2 (test/nil/literal.lox)
+Passed: 76 Failed: 61 Skipped: 2 (test/number/decimal_point_at_eof.lox)
+FAIL test/number/decimal_point_at_eof.lox
+     Unexpected output on stderr:
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     Unexpected output on stderr:
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+     Expected return code 65 and got 101. Stderr:
+     [line 2] Error at end: Expect property name after '.'.
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
 Passed: 76 Failed: 62 Skipped: 2 (test/number/leading_dot.lox)
 Passed: 77 Failed: 62 Skipped: 2 (test/number/literals.lox)
 Passed: 78 Failed: 62 Skipped: 2 (test/number/nan_equality.lox)
 Passed: 79 Failed: 62 Skipped: 2 (test/number/trailing_dot.lox)
-Passed: 80 Failed: 62 Skipped: 2 (test/operator/add.lox)
-Passed: 81 Failed: 62 Skipped: 2 (test/operator/add_bool_nil.lox)
-Passed: 82 Failed: 62 Skipped: 2 (test/operator/add_bool_num.lox)
-Passed: 83 Failed: 62 Skipped: 2 (test/operator/add_bool_string.lox)
-Passed: 84 Failed: 62 Skipped: 2 (test/operator/add_nil_nil.lox)
-Passed: 85 Failed: 62 Skipped: 2 (test/operator/add_num_nil.lox)
-Passed: 86 Failed: 62 Skipped: 2 (test/operator/add_string_nil.lox)
-Passed: 87 Failed: 62 Skipped: 2 (test/operator/comparison.lox)
-Passed: 88 Failed: 62 Skipped: 2 (test/operator/divide.lox)
-Passed: 89 Failed: 62 Skipped: 2 (test/operator/divide_nonnum_num.lox)
-Passed: 90 Failed: 62 Skipped: 2 (test/operator/divide_num_nonnum.lox)
-Passed: 91 Failed: 62 Skipped: 2 (test/operator/equals.lox)
-Passed: 92 Failed: 62 Skipped: 2 (test/operator/equals_class.lox)
+FAIL test/number/trailing_dot.lox
+     Unexpected output on stderr:
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     Unexpected output on stderr:
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+     Expected return code 65 and got 101. Stderr:
+     [line 2] Error at ';': Expect property name after '.'.
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+Passed: 79 Failed: 63 Skipped: 2 (test/operator/add.lox)
+Passed: 80 Failed: 63 Skipped: 2 (test/operator/add_bool_nil.lox)
+Passed: 81 Failed: 63 Skipped: 2 (test/operator/add_bool_num.lox)
+Passed: 82 Failed: 63 Skipped: 2 (test/operator/add_bool_string.lox)
+Passed: 83 Failed: 63 Skipped: 2 (test/operator/add_nil_nil.lox)
+Passed: 84 Failed: 63 Skipped: 2 (test/operator/add_num_nil.lox)
+Passed: 85 Failed: 63 Skipped: 2 (test/operator/add_string_nil.lox)
+Passed: 86 Failed: 63 Skipped: 2 (test/operator/comparison.lox)
+Passed: 87 Failed: 63 Skipped: 2 (test/operator/divide.lox)
+Passed: 88 Failed: 63 Skipped: 2 (test/operator/divide_nonnum_num.lox)
+Passed: 89 Failed: 63 Skipped: 2 (test/operator/divide_num_nonnum.lox)
+Passed: 90 Failed: 63 Skipped: 2 (test/operator/equals.lox)
+Passed: 91 Failed: 63 Skipped: 2 (test/operator/equals_class.lox)
 FAIL test/operator/equals_class.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'true' on line 5.
      Missing expected output 'false' on line 6.
@@ -913,421 +938,435 @@ FAIL test/operator/equals_class.lox
      Missing expected output 'false' on line 13.
 
 
-Passed: 92 Failed: 63 Skipped: 2 (test/operator/equals_method.lox)
+Passed: 91 Failed: 64 Skipped: 2 (test/operator/equals_method.lox)
 FAIL test/operator/equals_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'true' on line 10.
      Missing expected output 'false' on line 13.
 
 
-Passed: 92 Failed: 64 Skipped: 2 (test/operator/greater_nonnum_num.lox)
-Passed: 93 Failed: 64 Skipped: 2 (test/operator/greater_num_nonnum.lox)
-Passed: 94 Failed: 64 Skipped: 2 (test/operator/greater_or_equal_nonnum_num.lox)
-Passed: 95 Failed: 64 Skipped: 2 (test/operator/greater_or_equal_num_nonnum.lox)
-Passed: 96 Failed: 64 Skipped: 2 (test/operator/less_nonnum_num.lox)
-Passed: 97 Failed: 64 Skipped: 2 (test/operator/less_num_nonnum.lox)
-Passed: 98 Failed: 64 Skipped: 2 (test/operator/less_or_equal_nonnum_num.lox)
-Passed: 99 Failed: 64 Skipped: 2 (test/operator/less_or_equal_num_nonnum.lox)
-Passed: 100 Failed: 64 Skipped: 2 (test/operator/multiply.lox)
-Passed: 101 Failed: 64 Skipped: 2 (test/operator/multiply_nonnum_num.lox)
-Passed: 102 Failed: 64 Skipped: 2 (test/operator/multiply_num_nonnum.lox)
-Passed: 103 Failed: 64 Skipped: 2 (test/operator/negate.lox)
-Passed: 104 Failed: 64 Skipped: 2 (test/operator/negate_nonnum.lox)
-Passed: 105 Failed: 64 Skipped: 2 (test/operator/not.lox)
-Passed: 106 Failed: 64 Skipped: 2 (test/operator/not_class.lox)
+Passed: 91 Failed: 65 Skipped: 2 (test/operator/greater_nonnum_num.lox)
+Passed: 92 Failed: 65 Skipped: 2 (test/operator/greater_num_nonnum.lox)
+Passed: 93 Failed: 65 Skipped: 2 (test/operator/greater_or_equal_nonnum_num.lox)
+Passed: 94 Failed: 65 Skipped: 2 (test/operator/greater_or_equal_num_nonnum.lox)
+Passed: 95 Failed: 65 Skipped: 2 (test/operator/less_nonnum_num.lox)
+Passed: 96 Failed: 65 Skipped: 2 (test/operator/less_num_nonnum.lox)
+Passed: 97 Failed: 65 Skipped: 2 (test/operator/less_or_equal_nonnum_num.lox)
+Passed: 98 Failed: 65 Skipped: 2 (test/operator/less_or_equal_num_nonnum.lox)
+Passed: 99 Failed: 65 Skipped: 2 (test/operator/multiply.lox)
+Passed: 100 Failed: 65 Skipped: 2 (test/operator/multiply_nonnum_num.lox)
+Passed: 101 Failed: 65 Skipped: 2 (test/operator/multiply_num_nonnum.lox)
+Passed: 102 Failed: 65 Skipped: 2 (test/operator/negate.lox)
+Passed: 103 Failed: 65 Skipped: 2 (test/operator/negate_nonnum.lox)
+Passed: 104 Failed: 65 Skipped: 2 (test/operator/not.lox)
+Passed: 105 Failed: 65 Skipped: 2 (test/operator/not_class.lox)
 FAIL test/operator/not_class.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'false' on line 2.
      Missing expected output 'false' on line 3.
 
 
-Passed: 106 Failed: 65 Skipped: 2 (test/operator/not_equals.lox)
-Passed: 107 Failed: 65 Skipped: 2 (test/operator/subtract.lox)
-Passed: 108 Failed: 65 Skipped: 2 (test/operator/subtract_nonnum_num.lox)
-Passed: 109 Failed: 65 Skipped: 2 (test/operator/subtract_num_nonnum.lox)
-Passed: 110 Failed: 65 Skipped: 2 (test/precedence.lox)
-Passed: 111 Failed: 65 Skipped: 2 (test/print/missing_argument.lox)
-Passed: 112 Failed: 65 Skipped: 2 (test/regression/394.lox)
+Passed: 105 Failed: 66 Skipped: 2 (test/operator/not_equals.lox)
+Passed: 106 Failed: 66 Skipped: 2 (test/operator/subtract.lox)
+Passed: 107 Failed: 66 Skipped: 2 (test/operator/subtract_nonnum_num.lox)
+Passed: 108 Failed: 66 Skipped: 2 (test/operator/subtract_num_nonnum.lox)
+Passed: 109 Failed: 66 Skipped: 2 (test/precedence.lox)
+Passed: 110 Failed: 66 Skipped: 2 (test/print/missing_argument.lox)
+Passed: 111 Failed: 66 Skipped: 2 (test/regression/394.lox)
 FAIL test/regression/394.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'B' on line 4.
 
 
-Passed: 112 Failed: 66 Skipped: 2 (test/regression/40.lox)
-Passed: 113 Failed: 66 Skipped: 2 (test/return/after_else.lox)
-Passed: 114 Failed: 66 Skipped: 2 (test/return/after_if.lox)
-Passed: 115 Failed: 66 Skipped: 2 (test/return/after_while.lox)
-Passed: 116 Failed: 66 Skipped: 2 (test/return/at_top_level.lox)
-Passed: 117 Failed: 66 Skipped: 2 (test/return/in_function.lox)
-Passed: 118 Failed: 66 Skipped: 2 (test/return/in_method.lox)
+Passed: 111 Failed: 67 Skipped: 2 (test/regression/40.lox)
+Passed: 112 Failed: 67 Skipped: 2 (test/return/after_else.lox)
+Passed: 113 Failed: 67 Skipped: 2 (test/return/after_if.lox)
+Passed: 114 Failed: 67 Skipped: 2 (test/return/after_while.lox)
+Passed: 115 Failed: 67 Skipped: 2 (test/return/at_top_level.lox)
+Passed: 116 Failed: 67 Skipped: 2 (test/return/in_function.lox)
+Passed: 117 Failed: 67 Skipped: 2 (test/return/in_method.lox)
 FAIL test/return/in_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'ok' on line 8.
 
 
-Passed: 118 Failed: 67 Skipped: 2 (test/return/return_nil_if_no_value.lox)
-Passed: 119 Failed: 67 Skipped: 2 (test/scanning/identifiers.lox)
-Passed: 119 Failed: 67 Skipped: 3 (test/scanning/keywords.lox)
-Passed: 119 Failed: 67 Skipped: 4 (test/scanning/numbers.lox)
-Passed: 119 Failed: 67 Skipped: 5 (test/scanning/punctuators.lox)
-Passed: 119 Failed: 67 Skipped: 6 (test/scanning/strings.lox)
-Passed: 119 Failed: 67 Skipped: 7 (test/scanning/whitespace.lox)
-Passed: 119 Failed: 67 Skipped: 8 (test/string/error_after_multiline.lox)
-Passed: 120 Failed: 67 Skipped: 8 (test/string/literals.lox)
-Passed: 121 Failed: 67 Skipped: 8 (test/string/multiline.lox)
-Passed: 122 Failed: 67 Skipped: 8 (test/string/unterminated.lox)
-Passed: 123 Failed: 67 Skipped: 8 (test/super/bound_method.lox)
+Passed: 117 Failed: 68 Skipped: 2 (test/return/return_nil_if_no_value.lox)
+Passed: 118 Failed: 68 Skipped: 2 (test/scanning/identifiers.lox)
+Passed: 118 Failed: 68 Skipped: 3 (test/scanning/keywords.lox)
+Passed: 118 Failed: 68 Skipped: 4 (test/scanning/numbers.lox)
+Passed: 118 Failed: 68 Skipped: 5 (test/scanning/punctuators.lox)
+Passed: 118 Failed: 68 Skipped: 6 (test/scanning/strings.lox)
+Passed: 118 Failed: 68 Skipped: 7 (test/scanning/whitespace.lox)
+Passed: 118 Failed: 68 Skipped: 8 (test/string/error_after_multiline.lox)
+Passed: 119 Failed: 68 Skipped: 8 (test/string/literals.lox)
+Passed: 120 Failed: 68 Skipped: 8 (test/string/multiline.lox)
+Passed: 121 Failed: 68 Skipped: 8 (test/string/unterminated.lox)
+Passed: 122 Failed: 68 Skipped: 8 (test/super/bound_method.lox)
 FAIL test/super/bound_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'A.method(arg)' on line 19.
 
 
-Passed: 123 Failed: 68 Skipped: 8 (test/super/call_other_method.lox)
+Passed: 122 Failed: 69 Skipped: 8 (test/super/call_other_method.lox)
 FAIL test/super/call_other_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Derived.bar()' on line 15.
      Missing expected output 'Base.foo()' on line 16.
 
 
-Passed: 123 Failed: 69 Skipped: 8 (test/super/call_same_method.lox)
+Passed: 122 Failed: 70 Skipped: 8 (test/super/call_same_method.lox)
 FAIL test/super/call_same_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Derived.foo()' on line 15.
      Missing expected output 'Base.foo()' on line 16.
 
 
-Passed: 123 Failed: 70 Skipped: 8 (test/super/closure.lox)
+Passed: 122 Failed: 71 Skipped: 8 (test/super/closure.lox)
 FAIL test/super/closure.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Base' on line 17.
 
 
-Passed: 123 Failed: 71 Skipped: 8 (test/super/constructor.lox)
+Passed: 122 Failed: 72 Skipped: 8 (test/super/constructor.lox)
 FAIL test/super/constructor.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Derived.init()' on line 15.
      Missing expected output 'Base.init(a, b)' on line 16.
 
 
-Passed: 123 Failed: 72 Skipped: 8 (test/super/extra_arguments.lox)
+Passed: 122 Failed: 73 Skipped: 8 (test/super/extra_arguments.lox)
 FAIL test/super/extra_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 4.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Derived.foo()' on line 9.
 
 
-Passed: 123 Failed: 73 Skipped: 8 (test/super/indirectly_inherited.lox)
+Passed: 122 Failed: 74 Skipped: 8 (test/super/indirectly_inherited.lox)
 FAIL test/super/indirectly_inherited.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'C.foo()' on line 17.
      Missing expected output 'A.foo()' on line 18.
 
 
-Passed: 123 Failed: 74 Skipped: 8 (test/super/missing_arguments.lox)
+Passed: 122 Failed: 75 Skipped: 8 (test/super/missing_arguments.lox)
 FAIL test/super/missing_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 1.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 75 Skipped: 8 (test/super/no_superclass_bind.lox)
+Passed: 122 Failed: 76 Skipped: 8 (test/super/no_superclass_bind.lox)
 FAIL test/super/no_superclass_bind.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [3] Error at 'super': Can't use 'super' in a class with no superclass.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 76 Skipped: 8 (test/super/no_superclass_call.lox)
+Passed: 122 Failed: 77 Skipped: 8 (test/super/no_superclass_call.lox)
 FAIL test/super/no_superclass_call.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [3] Error at 'super': Can't use 'super' in a class with no superclass.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 77 Skipped: 8 (test/super/no_superclass_method.lox)
+Passed: 122 Failed: 78 Skipped: 8 (test/super/no_superclass_method.lox)
 FAIL test/super/no_superclass_method.lox
      Expected runtime error 'Undefined property 'doesNotExist'.' and got:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Expected stack trace and got:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 70 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 78 Skipped: 8 (test/super/parenthesized.lox)
+Passed: 122 Failed: 79 Skipped: 8 (test/super/parenthesized.lox)
 FAIL test/super/parenthesized.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [8] Error at ')': Expect '.' after 'super'.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 79 Skipped: 8 (test/super/reassign_superclass.lox)
+Passed: 122 Failed: 80 Skipped: 8 (test/super/reassign_superclass.lox)
 FAIL test/super/reassign_superclass.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Base.method()' on line 20.
      Missing expected output 'Base.method()' on line 22.
 
 
-Passed: 123 Failed: 80 Skipped: 8 (test/super/super_at_top_level.lox)
+Passed: 122 Failed: 81 Skipped: 8 (test/super/super_at_top_level.lox)
 FAIL test/super/super_at_top_level.lox
      Unexpected error:
      [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
-     Unexpected error:
-     [line 2] Error at 'super': Can't use 'super' in a class with no superclass.
+     Unexpected output on stderr:
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     Unexpected output on stderr:
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [1] Error at 'super': Can't use 'super' outside of a class.
      Missing expected error: [2] Error at 'super': Can't use 'super' outside of a class.
+     Expected return code 65 and got 101. Stderr:
+     [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 81 Skipped: 8 (test/super/super_in_closure_in_inherited_method.lox)
+Passed: 122 Failed: 82 Skipped: 8 (test/super/super_in_closure_in_inherited_method.lox)
 FAIL test/super/super_in_closure_in_inherited_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'A' on line 26.
 
 
-Passed: 123 Failed: 82 Skipped: 8 (test/super/super_in_inherited_method.lox)
+Passed: 122 Failed: 83 Skipped: 8 (test/super/super_in_inherited_method.lox)
 FAIL test/super/super_in_inherited_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'A' on line 23.
 
 
-Passed: 123 Failed: 83 Skipped: 8 (test/super/super_in_top_level_function.lox)
+Passed: 122 Failed: 84 Skipped: 8 (test/super/super_in_top_level_function.lox)
 FAIL test/super/super_in_top_level_function.lox
      Unexpected error:
      [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
+     Unexpected output on stderr:
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     Unexpected output on stderr:
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [1] Error at 'super': Can't use 'super' outside of a class.
+     Expected return code 65 and got 101. Stderr:
+     [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
+     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 84 Skipped: 8 (test/super/super_without_dot.lox)
+Passed: 122 Failed: 85 Skipped: 8 (test/super/super_without_dot.lox)
 FAIL test/super/super_without_dot.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [6] Error at ';': Expect '.' after 'super'.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 85 Skipped: 8 (test/super/super_without_name.lox)
+Passed: 122 Failed: 86 Skipped: 8 (test/super/super_without_name.lox)
 FAIL test/super/super_without_name.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected error: [5] Error at ';': Expect superclass method name.
      Expected return code 65 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 123 Failed: 86 Skipped: 8 (test/super/this_in_superclass_method.lox)
+Passed: 122 Failed: 87 Skipped: 8 (test/super/this_in_superclass_method.lox)
 FAIL test/super/this_in_superclass_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'a' on line 15.
      Missing expected output 'b' on line 16.
 
 
-Passed: 123 Failed: 87 Skipped: 8 (test/this/closure.lox)
+Passed: 122 Failed: 88 Skipped: 8 (test/this/closure.lox)
 FAIL test/this/closure.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Foo' on line 13.
 
 
-Passed: 123 Failed: 88 Skipped: 8 (test/this/nested_class.lox)
+Passed: 122 Failed: 89 Skipped: 8 (test/this/nested_class.lox)
 FAIL test/this/nested_class.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Outer instance' on line 3.
      Missing expected output 'Outer instance' on line 6.
      Missing expected output 'Inner instance' on line 10.
 
 
-Passed: 123 Failed: 89 Skipped: 8 (test/this/nested_closure.lox)
+Passed: 122 Failed: 90 Skipped: 8 (test/this/nested_closure.lox)
 FAIL test/this/nested_closure.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'Foo' on line 19.
 
 
-Passed: 123 Failed: 90 Skipped: 8 (test/this/this_at_top_level.lox)
-Passed: 124 Failed: 90 Skipped: 8 (test/this/this_in_method.lox)
+Passed: 122 Failed: 91 Skipped: 8 (test/this/this_at_top_level.lox)
+Passed: 123 Failed: 91 Skipped: 8 (test/this/this_in_method.lox)
 FAIL test/this/this_in_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'baz' on line 6.
 
 
-Passed: 124 Failed: 91 Skipped: 8 (test/this/this_in_top_level_function.lox)
-Passed: 125 Failed: 91 Skipped: 8 (test/unexpected_character.lox)
-Passed: 126 Failed: 91 Skipped: 8 (test/variable/collide_with_parameter.lox)
-Passed: 127 Failed: 91 Skipped: 8 (test/variable/duplicate_local.lox)
-Passed: 128 Failed: 91 Skipped: 8 (test/variable/duplicate_parameter.lox)
-Passed: 129 Failed: 91 Skipped: 8 (test/variable/early_bound.lox)
-Passed: 130 Failed: 91 Skipped: 8 (test/variable/in_middle_of_block.lox)
-Passed: 131 Failed: 91 Skipped: 8 (test/variable/in_nested_block.lox)
-Passed: 132 Failed: 91 Skipped: 8 (test/variable/local_from_method.lox)
+Passed: 123 Failed: 92 Skipped: 8 (test/this/this_in_top_level_function.lox)
+Passed: 124 Failed: 92 Skipped: 8 (test/unexpected_character.lox)
+Passed: 125 Failed: 92 Skipped: 8 (test/variable/collide_with_parameter.lox)
+Passed: 126 Failed: 92 Skipped: 8 (test/variable/duplicate_local.lox)
+Passed: 127 Failed: 92 Skipped: 8 (test/variable/duplicate_parameter.lox)
+Passed: 128 Failed: 92 Skipped: 8 (test/variable/early_bound.lox)
+Passed: 129 Failed: 92 Skipped: 8 (test/variable/in_middle_of_block.lox)
+Passed: 130 Failed: 92 Skipped: 8 (test/variable/in_nested_block.lox)
+Passed: 131 Failed: 92 Skipped: 8 (test/variable/local_from_method.lox)
 FAIL test/variable/local_from_method.lox
      Unexpected output on stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      Unexpected output on stderr:
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Expected return code 0 and got 101. Stderr:
-     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:470:9
+     thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:465:9
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      Missing expected output 'variable' on line 9.
 
 
-Passed: 132 Failed: 92 Skipped: 8 (test/variable/redeclare_global.lox)
-Passed: 133 Failed: 92 Skipped: 8 (test/variable/redefine_global.lox)
-Passed: 134 Failed: 92 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
-Passed: 135 Failed: 92 Skipped: 8 (test/variable/shadow_and_local.lox)
-Passed: 136 Failed: 92 Skipped: 8 (test/variable/shadow_global.lox)
-Passed: 137 Failed: 92 Skipped: 8 (test/variable/shadow_local.lox)
-Passed: 138 Failed: 92 Skipped: 8 (test/variable/undefined_global.lox)
-Passed: 139 Failed: 92 Skipped: 8 (test/variable/undefined_local.lox)
-Passed: 140 Failed: 92 Skipped: 8 (test/variable/uninitialized.lox)
-Passed: 141 Failed: 92 Skipped: 8 (test/variable/unreached_undefined.lox)
-Passed: 142 Failed: 92 Skipped: 8 (test/variable/use_false_as_var.lox)
-Passed: 143 Failed: 92 Skipped: 8 (test/variable/use_global_in_initializer.lox)
-Passed: 144 Failed: 92 Skipped: 8 (test/variable/use_local_in_initializer.lox)
-Passed: 145 Failed: 92 Skipped: 8 (test/variable/use_nil_as_var.lox)
-Passed: 146 Failed: 92 Skipped: 8 (test/variable/use_this_as_var.lox)
-Passed: 147 Failed: 92 Skipped: 8 (test/while/class_in_body.lox)
-Passed: 148 Failed: 92 Skipped: 8 (test/while/closure_in_body.lox)
-Passed: 149 Failed: 92 Skipped: 8 (test/while/fun_in_body.lox)
-Passed: 150 Failed: 92 Skipped: 8 (test/while/return_closure.lox)
-Passed: 151 Failed: 92 Skipped: 8 (test/while/return_inside.lox)
-Passed: 152 Failed: 92 Skipped: 8 (test/while/syntax.lox)
-Passed: 153 Failed: 92 Skipped: 8 (test/while/var_in_body.lox)
-154 tests passed. 92 tests failed.
+Passed: 131 Failed: 93 Skipped: 8 (test/variable/redeclare_global.lox)
+Passed: 132 Failed: 93 Skipped: 8 (test/variable/redefine_global.lox)
+Passed: 133 Failed: 93 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
+Passed: 134 Failed: 93 Skipped: 8 (test/variable/shadow_and_local.lox)
+Passed: 135 Failed: 93 Skipped: 8 (test/variable/shadow_global.lox)
+Passed: 136 Failed: 93 Skipped: 8 (test/variable/shadow_local.lox)
+Passed: 137 Failed: 93 Skipped: 8 (test/variable/undefined_global.lox)
+Passed: 138 Failed: 93 Skipped: 8 (test/variable/undefined_local.lox)
+Passed: 139 Failed: 93 Skipped: 8 (test/variable/uninitialized.lox)
+Passed: 140 Failed: 93 Skipped: 8 (test/variable/unreached_undefined.lox)
+Passed: 141 Failed: 93 Skipped: 8 (test/variable/use_false_as_var.lox)
+Passed: 142 Failed: 93 Skipped: 8 (test/variable/use_global_in_initializer.lox)
+Passed: 143 Failed: 93 Skipped: 8 (test/variable/use_local_in_initializer.lox)
+Passed: 144 Failed: 93 Skipped: 8 (test/variable/use_nil_as_var.lox)
+Passed: 145 Failed: 93 Skipped: 8 (test/variable/use_this_as_var.lox)
+Passed: 146 Failed: 93 Skipped: 8 (test/while/class_in_body.lox)
+Passed: 147 Failed: 93 Skipped: 8 (test/while/closure_in_body.lox)
+Passed: 148 Failed: 93 Skipped: 8 (test/while/fun_in_body.lox)
+Passed: 149 Failed: 93 Skipped: 8 (test/while/return_closure.lox)
+Passed: 150 Failed: 93 Skipped: 8 (test/while/return_inside.lox)
+Passed: 151 Failed: 93 Skipped: 8 (test/while/syntax.lox)
+Passed: 152 Failed: 93 Skipped: 8 (test/while/var_in_body.lox)
+153 tests passed. 93 tests failed.
