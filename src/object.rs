@@ -81,7 +81,6 @@ objImpl!(
     as_obj_upvalue,
     as_obj_upvalue_mut
 );
-objImpl!(NativeFn, is_native_fn, as_native_fn, as_native_fn_mut);
 objImpl!(ObjClass, is_obj_class, as_obj_class, as_obj_class_mut);
 objImpl!(
     ObjInstance,
@@ -100,7 +99,6 @@ objImpl!(
 #[repr(u8)]
 pub enum ObjType {
     ObjFunction,
-    NativeFn,
     ObjString,
     ObjClosure,
     ObjUpvalue,
@@ -119,7 +117,6 @@ impl Display for ObjHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.obj_type {
             ObjType::ObjFunction => self.as_obj_function().fmt(f),
-            ObjType::NativeFn => self.as_native_fn().fmt(f),
             ObjType::ObjString => self.as_obj_string().fmt(f),
             ObjType::ObjClosure => self.as_obj_closure().fmt(f),
             ObjType::ObjUpvalue => self.as_obj_upvalue().fmt(f),
@@ -209,30 +206,6 @@ impl Display for ObjFunction {
         } else {
             write!(f, "<script>")
         }
-    }
-}
-
-pub type NativeFnRef = fn(&[Value]) -> Value;
-
-#[repr(C)]
-pub struct NativeFn {
-    header: ObjHeader,
-
-    pub inner: NativeFnRef,
-}
-
-impl NativeFn {
-    pub fn new(inner: NativeFnRef) -> Self {
-        Self {
-            header: Self::header(),
-            inner,
-        }
-    }
-}
-
-impl Display for NativeFn {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<native fn>")
     }
 }
 

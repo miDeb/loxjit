@@ -14,8 +14,8 @@ use crate::common::{DEBUG_PRINT_GC_STATS, DEBUG_STRESS_GC};
 use crate::{
     emitter::global_vars,
     object::{
-        NativeFn, ObjBoundMethod, ObjClass, ObjClosure, ObjFunction, ObjHeader, ObjInstance,
-        ObjString, ObjType, ObjUpvalue,
+        ObjBoundMethod, ObjClass, ObjClosure, ObjFunction, ObjHeader, ObjInstance, ObjString,
+        ObjType, ObjUpvalue,
     },
     value::Value,
 };
@@ -159,10 +159,7 @@ impl GC {
                 drop(Box::from_raw(ptr as *mut GcInner<ObjFunction>));
                 *occupied -= std::mem::size_of::<GcInner<ObjFunction>>();
             },
-            ObjType::NativeFn => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<NativeFn>));
-                *occupied -= std::mem::size_of::<GcInner<NativeFn>>();
-            },
+
             ObjType::ObjString => unsafe {
                 drop(Box::from_raw(ptr as *mut GcInner<ObjString>));
                 *occupied -= std::mem::size_of::<GcInner<ObjString>>();
@@ -215,7 +212,7 @@ impl GC {
                 GcFlags::Marked | GcFlags::Constant => return,
             }
             match obj.obj_type {
-                ObjType::ObjFunction | ObjType::NativeFn | ObjType::ObjString => {}
+                ObjType::ObjFunction | ObjType::ObjString => {}
                 ObjType::ObjClosure => {
                     let closure = obj.as_obj_closure();
                     let upvalues = unsafe {
