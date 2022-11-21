@@ -1,6 +1,16 @@
-fun foo(x) {
-  print clock();
-  foo();
+class Foo {}
+
+print Foo;
+
+var instance = Foo();
+print instance;
+
+var start = clock();
+
+for (var i = 0; i < 10000; i = i + 1) {
+    instance.x = 0;
+    instance.y = 0;
+    instance.x;
 }
 
-foo();
+print clock() - start;

@@ -3,8 +3,11 @@ use std::ops::Range;
 use std::ptr::null_mut;
 use std::time::Instant;
 
-use crate::gc::{intern_string, register_object, GcCell};
-use crate::object::{ObjClosure, ObjString, ObjType, ObjUpvalue};
+use crate::gc::{intern_string, register_object, register_object_no_gc, GcCell};
+use crate::object::{
+    ObjBoundMethod, ObjClass, ObjClosure, ObjInstance, ObjString, ObjType, ObjUpvalue,
+};
+use crate::properties::{ObjShape, ShapeEntry};
 use crate::source_mapping::{FnSourceInfo, SourceMapping};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
 use crate::START;
@@ -36,9 +39,6 @@ macro_rules! my_dynasm {
 macro_rules! call_extern {
     ($ops:expr, $fun:expr) => {
         dynasm!($ops
-            // trigger a stack overflow now if there is little stack left
-            ; mov rax, [rsp - 0x400]
-
             ; push rbp
             ; mov rbp, rsp
             ; and spl, BYTE 0xF0 as _
@@ -54,9 +54,7 @@ macro_rules! call_extern {
 macro_rules! call_extern_alloc {
     ($ops:expr, $fun:expr) => {
         dynasm!($ops
-            // trigger a stack overflow now if there is little stack left
-            ; mov rax, [rsp - 0x400]
-
+            // We need to align the stack to 0x10.
             ; push rbp
             ; mov rbp, rsp
             ; mov rdx, [r12+0x40]
@@ -208,6 +206,12 @@ impl Emitter {
 
             ; -> stack_overflow:
             ;; handle_error!(ops, stack_overflow)
+
+            ; -> field_requires_instance:
+            ;; handle_error!(ops, field_requires_instance)
+
+            ; -> uninit_field:
+            ;; handle_error!(ops, uninit_field)
 
             ; ->exit_error:
             ; mov r15, [r12]
@@ -665,8 +669,16 @@ impl Emitter {
 
             ; and rax, [->tag_obj_not]
             ; cmp [rax], BYTE ObjType::ObjClosure as _
-            ; jne >fail
+            ; je >call_closure
 
+            ; cmp [rax], BYTE ObjType::ObjClass as _
+            ; jne >fail
+            ; mov r8, rax
+            ;; call_extern_alloc!(self.ops, alloc_instance)
+            ; mov [rsp], rax
+            ; jmp >ok
+
+            ; call_closure:
             ; mov rax, [rax + 8]
             ; call rax
             ; add rsp, (arity * 8) as _
@@ -675,6 +687,75 @@ impl Emitter {
 
             ; fail:
             ; call ->expected_callable
+            ; ok:
+        )
+    }
+
+    pub fn push_class(&mut self, name: GcCell<ObjString>) {
+        dynasm!(self.ops
+            ; mov r8, QWORD name.to_bits() as _
+            ;; call_extern_alloc!(self.ops, alloc_class)
+            ; push rax
+        )
+    }
+
+    pub fn get_property(&mut self, name: GcCell<ObjString>) {
+        dynasm!(self.ops
+            ; pop r8
+
+            // TODO: common check
+            ; mov rcx, r8
+            ; and rcx, [->tag_obj]
+            ; cmp rcx, [->tag_obj]
+            ; jne >fail
+
+            ; and r8, [->tag_obj_not]
+            ; cmp [r8], BYTE ObjType::ObjInstance as _
+            ; jne >fail
+
+            ; mov r9, QWORD name.to_bits() as _
+            ;; call_extern_alloc!(self.ops, get_property)
+            ; push rax
+            ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
+            ; cmp rax, rcx
+            ; jne >ok
+            ; mov r8, QWORD name.to_bits() as _
+            ; call ->uninit_field
+            ; jmp >ok
+
+            ; fail:
+            ; call ->field_requires_instance
+
+            ; ok:
+        )
+    }
+
+    pub fn set_property(&mut self, name: GcCell<ObjString>) {
+        dynasm!(self.ops
+            ; mov r8, [rsp + 0x8]
+
+            // TODO: common check
+            ; mov r9, r8
+            ; and r9, [->tag_obj]
+            ; cmp r9, [->tag_obj]
+            ; jne >fail
+
+            ; and r8, [->tag_obj_not]
+            ; cmp [r8], BYTE ObjType::ObjInstance as _
+            ; jne >fail
+
+            ; mov r9, QWORD name.to_bits() as _
+            ;; call_extern_alloc!(self.ops, set_property)
+            ; pop rcx
+            ; mov [rax], rcx
+            ; add rsp, 0x8
+            ; push rcx
+
+            ; jmp >ok
+
+            ; fail:
+            ; call ->field_requires_instance
+
             ; ok:
         )
     }
@@ -770,6 +851,24 @@ extern "win64" fn print_value(value: Value) {
     }
 }
 
+extern "win64" fn alloc_class(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    name: GcCell<ObjString>,
+) -> Value {
+    let class = ObjClass::new(name, stack_start..stack_end);
+    Value::from(register_object_no_gc(class))
+}
+
+extern "win64" fn alloc_instance(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    class: GcCell<ObjClass>,
+) -> Value {
+    let instance = ObjInstance::new(class);
+    Value::from(register_object(instance, stack_start..stack_end))
+}
+
 extern "win64" fn alloc_closure(
     stack_start: *const Value,
     stack_end: *const Value,
@@ -817,6 +916,46 @@ extern "win64" fn alloc_closure(
     Value::from(register_object(closure, stack_start..stack_end)).to_bits()
 }
 
+extern "win64" fn get_property(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    receiver: GcCell<ObjInstance>,
+    name: GcCell<ObjString>,
+) -> Value {
+    if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
+        match entry {
+            ShapeEntry::Present { offset } => *receiver.fields.get(offset),
+            ShapeEntry::Method { offset } => register_object(
+                ObjBoundMethod::new(receiver, offset),
+                stack_start..stack_end,
+            )
+            .into(),
+            _ => unreachable!(),
+        }
+    } else {
+        UNINIT_VAL
+    }
+}
+
+extern "win64" fn set_property(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    mut receiver: GcCell<ObjInstance>,
+    name: GcCell<ObjString>,
+) -> *mut Value {
+    let property_len = receiver.fields.len();
+    match ObjShape::resolve_set_property(stack_start..stack_end, receiver.shape, name, property_len)
+    {
+        ShapeEntry::Present { offset } => receiver.fields.get_mut(offset),
+        ShapeEntry::MissingWithKnownShape { shape, .. } => {
+            receiver.shape = shape;
+            receiver.fields.push(UNINIT_VAL);
+            receiver.fields.get_mut(property_len)
+        }
+        _ => unreachable!(),
+    }
+}
+
 extern "win64" fn concat_strings(
     stack_start: *const Value,
     stack_end: *const Value,
@@ -862,6 +1001,14 @@ extern "win64" fn expected_callable(ip: *const u8, base_ptr: *const u8) {
 }
 extern "win64" fn stack_overflow(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Stack overflow.");
+    print_stacktrace(ip, base_ptr)
+}
+extern "win64" fn field_requires_instance(ip: *const u8, base_ptr: *const u8) {
+    eprintln!("Only instances have fields.");
+    print_stacktrace(ip, base_ptr)
+}
+extern "win64" fn uninit_field(ip: *const u8, base_ptr: *const u8, name: GcCell<ObjString>) {
+    eprintln!("Undefined property {name}.");
     print_stacktrace(ip, base_ptr)
 }
 

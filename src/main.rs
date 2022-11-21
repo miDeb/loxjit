@@ -6,6 +6,7 @@
 #![feature(let_chains)]
 #![feature(slice_from_ptr_range)]
 #![feature(vec_into_raw_parts)]
+#![feature(link_llvm_intrinsics)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -22,6 +23,7 @@ mod compiler;
 mod emitter;
 mod gc;
 mod object;
+mod properties;
 mod scanner;
 mod source_mapping;
 mod value;

@@ -11,6 +11,7 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHashSet;
 
 use crate::common::{DEBUG_PRINT_GC_STATS, DEBUG_STRESS_GC};
+use crate::properties::ObjShape;
 use crate::{
     emitter::global_vars,
     object::{
@@ -29,7 +30,13 @@ pub fn intern_string(string: String, stack: Range<*const Value>) -> GcCell<ObjSt
     unsafe { GLOBAL_GC.intern_string(string, Some(stack), false) }
 }
 pub fn register_object<T>(val: T, stack: Range<*const Value>) -> GcCell<T> {
-    unsafe { GLOBAL_GC.register_object(val, Some(stack)) }
+    unsafe { GLOBAL_GC.register_object(val, Some(stack), false) }
+}
+pub fn register_object_no_gc<T>(val: T) -> GcCell<T> {
+    unsafe { GLOBAL_GC.register_object(val, None, false) }
+}
+pub fn register_const_object<T>(val: T) -> GcCell<T> {
+    unsafe { GLOBAL_GC.register_object(val, None, true) }
 }
 
 #[repr(u8)]
@@ -94,7 +101,12 @@ impl GC {
         }
     }
 
-    fn register_object<T>(&mut self, value: T, stack: Option<Range<*const Value>>) -> GcCell<T> {
+    fn register_object<T>(
+        &mut self,
+        value: T,
+        stack: Option<Range<*const Value>>,
+        is_const: bool,
+    ) -> GcCell<T> {
         self.occupied += std::mem::size_of::<GcInner<T>>();
 
         if let Some(stack) = stack && (self.occupied > self.next_gc || DEBUG_STRESS_GC) {
@@ -102,7 +114,11 @@ impl GC {
         }
 
         let mut next = Box::new(GcInner {
-            flag: GcFlags::Unmarked,
+            flag: if is_const {
+                GcFlags::Constant
+            } else {
+                GcFlags::Unmarked
+            },
             next: self.first,
             value,
         });
@@ -154,36 +170,44 @@ impl GC {
 
     fn free_object_contents(occupied: &mut usize, obj: &mut GcInner<ObjHeader>) {
         let ptr = obj as *mut _;
-        match obj.value.obj_type {
-            ObjType::ObjFunction => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<ObjFunction>));
-                *occupied -= std::mem::size_of::<GcInner<ObjFunction>>();
-            },
+        unsafe {
+            match obj.value.obj_type {
+                ObjType::ObjFunction => {
+                    drop(Box::from_raw(ptr as *mut GcInner<ObjFunction>));
+                    *occupied -= std::mem::size_of::<GcInner<ObjFunction>>();
+                }
 
-            ObjType::ObjString => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<ObjString>));
-                *occupied -= std::mem::size_of::<GcInner<ObjString>>();
-            },
-            ObjType::ObjClosure => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<ObjClosure>));
-                *occupied -= std::mem::size_of::<GcInner<ObjClosure>>();
-            },
-            ObjType::ObjUpvalue => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<ObjUpvalue>));
-                *occupied -= std::mem::size_of::<GcInner<ObjUpvalue>>();
-            },
-            ObjType::ObjClass => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<ObjClass>));
-                *occupied -= std::mem::size_of::<GcInner<ObjClass>>();
-            },
-            ObjType::ObjInstance => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<ObjInstance>));
-                *occupied -= std::mem::size_of::<GcInner<ObjInstance>>();
-            },
-            ObjType::ObjBoundMethod => unsafe {
-                drop(Box::from_raw(ptr as *mut GcInner<ObjBoundMethod>));
-                *occupied -= std::mem::size_of::<GcInner<ObjBoundMethod>>();
-            },
+                ObjType::ObjString => {
+                    drop(Box::from_raw(ptr as *mut GcInner<ObjString>));
+                    *occupied -= std::mem::size_of::<GcInner<ObjString>>();
+                }
+                ObjType::ObjClosure => {
+                    drop(Box::from_raw(ptr as *mut GcInner<ObjClosure>));
+                    *occupied -= std::mem::size_of::<GcInner<ObjClosure>>();
+                }
+                ObjType::ObjUpvalue => {
+                    drop(Box::from_raw(ptr as *mut GcInner<ObjUpvalue>));
+                    *occupied -= std::mem::size_of::<GcInner<ObjUpvalue>>();
+                }
+                ObjType::ObjClass => {
+                    drop(Box::from_raw(ptr as *mut GcInner<ObjClass>));
+                    *occupied -= std::mem::size_of::<GcInner<ObjClass>>();
+                }
+                ObjType::ObjInstance => {
+                    drop(Box::from_raw(ptr as *mut GcInner<ObjInstance>));
+                    *occupied -= std::mem::size_of::<GcInner<ObjInstance>>();
+                }
+                ObjType::ObjBoundMethod => {
+                    drop(Box::from_raw(ptr as *mut GcInner<ObjBoundMethod>));
+                    *occupied -= std::mem::size_of::<GcInner<ObjBoundMethod>>();
+                }
+                ObjType::ObjShape => {
+                    let ptr = ptr as *mut GcInner<ObjShape>;
+                    (&mut *ptr).value.dispose();
+                    drop(Box::from_raw(ptr));
+                    *occupied -= std::mem::size_of::<GcInner<ObjShape>>();
+                }
+            }
         }
     }
 
@@ -236,24 +260,32 @@ impl GC {
                 ObjType::ObjClass => {
                     let class = obj.as_obj_class();
                     class.name.to_inner().mark();
-                    for key in class.methods.keys() {
-                        key.to_inner().mark();
-                    }
+                    self.gray_objects.push(class.shape.into());
                     self.gray_objects
-                        .extend(class.methods.values().map(|value| Value::from(*value)));
+                        .extend(class.methods.iter().map(Into::<Value>::into));
                 }
                 ObjType::ObjInstance => {
                     let instance = obj.as_obj_instance();
                     self.gray_objects.push(instance.class.into());
-                    for (key, value) in &instance.fields {
-                        key.to_inner().mark();
-                        self.gray_objects.push(*value);
+                    self.gray_objects
+                        .extend_from_slice(instance.fields.as_slice());
+                    let mut shape = Some(instance.shape);
+                    while let Some(s) = shape {
+                        s.to_inner().flag = GcFlags::Marked;
+                        shape = s.parent.map(|p| p.0);
                     }
                 }
                 ObjType::ObjBoundMethod => {
                     let obj_bound_method = obj.as_obj_bound_method();
-                    self.gray_objects.push(obj_bound_method.receiver);
-                    self.gray_objects.push(obj_bound_method.method.into());
+                    self.gray_objects.push(obj_bound_method.receiver.into());
+                }
+                ObjType::ObjShape => {
+                    let shape = obj.as_obj_shape();
+                    self.gray_objects
+                        .extend(shape.entries.keys().map(Into::<Value>::into));
+                    if let Some(parent) = shape.parent {
+                        self.gray_objects.push(parent.0.into())
+                    }
                 }
             }
         }

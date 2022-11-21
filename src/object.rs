@@ -3,12 +3,12 @@
 use std::fmt::Display;
 use std::hash::Hash;
 use std::mem::MaybeUninit;
-
-use rustc_hash::FxHashMap;
+use std::ops::Range;
 
 use crate::chunk::Chunk;
 use crate::emitter::FnInfo;
-use crate::gc::GcCell;
+use crate::gc::{register_object, GcCell};
+use crate::properties::{ObjShape, PropertyList};
 use crate::value::Value;
 
 macro_rules! objImpl {
@@ -59,6 +59,18 @@ macro_rules! objImpl {
                 Value::from_obj(unsafe { obj.cast() })
             }
         }
+
+        impl From<&GcCell<$obj_name>> for GcCell<ObjHeader> {
+            fn from(obj: &GcCell<$obj_name>) -> Self {
+                unsafe { obj.cast() }
+            }
+        }
+
+        impl From<&GcCell<$obj_name>> for Value {
+            fn from(obj: &GcCell<$obj_name>) -> Self {
+                Value::from_obj(unsafe { obj.cast() })
+            }
+        }
     };
 }
 
@@ -94,6 +106,7 @@ objImpl!(
     as_obj_bound_method,
     as_obj_bound_method_mut
 );
+objImpl!(ObjShape, is_obj_shape, as_obj_shape, as_obj_shape_mut);
 
 #[derive(PartialEq, Eq, Debug)]
 #[repr(u8)]
@@ -105,6 +118,7 @@ pub enum ObjType {
     ObjClass,
     ObjInstance,
     ObjBoundMethod,
+    ObjShape,
 }
 
 #[derive(Debug)]
@@ -115,14 +129,14 @@ pub struct ObjHeader {
 
 impl Display for ObjHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.obj_type {
+        match &self.obj_type {
             ObjType::ObjFunction => self.as_obj_function().fmt(f),
             ObjType::ObjString => self.as_obj_string().fmt(f),
             ObjType::ObjClosure => self.as_obj_closure().fmt(f),
-            ObjType::ObjUpvalue => self.as_obj_upvalue().fmt(f),
             ObjType::ObjClass => self.as_obj_class().fmt(f),
             ObjType::ObjInstance => self.as_obj_instance().fmt(f),
             ObjType::ObjBoundMethod => self.as_obj_bound_method().fmt(f),
+            t => panic!("tried to format internal VM value {t:?}"),
         }
     }
 }
@@ -262,15 +276,17 @@ impl Display for ObjUpvalue {
 pub struct ObjClass {
     header: ObjHeader,
     pub name: GcCell<ObjString>,
-    pub methods: FxHashMap<GcCell<ObjString>, GcCell<ObjClosure>>,
+    pub methods: Vec<GcCell<ObjClosure>>,
+    pub shape: GcCell<ObjShape>,
 }
 
 impl ObjClass {
-    pub fn new(name: GcCell<ObjString>) -> Self {
+    pub fn new(name: GcCell<ObjString>, stack: Range<*const Value>) -> Self {
         Self {
             header: Self::header(),
             name,
             methods: Default::default(),
+            shape: register_object(ObjShape::empty(), stack),
         }
     }
 }
@@ -285,7 +301,8 @@ impl Display for ObjClass {
 pub struct ObjInstance {
     header: ObjHeader,
     pub class: GcCell<ObjClass>,
-    pub fields: FxHashMap<GcCell<ObjString>, Value>,
+    pub fields: PropertyList,
+    pub shape: GcCell<ObjShape>,
 }
 
 impl ObjInstance {
@@ -293,7 +310,8 @@ impl ObjInstance {
         Self {
             header: Self::header(),
             class,
-            fields: Default::default(),
+            fields: PropertyList::new(),
+            shape: class.shape,
         }
     }
 }
@@ -307,12 +325,12 @@ impl Display for ObjInstance {
 #[repr(C)]
 pub struct ObjBoundMethod {
     header: ObjHeader,
-    pub receiver: Value,
-    pub method: GcCell<ObjClosure>,
+    pub receiver: GcCell<ObjInstance>,
+    pub method: usize,
 }
 
 impl ObjBoundMethod {
-    pub fn new(receiver: Value, method: GcCell<ObjClosure>) -> Self {
+    pub fn new(receiver: GcCell<ObjInstance>, method: usize) -> Self {
         Self {
             header: Self::header(),
             receiver,
@@ -323,6 +341,6 @@ impl ObjBoundMethod {
 
 impl Display for ObjBoundMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "objBoundMethod")
+        write!(f, "{}", self.method)
     }
 }

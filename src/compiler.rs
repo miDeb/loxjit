@@ -589,17 +589,17 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn dot(&mut self, can_assign: bool) {
         self.consume(TokenType::Identifier, "Expect property name after '.'.");
-        // let name = self.identifier_constant(self.previous.source);
+        let name = self.identifier_constant(self.previous.source);
 
         if can_assign && self.match_token(TokenType::Equal) {
             self.expression();
-            self.emit_bytes(OpCode::SetProperty, 0);
+            self.emitter.set_property(name)
         } else if self.match_token(TokenType::LeftParen) {
             let arg_count = self.argument_list();
             self.emit_bytes(OpCode::Invoke, 0);
             self.emit_byte(arg_count);
         } else {
-            self.emit_bytes(OpCode::GetProperty, 0);
+            self.emitter.get_property(name)
         }
     }
 
@@ -965,7 +965,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let name_constant = self.identifier_constant(self.previous.source);
         self.declare_variable();
 
-        self.emit_bytes(OpCode::Class, 0);
+        self.emitter.push_class(name_constant);
         self.define_variable(Some(name_constant));
 
         self.class_compiler = Some(Box::new(ClassCompiler {
@@ -998,7 +998,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' after class body.");
-        self.emit_byte(OpCode::Pop);
+        self.emitter.pop();
 
         if self.class_compiler.as_ref().unwrap().has_superclass {
             self.end_scope();
