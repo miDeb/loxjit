@@ -336,7 +336,7 @@ impl<'a> Compiler<'a> {
         fun_name: Option<GcCell<ObjString>>,
         enclosing: Option<Box<Compiler<'a>>>,
     ) -> Self {
-        let compiler = Self {
+        let mut compiler = Self {
             function: Box::new(ObjFunction::new(0, Chunk::new(), fun_name, None)),
             fun_type,
             locals: Vec::with_capacity(u8::MAX as usize + 1),
@@ -345,7 +345,7 @@ impl<'a> Compiler<'a> {
             upvalues: [MaybeUninit::uninit(); 256],
         };
 
-        /* compiler.locals.push(Local {
+        compiler.locals.push(Local {
             name: if fun_type == FunctionType::Function {
                 ""
             } else {
@@ -353,8 +353,7 @@ impl<'a> Compiler<'a> {
             },
             depth: 0,
             is_captured: false,
-        }); */
-
+        });
         compiler
     }
 }
@@ -596,8 +595,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.emitter.set_property(name)
         } else if self.match_token(TokenType::LeftParen) {
             let arg_count = self.argument_list();
-            self.emit_bytes(OpCode::Invoke, 0);
-            self.emit_byte(arg_count);
+            self.emitter.invoke(name, arg_count)
         } else {
             self.emitter.get_property(name)
         }
@@ -1009,7 +1007,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn method(&mut self) {
         self.consume(TokenType::Identifier, "Expect method name.");
-        //let constant = self.identifier_constant(self.previous.source);
+        let name = self.identifier_constant(self.previous.source);
 
         self.function(if self.previous.source == "init" {
             FunctionType::Initializer
@@ -1017,7 +1015,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             FunctionType::Method
         });
 
-        self.emit_bytes(OpCode::Method, 0);
+        self.emitter.add_method(name)
     }
 
     fn while_statement(&mut self) {

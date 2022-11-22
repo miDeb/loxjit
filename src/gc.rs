@@ -335,6 +335,10 @@ impl<T> GcCell<T> {
     pub fn to_bits(&self) -> u64 {
         self.0.as_ptr() as u64
     }
+
+    pub fn as_ptr(&self) -> *const T {
+        self.0.as_ptr()
+    }
 }
 
 impl<T> Borrow<T> for GcCell<T> {

@@ -325,12 +325,12 @@ impl Display for ObjInstance {
 #[repr(C)]
 pub struct ObjBoundMethod {
     header: ObjHeader,
-    pub receiver: GcCell<ObjInstance>,
-    pub method: usize,
+    pub receiver: Value,
+    pub method: GcCell<ObjClosure>,
 }
 
 impl ObjBoundMethod {
-    pub fn new(receiver: GcCell<ObjInstance>, method: usize) -> Self {
+    pub fn new(receiver: Value, method: GcCell<ObjClosure>) -> Self {
         Self {
             header: Self::header(),
             receiver,

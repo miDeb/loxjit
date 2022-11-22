@@ -1,6 +1,6 @@
 use std::mem::MaybeUninit;
 use std::ops::Range;
-use std::ptr::null_mut;
+use std::ptr::{null, null_mut};
 use std::time::Instant;
 
 use crate::gc::{intern_string, register_object, register_object_no_gc, GcCell};
@@ -316,13 +316,13 @@ impl Emitter {
     pub fn set_local(&mut self, index: usize) {
         dynasm!(self.ops
             ; mov rax, [rsp]
-            ; mov QWORD [rbp - (index as i32 * 8 + 8)], rax
+            ; mov QWORD [rbp - (index as i32 * 8)], rax
         )
     }
 
     pub fn get_local(&mut self, index: usize) {
         dynasm!(self.ops
-            ; push QWORD [rbp - (index as i32 * 8 + 8)]
+            ; push QWORD [rbp - (index as i32 * 8)]
         )
     }
 
@@ -671,12 +671,22 @@ impl Emitter {
             ; cmp [rax], BYTE ObjType::ObjClosure as _
             ; je >call_closure
 
+            ; cmp [rax], BYTE ObjType::ObjBoundMethod as _
+            ; je >call_bound_method
+
             ; cmp [rax], BYTE ObjType::ObjClass as _
             ; jne >fail
             ; mov r8, rax
             ;; call_extern_alloc!(self.ops, alloc_instance)
             ; mov [rsp], rax
             ; jmp >ok
+
+            ; call_bound_method:
+            // [slot 0] <- receiver
+            ; mov rdx, [rax + 8]
+            ; mov [rsp + (arity * 8) as _], rdx
+            // rax <- ObjClosure
+            ; mov rax, [rax + 0x10]
 
             ; call_closure:
             ; mov rax, [rax + 8]
@@ -689,6 +699,42 @@ impl Emitter {
             ; call ->expected_callable
             ; ok:
         )
+    }
+
+    pub fn invoke(&mut self, name: GcCell<ObjString>, arity: u8) {
+        dynasm!(self.ops
+            ; mov rcx, [rsp + (arity * 8) as _]
+
+            ; mov r8, rcx
+            ; and r8, [->tag_obj]
+            ; cmp r8, [->tag_obj]
+            ; jne >fail
+
+            ; and rcx, [->tag_obj_not]
+
+            ; mov rdx, QWORD name.to_bits() as _
+
+            ;; call_extern!(self.ops, invoke)
+            ; cmp rax, 0
+            ; je >unhappy_path
+
+            ; mov rcx, arity as _
+
+            ; mov rax, [rax + 8]
+            ; call rax
+            ; add rsp, (arity * 8) as _
+            ; mov [rsp], rax
+            ; jmp >ok2
+
+            ; unhappy_path:
+            ;; self.get_property(name)
+            ;; self.call(arity)
+            ; jmp >ok2
+
+            ; fail:
+            ; call ->expected_callable
+            ; ok2:
+        );
     }
 
     pub fn push_class(&mut self, name: GcCell<ObjString>) {
@@ -757,6 +803,15 @@ impl Emitter {
             ; call ->field_requires_instance
 
             ; ok:
+        )
+    }
+
+    pub fn add_method(&mut self, name: GcCell<ObjString>) {
+        dynasm!(self.ops
+            ; mov rcx, [rsp + 0x8]
+            ; pop rdx
+            ; mov r8, QWORD name.to_bits() as _
+            ;; call_extern!(self.ops, add_method)
         )
     }
 
@@ -887,7 +942,7 @@ extern "win64" fn alloc_closure(
 
         upvalues.push(if is_local {
             let upvalue = capture_upvalue(
-                unsafe { base_ptr.sub(index as usize * 0x8 + 0x8).cast() },
+                unsafe { base_ptr.sub(index as usize * 0x8).cast() },
                 stack_start..stack_end,
             );
             unsafe {
@@ -926,7 +981,7 @@ extern "win64" fn get_property(
         match entry {
             ShapeEntry::Present { offset } => *receiver.fields.get(offset),
             ShapeEntry::Method { offset } => register_object(
-                ObjBoundMethod::new(receiver, offset),
+                ObjBoundMethod::new(receiver.into(), receiver.class.methods[offset]),
                 stack_start..stack_end,
             )
             .into(),
@@ -954,6 +1009,24 @@ extern "win64" fn set_property(
         }
         _ => unreachable!(),
     }
+}
+
+extern "win64" fn invoke(
+    receiver: GcCell<ObjInstance>,
+    name: GcCell<ObjString>,
+) -> *const ObjClosure {
+    match ObjShape::resolve_get_property(receiver.shape, name) {
+        Some(ShapeEntry::Method { offset }) => receiver.class.methods[offset].as_ptr(),
+        _ => null(),
+    }
+}
+
+extern "win64" fn add_method(class: Value, closure: Value, name: GcCell<ObjString>) {
+    let mut class = class.as_obj_class();
+    let closure = closure.as_obj_closure();
+    ObjShape::add_method(class.shape, name, class.methods.len());
+
+    class.methods.push(closure);
 }
 
 extern "win64" fn concat_strings(
@@ -1008,7 +1081,7 @@ extern "win64" fn field_requires_instance(ip: *const u8, base_ptr: *const u8) {
     print_stacktrace(ip, base_ptr)
 }
 extern "win64" fn uninit_field(ip: *const u8, base_ptr: *const u8, name: GcCell<ObjString>) {
-    eprintln!("Undefined property {name}.");
+    eprintln!("Undefined property '{name}'.");
     print_stacktrace(ip, base_ptr)
 }
 

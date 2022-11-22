@@ -68,6 +68,12 @@ impl ObjShape {
         }
     }
 
+    pub fn add_method(mut shape: GcCell<ObjShape>, name: GcCell<ObjString>, method_len: usize) {
+        shape
+            .entries
+            .insert(name, ShapeEntry::Method { offset: method_len });
+    }
+
     pub fn resolve_set_property(
         stack: Range<*const Value>,
         mut shape: GcCell<ObjShape>,

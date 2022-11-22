@@ -1,16 +1,13 @@
-class Foo {}
+var f;
 
-print Foo;
-
-var instance = Foo();
-print instance;
-
-var start = clock();
-
-for (var i = 0; i < 10000; i = i + 1) {
-    instance.x = 0;
-    instance.y = 0;
-    instance.x;
+{
+  var a = "a";
+  fun f_() {
+    print a;
+  }
+  f = f_;
 }
 
-print clock() - start;
+f();
+// expect: a
+// expect: a
