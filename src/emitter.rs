@@ -730,7 +730,7 @@ impl Emitter {
             ; jmp >ok2
 
             ; unhappy_path:
-            ;; self.get_property(name)
+            ;; self.get_property_with_stack_offset(name, arity as i32 * 8)
             ;; self.call(arity)
             ; jmp >ok2
 
@@ -749,8 +749,13 @@ impl Emitter {
     }
 
     pub fn get_property(&mut self, name: GcCell<ObjString>) {
+        self.get_property_with_stack_offset(name, 0)
+    }
+
+    /// Gets the property `name` from the instance at [rsp + stack_offset] and writes the result to that location.
+    fn get_property_with_stack_offset(&mut self, name: GcCell<ObjString>, stack_offset: i32) {
         dynasm!(self.ops
-            ; pop r8
+            ; mov r8, [rsp + stack_offset]
 
             // TODO: common check
             ; mov rcx, r8
@@ -764,7 +769,7 @@ impl Emitter {
 
             ; mov r9, QWORD name.to_bits() as _
             ;; call_extern_alloc!(self.ops, get_property)
-            ; push rax
+            ; mov [rsp + stack_offset], rax
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rax, rcx
             ; jne >ok
