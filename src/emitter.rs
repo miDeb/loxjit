@@ -210,6 +210,9 @@ impl Emitter {
             ; -> field_requires_instance:
             ;; handle_error!(ops, field_requires_instance)
 
+            ; -> property_requires_instance:
+            ;; handle_error!(ops, property_requires_instance)
+
             ; -> uninit_field:
             ;; handle_error!(ops, uninit_field)
 
@@ -770,7 +773,7 @@ impl Emitter {
             ; jmp >ok
 
             ; fail:
-            ; call ->field_requires_instance
+            ; call ->property_requires_instance
 
             ; ok:
         )
@@ -1078,6 +1081,10 @@ extern "win64" fn stack_overflow(ip: *const u8, base_ptr: *const u8) {
 }
 extern "win64" fn field_requires_instance(ip: *const u8, base_ptr: *const u8) {
     eprintln!("Only instances have fields.");
+    print_stacktrace(ip, base_ptr)
+}
+extern "win64" fn property_requires_instance(ip: *const u8, base_ptr: *const u8) {
+    eprintln!("Only instances have properties.");
     print_stacktrace(ip, base_ptr)
 }
 extern "win64" fn uninit_field(ip: *const u8, base_ptr: *const u8, name: GcCell<ObjString>) {
