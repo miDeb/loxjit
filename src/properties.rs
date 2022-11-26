@@ -4,7 +4,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     gc::{register_object, GcCell},
-    object::ObjString,
+    object::{ObjHeader, ObjString},
     value::Value,
 };
 
@@ -22,7 +22,9 @@ pub enum ShapeEntry {
     },
 }
 
+#[repr(C)]
 pub struct ObjShape {
+    header: ObjHeader,
     pub entries: FxHashMap<GcCell<ObjString>, ShapeEntry>,
     pub parent: Option<(GcCell<ObjShape>, GcCell<ObjString>)>,
 }
@@ -45,6 +47,7 @@ impl ObjShape {
 
     fn new(parent: Option<(GcCell<ObjShape>, GcCell<ObjString>)>) -> Self {
         Self {
+            header: Self::header(),
             parent,
             entries: if let Some(parent) = parent {
                 parent.0.entries.clone()
