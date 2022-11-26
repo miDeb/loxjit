@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use crate::gc::{intern_string, register_object, register_object_no_gc, GcCell};
 use crate::object::{
-    ObjBoundMethod, ObjClass, ObjClosure, ObjInstance, ObjString, ObjType, ObjUpvalue,
+    ObjBoundMethod, ObjClass, ObjClosure, ObjInstance, ObjString, ObjType, ObjUpvalue, INIT_STRING,
 };
 use crate::properties::{ObjShape, ShapeEntry};
 use crate::source_mapping::{FnSourceInfo, SourceMapping};
@@ -591,10 +591,10 @@ impl Emitter {
         dynasm!(self.ops
             ; =>start
             ; cmp rcx, arity as _
-            // Jump instead of calling to make the error appear on the call site.
             ; je >ok
             ; mov r8, rcx
             ; mov r9, arity as _
+            // Jump instead of calling to make the error appear on the call site.
             ; jmp ->fn_arity_mismatch
             ; ok:
             ; inc edi
@@ -680,9 +680,29 @@ impl Emitter {
             ; cmp [rax], BYTE ObjType::ObjClass as _
             ; jne >fail
             ; mov r8, rax
+            // preserve r8 and rcx on the stack
+            ; push r8
+            ; push rcx
             ;; call_extern_alloc!(self.ops, alloc_instance)
-            ; mov [rsp], rax
+            ; pop rcx
+            ; pop r8
+            // move [instance] to parameter 0 position
+            ; mov [rsp + (arity * 8) as _], rax
+            ; cmp QWORD [r8 + 0x10], 0
+            ; je >default_constructor
+            ; mov rax, [r8 + 0x10]
+            ; mov rax, [rax + 8]
+            ; call rax
+            ; add rsp, (arity * 8) as _
             ; jmp >ok
+
+            // check that there are exactly 0 arguments
+            ; default_constructor:
+            ; cmp rcx, 0
+            ; je >ok
+            ; mov r8, rcx
+            ; xor r9, r9
+            ; call ->fn_arity_mismatch
 
             ; call_bound_method:
             // [slot 0] <- receiver
@@ -1032,6 +1052,9 @@ extern "win64" fn invoke(
 extern "win64" fn add_method(class: Value, closure: Value, name: GcCell<ObjString>) {
     let mut class = class.as_obj_class();
     let closure = closure.as_obj_closure();
+    if name == unsafe { *INIT_STRING } {
+        class.init = Some(closure)
+    }
     ObjShape::add_method(class.shape, name, class.methods.len());
 
     class.methods.push(closure);

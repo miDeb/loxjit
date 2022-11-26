@@ -5,11 +5,16 @@ use std::hash::Hash;
 use std::mem::MaybeUninit;
 use std::ops::Range;
 
+use once_cell::sync::Lazy;
+
 use crate::chunk::Chunk;
 use crate::emitter::FnInfo;
-use crate::gc::{register_object, GcCell};
+use crate::gc::{intern_const_string, register_object, GcCell};
 use crate::properties::{ObjShape, PropertyList};
 use crate::value::Value;
+
+pub static mut INIT_STRING: Lazy<GcCell<ObjString>> =
+    Lazy::new(|| intern_const_string("init".into()));
 
 macro_rules! objImpl {
     ($obj_name: ident, $is_fn: ident, $as_fn: ident,$as_mut_fn: ident) => {
@@ -276,6 +281,7 @@ impl Display for ObjUpvalue {
 pub struct ObjClass {
     header: ObjHeader,
     pub name: GcCell<ObjString>,
+    pub init: Option<GcCell<ObjClosure>>,
     pub methods: Vec<GcCell<ObjClosure>>,
     pub shape: GcCell<ObjShape>,
 }
@@ -285,6 +291,7 @@ impl ObjClass {
         Self {
             header: Self::header(),
             name,
+            init: None,
             methods: Default::default(),
             shape: register_object(ObjShape::empty(), stack),
         }

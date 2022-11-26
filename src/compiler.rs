@@ -499,7 +499,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn emit_return(&mut self) {
         match self.compiler.fun_type {
-            FunctionType::Initializer => self.emit_bytes(OpCode::GetLocal, 0),
+            FunctionType::Initializer => self.emitter.get_local(0),
             FunctionType::Function | FunctionType::Method => self.emitter.nil(),
             FunctionType::Script => return,
         }
