@@ -723,7 +723,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn add_local(&mut self, name: &'a str) {
-        if self.compiler.locals.len() == u8::MAX as usize + 2 {
+        if self.compiler.locals.len() == u8::MAX as usize + 4 {
             self.error("Too many local variables in function.");
             return;
         }
@@ -916,6 +916,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.compiler.function.fn_info = Some(fn_info);
 
         // JIT needs to preserve rbp and rip here. Don't use those spots.
+        self.compiler.locals.push(Local {
+            name: "",
+            depth: -1,
+            is_captured: false,
+        });
         self.compiler.locals.push(Local {
             name: "",
             depth: -1,

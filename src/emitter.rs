@@ -1,3 +1,21 @@
+/// Calling convention:
+///
+/// [ saved rsi ] [ saved rip ] [ saved rbp ]
+/// ^
+/// |
+///  base pointer
+///
+/// rsi: (re-)stored by the caller
+/// rip: (re-)stored by call/ret instruction
+/// rbp: (re-)stored by the callee
+/// 
+/// Registers used by the VM:
+///
+/// rsi: pointer to the current ObjClosure (used to read/store upvalues)
+/// rbp: base pointer of the current call frame
+/// rdi: call frame depth counter for stack overflow checks
+/// r12: ptr to globals table (=a heap allocated vector)
+/// r13-15: true, false, nil
 use std::mem::MaybeUninit;
 use std::ops::Range;
 use std::ptr::{null, null_mut};
@@ -331,12 +349,8 @@ impl Emitter {
 
     pub fn set_upvalue(&mut self, index: usize) {
         dynasm!(self.ops
-            ; mov rax, [rbp]
-            // rax: ptr to ObjClosure
-            ; and rax, [->tag_obj_not]
-
             // rax: ptr to GcCell<Upvalue>s
-            ; mov rax, [rax + 0x10]
+            ; mov rax, [rsi + 0x10]
 
             // rax: ptr to Upvalue
             ; mov rax, [rax + 0x8 * index as i32]
@@ -351,12 +365,8 @@ impl Emitter {
 
     pub fn get_upvalue(&mut self, index: usize) {
         dynasm!(self.ops
-            ; mov rax, [rbp]
-            // rax: ptr to ObjClosure
-            ; and rax, [->tag_obj_not]
-
             // rax: ptr to GcCell<Upvalue>s
-            ; mov rax, [rax + 0x10]
+            ; mov rax, [rsi + 0x10]
 
             // rax: ptr to Upvalue
             ; mov rax, [rax + 0x8 * index as i32]
@@ -601,7 +611,7 @@ impl Emitter {
             ; cmp edi, FRAMES_MAX as _
             ; je ->stack_overflow
             ; push rbp
-            ; lea rbp, [rsp + (arity * 8 + 0x10) as _]
+            ; lea rbp, [rsp + (arity * 8 + 0x18) as _]
         );
         FnInfo {
             arity,
@@ -615,7 +625,7 @@ impl Emitter {
             ; mov rcx, rbp
             ;; call_extern!(self.ops, close_upvalues)
             ; pop rax
-            ; lea rsp, [rbp - ((fn_info.arity * 8 + 0x10) as i32)]
+            ; lea rsp, [rbp - ((fn_info.arity * 8 + 0x18) as i32)]
             ; pop rbp
             ; dec edi
             ; ret
@@ -691,8 +701,11 @@ impl Emitter {
             ; cmp QWORD [r8 + 0x10], 0
             ; je >default_constructor
             ; mov rax, [r8 + 0x10]
+            ; push rsi
+            ; mov rsi, rax
             ; mov rax, [rax + 8]
             ; call rax
+            ; pop rsi
             ; add rsp, (arity * 8) as _
             ; jmp >ok
 
@@ -712,8 +725,11 @@ impl Emitter {
             ; mov rax, [rax + 0x10]
 
             ; call_closure:
+            ; push rsi
+            ; mov rsi, rax
             ; mov rax, [rax + 8]
             ; call rax
+            ; pop rsi
             ; add rsp, (arity * 8) as _
             ; mov [rsp], rax
             ; jmp >ok
@@ -731,7 +747,7 @@ impl Emitter {
             ; mov r8, rcx
             ; and r8, [->tag_obj]
             ; cmp r8, [->tag_obj]
-            ; jne >fail
+            ; jne >fail2
 
             ; and rcx, [->tag_obj_not]
 
@@ -743,8 +759,11 @@ impl Emitter {
 
             ; mov rcx, arity as _
 
+            ; push rsi
+            ; mov rsi, rax
             ; mov rax, [rax + 8]
             ; call rax
+            ; pop rsi
             ; add rsp, (arity * 8) as _
             ; mov [rsp], rax
             ; jmp >ok2
@@ -754,7 +773,7 @@ impl Emitter {
             ;; self.call(arity)
             ; jmp >ok2
 
-            ; fail:
+            ; fail2:
             ; call ->expected_callable
             ; ok2:
         );

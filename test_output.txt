@@ -70,100 +70,95 @@ FAIL test/class/local_inherit_self.lox
 
 
 Passed: 19 Failed: 4 Skipped: 0 (test/class/local_reference_self.lox)
-FAIL test/class/local_reference_self.lox
-     Expected return code 0 and got -11. Stderr:
-     Missing expected output 'Foo' on line 8.
-
-
-Passed: 19 Failed: 5 Skipped: 0 (test/class/reference_self.lox)
-Passed: 20 Failed: 5 Skipped: 0 (test/closure/assign_to_closure.lox)
-Passed: 21 Failed: 5 Skipped: 0 (test/closure/assign_to_shadowed_later.lox)
-Passed: 22 Failed: 5 Skipped: 0 (test/closure/close_over_function_parameter.lox)
-Passed: 23 Failed: 5 Skipped: 0 (test/closure/close_over_later_variable.lox)
-Passed: 24 Failed: 5 Skipped: 0 (test/closure/close_over_method_parameter.lox)
-Passed: 25 Failed: 5 Skipped: 0 (test/closure/closed_closure_in_function.lox)
-Passed: 26 Failed: 5 Skipped: 0 (test/closure/nested_closure.lox)
-Passed: 27 Failed: 5 Skipped: 0 (test/closure/open_closure_in_function.lox)
-Passed: 28 Failed: 5 Skipped: 0 (test/closure/reference_closure_multiple_times.lox)
-Passed: 29 Failed: 5 Skipped: 0 (test/closure/reuse_closure_slot.lox)
-Passed: 30 Failed: 5 Skipped: 0 (test/closure/shadow_closure_with_local.lox)
-Passed: 31 Failed: 5 Skipped: 0 (test/closure/unused_closure.lox)
-Passed: 32 Failed: 5 Skipped: 0 (test/closure/unused_later_closure.lox)
-Passed: 33 Failed: 5 Skipped: 0 (test/comments/line_at_eof.lox)
-Passed: 34 Failed: 5 Skipped: 0 (test/comments/only_line_comment.lox)
-Passed: 35 Failed: 5 Skipped: 0 (test/comments/only_line_comment_and_line.lox)
-Passed: 36 Failed: 5 Skipped: 0 (test/comments/unicode.lox)
-Passed: 37 Failed: 5 Skipped: 0 (test/constructor/arguments.lox)
-Passed: 38 Failed: 5 Skipped: 0 (test/constructor/call_init_early_return.lox)
-Passed: 39 Failed: 5 Skipped: 0 (test/constructor/call_init_explicitly.lox)
-Passed: 40 Failed: 5 Skipped: 0 (test/constructor/default.lox)
-Passed: 41 Failed: 5 Skipped: 0 (test/constructor/default_arguments.lox)
-Passed: 42 Failed: 5 Skipped: 0 (test/constructor/early_return.lox)
-Passed: 43 Failed: 5 Skipped: 0 (test/constructor/extra_arguments.lox)
-Passed: 44 Failed: 5 Skipped: 0 (test/constructor/init_not_method.lox)
-Passed: 45 Failed: 5 Skipped: 0 (test/constructor/missing_arguments.lox)
-Passed: 46 Failed: 5 Skipped: 0 (test/constructor/return_in_nested_function.lox)
-Passed: 47 Failed: 5 Skipped: 0 (test/constructor/return_value.lox)
-Passed: 48 Failed: 5 Skipped: 0 (test/empty_file.lox)
-Passed: 49 Failed: 5 Skipped: 0 (test/expressions/evaluate.lox)
-Passed: 49 Failed: 5 Skipped: 1 (test/expressions/parse.lox)
-Passed: 49 Failed: 5 Skipped: 2 (test/field/call_function_field.lox)
-Passed: 50 Failed: 5 Skipped: 2 (test/field/call_nonfunction_field.lox)
-Passed: 51 Failed: 5 Skipped: 2 (test/field/get_and_set_method.lox)
-Passed: 52 Failed: 5 Skipped: 2 (test/field/get_on_bool.lox)
-Passed: 53 Failed: 5 Skipped: 2 (test/field/get_on_class.lox)
-Passed: 54 Failed: 5 Skipped: 2 (test/field/get_on_function.lox)
-Passed: 55 Failed: 5 Skipped: 2 (test/field/get_on_nil.lox)
-Passed: 56 Failed: 5 Skipped: 2 (test/field/get_on_num.lox)
-Passed: 57 Failed: 5 Skipped: 2 (test/field/get_on_string.lox)
-Passed: 58 Failed: 5 Skipped: 2 (test/field/many.lox)
-Passed: 59 Failed: 5 Skipped: 2 (test/field/method.lox)
-Passed: 60 Failed: 5 Skipped: 2 (test/field/method_binds_this.lox)
-Passed: 61 Failed: 5 Skipped: 2 (test/field/on_instance.lox)
-Passed: 62 Failed: 5 Skipped: 2 (test/field/set_evaluation_order.lox)
-Passed: 63 Failed: 5 Skipped: 2 (test/field/set_on_bool.lox)
-Passed: 64 Failed: 5 Skipped: 2 (test/field/set_on_class.lox)
-Passed: 65 Failed: 5 Skipped: 2 (test/field/set_on_function.lox)
-Passed: 66 Failed: 5 Skipped: 2 (test/field/set_on_nil.lox)
-Passed: 67 Failed: 5 Skipped: 2 (test/field/set_on_num.lox)
-Passed: 68 Failed: 5 Skipped: 2 (test/field/set_on_string.lox)
-Passed: 69 Failed: 5 Skipped: 2 (test/field/undefined.lox)
-Passed: 70 Failed: 5 Skipped: 2 (test/for/class_in_body.lox)
-Passed: 71 Failed: 5 Skipped: 2 (test/for/closure_in_body.lox)
-Passed: 72 Failed: 5 Skipped: 2 (test/for/fun_in_body.lox)
-Passed: 73 Failed: 5 Skipped: 2 (test/for/return_closure.lox)
-Passed: 74 Failed: 5 Skipped: 2 (test/for/return_inside.lox)
-Passed: 75 Failed: 5 Skipped: 2 (test/for/scope.lox)
-Passed: 76 Failed: 5 Skipped: 2 (test/for/statement_condition.lox)
-Passed: 77 Failed: 5 Skipped: 2 (test/for/statement_increment.lox)
-Passed: 78 Failed: 5 Skipped: 2 (test/for/statement_initializer.lox)
-Passed: 79 Failed: 5 Skipped: 2 (test/for/syntax.lox)
-Passed: 80 Failed: 5 Skipped: 2 (test/for/var_in_body.lox)
-Passed: 81 Failed: 5 Skipped: 2 (test/function/body_must_be_block.lox)
-Passed: 82 Failed: 5 Skipped: 2 (test/function/empty_body.lox)
-Passed: 83 Failed: 5 Skipped: 2 (test/function/extra_arguments.lox)
-Passed: 84 Failed: 5 Skipped: 2 (test/function/local_mutual_recursion.lox)
-Passed: 85 Failed: 5 Skipped: 2 (test/function/local_recursion.lox)
-Passed: 86 Failed: 5 Skipped: 2 (test/function/missing_arguments.lox)
-Passed: 87 Failed: 5 Skipped: 2 (test/function/missing_comma_in_parameters.lox)
-Passed: 88 Failed: 5 Skipped: 2 (test/function/mutual_recursion.lox)
-Passed: 89 Failed: 5 Skipped: 2 (test/function/nested_call_with_arguments.lox)
-Passed: 90 Failed: 5 Skipped: 2 (test/function/parameters.lox)
-Passed: 91 Failed: 5 Skipped: 2 (test/function/print.lox)
-Passed: 92 Failed: 5 Skipped: 2 (test/function/recursion.lox)
-Passed: 93 Failed: 5 Skipped: 2 (test/function/too_many_arguments.lox)
-Passed: 94 Failed: 5 Skipped: 2 (test/function/too_many_parameters.lox)
-Passed: 95 Failed: 5 Skipped: 2 (test/if/class_in_else.lox)
-Passed: 96 Failed: 5 Skipped: 2 (test/if/class_in_then.lox)
-Passed: 97 Failed: 5 Skipped: 2 (test/if/dangling_else.lox)
-Passed: 98 Failed: 5 Skipped: 2 (test/if/else.lox)
-Passed: 99 Failed: 5 Skipped: 2 (test/if/fun_in_else.lox)
-Passed: 100 Failed: 5 Skipped: 2 (test/if/fun_in_then.lox)
-Passed: 101 Failed: 5 Skipped: 2 (test/if/if.lox)
-Passed: 102 Failed: 5 Skipped: 2 (test/if/truth.lox)
-Passed: 103 Failed: 5 Skipped: 2 (test/if/var_in_else.lox)
-Passed: 104 Failed: 5 Skipped: 2 (test/if/var_in_then.lox)
-Passed: 105 Failed: 5 Skipped: 2 (test/inheritance/constructor.lox)
+Passed: 20 Failed: 4 Skipped: 0 (test/class/reference_self.lox)
+Passed: 21 Failed: 4 Skipped: 0 (test/closure/assign_to_closure.lox)
+Passed: 22 Failed: 4 Skipped: 0 (test/closure/assign_to_shadowed_later.lox)
+Passed: 23 Failed: 4 Skipped: 0 (test/closure/close_over_function_parameter.lox)
+Passed: 24 Failed: 4 Skipped: 0 (test/closure/close_over_later_variable.lox)
+Passed: 25 Failed: 4 Skipped: 0 (test/closure/close_over_method_parameter.lox)
+Passed: 26 Failed: 4 Skipped: 0 (test/closure/closed_closure_in_function.lox)
+Passed: 27 Failed: 4 Skipped: 0 (test/closure/nested_closure.lox)
+Passed: 28 Failed: 4 Skipped: 0 (test/closure/open_closure_in_function.lox)
+Passed: 29 Failed: 4 Skipped: 0 (test/closure/reference_closure_multiple_times.lox)
+Passed: 30 Failed: 4 Skipped: 0 (test/closure/reuse_closure_slot.lox)
+Passed: 31 Failed: 4 Skipped: 0 (test/closure/shadow_closure_with_local.lox)
+Passed: 32 Failed: 4 Skipped: 0 (test/closure/unused_closure.lox)
+Passed: 33 Failed: 4 Skipped: 0 (test/closure/unused_later_closure.lox)
+Passed: 34 Failed: 4 Skipped: 0 (test/comments/line_at_eof.lox)
+Passed: 35 Failed: 4 Skipped: 0 (test/comments/only_line_comment.lox)
+Passed: 36 Failed: 4 Skipped: 0 (test/comments/only_line_comment_and_line.lox)
+Passed: 37 Failed: 4 Skipped: 0 (test/comments/unicode.lox)
+Passed: 38 Failed: 4 Skipped: 0 (test/constructor/arguments.lox)
+Passed: 39 Failed: 4 Skipped: 0 (test/constructor/call_init_early_return.lox)
+Passed: 40 Failed: 4 Skipped: 0 (test/constructor/call_init_explicitly.lox)
+Passed: 41 Failed: 4 Skipped: 0 (test/constructor/default.lox)
+Passed: 42 Failed: 4 Skipped: 0 (test/constructor/default_arguments.lox)
+Passed: 43 Failed: 4 Skipped: 0 (test/constructor/early_return.lox)
+Passed: 44 Failed: 4 Skipped: 0 (test/constructor/extra_arguments.lox)
+Passed: 45 Failed: 4 Skipped: 0 (test/constructor/init_not_method.lox)
+Passed: 46 Failed: 4 Skipped: 0 (test/constructor/missing_arguments.lox)
+Passed: 47 Failed: 4 Skipped: 0 (test/constructor/return_in_nested_function.lox)
+Passed: 48 Failed: 4 Skipped: 0 (test/constructor/return_value.lox)
+Passed: 49 Failed: 4 Skipped: 0 (test/empty_file.lox)
+Passed: 50 Failed: 4 Skipped: 0 (test/expressions/evaluate.lox)
+Passed: 50 Failed: 4 Skipped: 1 (test/expressions/parse.lox)
+Passed: 50 Failed: 4 Skipped: 2 (test/field/call_function_field.lox)
+Passed: 51 Failed: 4 Skipped: 2 (test/field/call_nonfunction_field.lox)
+Passed: 52 Failed: 4 Skipped: 2 (test/field/get_and_set_method.lox)
+Passed: 53 Failed: 4 Skipped: 2 (test/field/get_on_bool.lox)
+Passed: 54 Failed: 4 Skipped: 2 (test/field/get_on_class.lox)
+Passed: 55 Failed: 4 Skipped: 2 (test/field/get_on_function.lox)
+Passed: 56 Failed: 4 Skipped: 2 (test/field/get_on_nil.lox)
+Passed: 57 Failed: 4 Skipped: 2 (test/field/get_on_num.lox)
+Passed: 58 Failed: 4 Skipped: 2 (test/field/get_on_string.lox)
+Passed: 59 Failed: 4 Skipped: 2 (test/field/many.lox)
+Passed: 60 Failed: 4 Skipped: 2 (test/field/method.lox)
+Passed: 61 Failed: 4 Skipped: 2 (test/field/method_binds_this.lox)
+Passed: 62 Failed: 4 Skipped: 2 (test/field/on_instance.lox)
+Passed: 63 Failed: 4 Skipped: 2 (test/field/set_evaluation_order.lox)
+Passed: 64 Failed: 4 Skipped: 2 (test/field/set_on_bool.lox)
+Passed: 65 Failed: 4 Skipped: 2 (test/field/set_on_class.lox)
+Passed: 66 Failed: 4 Skipped: 2 (test/field/set_on_function.lox)
+Passed: 67 Failed: 4 Skipped: 2 (test/field/set_on_nil.lox)
+Passed: 68 Failed: 4 Skipped: 2 (test/field/set_on_num.lox)
+Passed: 69 Failed: 4 Skipped: 2 (test/field/set_on_string.lox)
+Passed: 70 Failed: 4 Skipped: 2 (test/field/undefined.lox)
+Passed: 71 Failed: 4 Skipped: 2 (test/for/class_in_body.lox)
+Passed: 72 Failed: 4 Skipped: 2 (test/for/closure_in_body.lox)
+Passed: 73 Failed: 4 Skipped: 2 (test/for/fun_in_body.lox)
+Passed: 74 Failed: 4 Skipped: 2 (test/for/return_closure.lox)
+Passed: 75 Failed: 4 Skipped: 2 (test/for/return_inside.lox)
+Passed: 76 Failed: 4 Skipped: 2 (test/for/scope.lox)
+Passed: 77 Failed: 4 Skipped: 2 (test/for/statement_condition.lox)
+Passed: 78 Failed: 4 Skipped: 2 (test/for/statement_increment.lox)
+Passed: 79 Failed: 4 Skipped: 2 (test/for/statement_initializer.lox)
+Passed: 80 Failed: 4 Skipped: 2 (test/for/syntax.lox)
+Passed: 81 Failed: 4 Skipped: 2 (test/for/var_in_body.lox)
+Passed: 82 Failed: 4 Skipped: 2 (test/function/body_must_be_block.lox)
+Passed: 83 Failed: 4 Skipped: 2 (test/function/empty_body.lox)
+Passed: 84 Failed: 4 Skipped: 2 (test/function/extra_arguments.lox)
+Passed: 85 Failed: 4 Skipped: 2 (test/function/local_mutual_recursion.lox)
+Passed: 86 Failed: 4 Skipped: 2 (test/function/local_recursion.lox)
+Passed: 87 Failed: 4 Skipped: 2 (test/function/missing_arguments.lox)
+Passed: 88 Failed: 4 Skipped: 2 (test/function/missing_comma_in_parameters.lox)
+Passed: 89 Failed: 4 Skipped: 2 (test/function/mutual_recursion.lox)
+Passed: 90 Failed: 4 Skipped: 2 (test/function/nested_call_with_arguments.lox)
+Passed: 91 Failed: 4 Skipped: 2 (test/function/parameters.lox)
+Passed: 92 Failed: 4 Skipped: 2 (test/function/print.lox)
+Passed: 93 Failed: 4 Skipped: 2 (test/function/recursion.lox)
+Passed: 94 Failed: 4 Skipped: 2 (test/function/too_many_arguments.lox)
+Passed: 95 Failed: 4 Skipped: 2 (test/function/too_many_parameters.lox)
+Passed: 96 Failed: 4 Skipped: 2 (test/if/class_in_else.lox)
+Passed: 97 Failed: 4 Skipped: 2 (test/if/class_in_then.lox)
+Passed: 98 Failed: 4 Skipped: 2 (test/if/dangling_else.lox)
+Passed: 99 Failed: 4 Skipped: 2 (test/if/else.lox)
+Passed: 100 Failed: 4 Skipped: 2 (test/if/fun_in_else.lox)
+Passed: 101 Failed: 4 Skipped: 2 (test/if/fun_in_then.lox)
+Passed: 102 Failed: 4 Skipped: 2 (test/if/if.lox)
+Passed: 103 Failed: 4 Skipped: 2 (test/if/truth.lox)
+Passed: 104 Failed: 4 Skipped: 2 (test/if/var_in_else.lox)
+Passed: 105 Failed: 4 Skipped: 2 (test/if/var_in_then.lox)
+Passed: 106 Failed: 4 Skipped: 2 (test/inheritance/constructor.lox)
 FAIL test/inheritance/constructor.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -175,7 +170,7 @@ FAIL test/inheritance/constructor.lox
      Missing expected output 'value' on line 14.
 
 
-Passed: 105 Failed: 6 Skipped: 2 (test/inheritance/inherit_from_function.lox)
+Passed: 106 Failed: 5 Skipped: 2 (test/inheritance/inherit_from_function.lox)
 FAIL test/inheritance/inherit_from_function.lox
      Expected runtime error 'Superclass must be a class.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -186,7 +181,7 @@ FAIL test/inheritance/inherit_from_function.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 105 Failed: 7 Skipped: 2 (test/inheritance/inherit_from_nil.lox)
+Passed: 106 Failed: 6 Skipped: 2 (test/inheritance/inherit_from_nil.lox)
 FAIL test/inheritance/inherit_from_nil.lox
      Expected runtime error 'Superclass must be a class.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -197,7 +192,7 @@ FAIL test/inheritance/inherit_from_nil.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 105 Failed: 8 Skipped: 2 (test/inheritance/inherit_from_number.lox)
+Passed: 106 Failed: 7 Skipped: 2 (test/inheritance/inherit_from_number.lox)
 FAIL test/inheritance/inherit_from_number.lox
      Expected runtime error 'Superclass must be a class.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -208,7 +203,7 @@ FAIL test/inheritance/inherit_from_number.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 105 Failed: 9 Skipped: 2 (test/inheritance/inherit_methods.lox)
+Passed: 106 Failed: 8 Skipped: 2 (test/inheritance/inherit_methods.lox)
 FAIL test/inheritance/inherit_methods.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -222,7 +217,7 @@ FAIL test/inheritance/inherit_methods.lox
      Missing expected output 'bar' on line 14.
 
 
-Passed: 105 Failed: 10 Skipped: 2 (test/inheritance/parenthesized_superclass.lox)
+Passed: 106 Failed: 9 Skipped: 2 (test/inheritance/parenthesized_superclass.lox)
 FAIL test/inheritance/parenthesized_superclass.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -234,7 +229,7 @@ FAIL test/inheritance/parenthesized_superclass.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 105 Failed: 11 Skipped: 2 (test/inheritance/set_fields_from_base_class.lox)
+Passed: 106 Failed: 10 Skipped: 2 (test/inheritance/set_fields_from_base_class.lox)
 FAIL test/inheritance/set_fields_from_base_class.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -251,87 +246,82 @@ FAIL test/inheritance/set_fields_from_base_class.lox
      Missing expected output 'bar 2' on line 38.
 
 
-Passed: 105 Failed: 12 Skipped: 2 (test/limit/loop_too_large.lox)
+Passed: 106 Failed: 11 Skipped: 2 (test/limit/loop_too_large.lox)
 FAIL test/limit/loop_too_large.lox
      Missing expected error: [2351] Error at '}': Loop body too large.
      Expected return code 65 and got 0. Stderr:
 
 
-Passed: 105 Failed: 13 Skipped: 2 (test/limit/no_reuse_constants.lox)
+Passed: 106 Failed: 12 Skipped: 2 (test/limit/no_reuse_constants.lox)
 FAIL test/limit/no_reuse_constants.lox
      Missing expected error: [35] Error at '1': Too many constants in one chunk.
      Expected return code 65 and got 0. Stderr:
 
 
-Passed: 105 Failed: 14 Skipped: 2 (test/limit/stack_overflow.lox)
-Passed: 106 Failed: 14 Skipped: 2 (test/limit/too_many_constants.lox)
+Passed: 106 Failed: 13 Skipped: 2 (test/limit/stack_overflow.lox)
+Passed: 107 Failed: 13 Skipped: 2 (test/limit/too_many_constants.lox)
 FAIL test/limit/too_many_constants.lox
      Missing expected error: [35] Error at '"oops"': Too many constants in one chunk.
      Expected return code 65 and got 0. Stderr:
 
 
-Passed: 106 Failed: 15 Skipped: 2 (test/limit/too_many_locals.lox)
-FAIL test/limit/too_many_locals.lox
-     Unexpected error:
-     [line 50] Error at 'vff': Too many local variables in function.
-
-
-Passed: 106 Failed: 16 Skipped: 2 (test/limit/too_many_upvalues.lox)
-Passed: 107 Failed: 16 Skipped: 2 (test/logical_operator/and.lox)
-Passed: 108 Failed: 16 Skipped: 2 (test/logical_operator/and_truth.lox)
-Passed: 109 Failed: 16 Skipped: 2 (test/logical_operator/or.lox)
-Passed: 110 Failed: 16 Skipped: 2 (test/logical_operator/or_truth.lox)
-Passed: 111 Failed: 16 Skipped: 2 (test/method/arity.lox)
-Passed: 112 Failed: 16 Skipped: 2 (test/method/empty_block.lox)
-Passed: 113 Failed: 16 Skipped: 2 (test/method/extra_arguments.lox)
-Passed: 114 Failed: 16 Skipped: 2 (test/method/missing_arguments.lox)
-Passed: 115 Failed: 16 Skipped: 2 (test/method/not_found.lox)
-Passed: 116 Failed: 16 Skipped: 2 (test/method/print_bound_method.lox)
-Passed: 117 Failed: 16 Skipped: 2 (test/method/refer_to_name.lox)
-Passed: 118 Failed: 16 Skipped: 2 (test/method/too_many_arguments.lox)
-Passed: 119 Failed: 16 Skipped: 2 (test/method/too_many_parameters.lox)
-Passed: 120 Failed: 16 Skipped: 2 (test/nil/literal.lox)
-Passed: 121 Failed: 16 Skipped: 2 (test/number/decimal_point_at_eof.lox)
-Passed: 122 Failed: 16 Skipped: 2 (test/number/leading_dot.lox)
-Passed: 123 Failed: 16 Skipped: 2 (test/number/literals.lox)
-Passed: 124 Failed: 16 Skipped: 2 (test/number/nan_equality.lox)
-Passed: 125 Failed: 16 Skipped: 2 (test/number/trailing_dot.lox)
-Passed: 126 Failed: 16 Skipped: 2 (test/operator/add.lox)
-Passed: 127 Failed: 16 Skipped: 2 (test/operator/add_bool_nil.lox)
-Passed: 128 Failed: 16 Skipped: 2 (test/operator/add_bool_num.lox)
-Passed: 129 Failed: 16 Skipped: 2 (test/operator/add_bool_string.lox)
-Passed: 130 Failed: 16 Skipped: 2 (test/operator/add_nil_nil.lox)
-Passed: 131 Failed: 16 Skipped: 2 (test/operator/add_num_nil.lox)
-Passed: 132 Failed: 16 Skipped: 2 (test/operator/add_string_nil.lox)
-Passed: 133 Failed: 16 Skipped: 2 (test/operator/comparison.lox)
-Passed: 134 Failed: 16 Skipped: 2 (test/operator/divide.lox)
-Passed: 135 Failed: 16 Skipped: 2 (test/operator/divide_nonnum_num.lox)
-Passed: 136 Failed: 16 Skipped: 2 (test/operator/divide_num_nonnum.lox)
-Passed: 137 Failed: 16 Skipped: 2 (test/operator/equals.lox)
-Passed: 138 Failed: 16 Skipped: 2 (test/operator/equals_class.lox)
-Passed: 139 Failed: 16 Skipped: 2 (test/operator/equals_method.lox)
-Passed: 140 Failed: 16 Skipped: 2 (test/operator/greater_nonnum_num.lox)
-Passed: 141 Failed: 16 Skipped: 2 (test/operator/greater_num_nonnum.lox)
-Passed: 142 Failed: 16 Skipped: 2 (test/operator/greater_or_equal_nonnum_num.lox)
-Passed: 143 Failed: 16 Skipped: 2 (test/operator/greater_or_equal_num_nonnum.lox)
-Passed: 144 Failed: 16 Skipped: 2 (test/operator/less_nonnum_num.lox)
-Passed: 145 Failed: 16 Skipped: 2 (test/operator/less_num_nonnum.lox)
-Passed: 146 Failed: 16 Skipped: 2 (test/operator/less_or_equal_nonnum_num.lox)
-Passed: 147 Failed: 16 Skipped: 2 (test/operator/less_or_equal_num_nonnum.lox)
-Passed: 148 Failed: 16 Skipped: 2 (test/operator/multiply.lox)
-Passed: 149 Failed: 16 Skipped: 2 (test/operator/multiply_nonnum_num.lox)
-Passed: 150 Failed: 16 Skipped: 2 (test/operator/multiply_num_nonnum.lox)
-Passed: 151 Failed: 16 Skipped: 2 (test/operator/negate.lox)
-Passed: 152 Failed: 16 Skipped: 2 (test/operator/negate_nonnum.lox)
-Passed: 153 Failed: 16 Skipped: 2 (test/operator/not.lox)
-Passed: 154 Failed: 16 Skipped: 2 (test/operator/not_class.lox)
-Passed: 155 Failed: 16 Skipped: 2 (test/operator/not_equals.lox)
-Passed: 156 Failed: 16 Skipped: 2 (test/operator/subtract.lox)
-Passed: 157 Failed: 16 Skipped: 2 (test/operator/subtract_nonnum_num.lox)
-Passed: 158 Failed: 16 Skipped: 2 (test/operator/subtract_num_nonnum.lox)
-Passed: 159 Failed: 16 Skipped: 2 (test/precedence.lox)
-Passed: 160 Failed: 16 Skipped: 2 (test/print/missing_argument.lox)
-Passed: 161 Failed: 16 Skipped: 2 (test/regression/394.lox)
+Passed: 107 Failed: 14 Skipped: 2 (test/limit/too_many_locals.lox)
+Passed: 108 Failed: 14 Skipped: 2 (test/limit/too_many_upvalues.lox)
+Passed: 109 Failed: 14 Skipped: 2 (test/logical_operator/and.lox)
+Passed: 110 Failed: 14 Skipped: 2 (test/logical_operator/and_truth.lox)
+Passed: 111 Failed: 14 Skipped: 2 (test/logical_operator/or.lox)
+Passed: 112 Failed: 14 Skipped: 2 (test/logical_operator/or_truth.lox)
+Passed: 113 Failed: 14 Skipped: 2 (test/method/arity.lox)
+Passed: 114 Failed: 14 Skipped: 2 (test/method/empty_block.lox)
+Passed: 115 Failed: 14 Skipped: 2 (test/method/extra_arguments.lox)
+Passed: 116 Failed: 14 Skipped: 2 (test/method/missing_arguments.lox)
+Passed: 117 Failed: 14 Skipped: 2 (test/method/not_found.lox)
+Passed: 118 Failed: 14 Skipped: 2 (test/method/print_bound_method.lox)
+Passed: 119 Failed: 14 Skipped: 2 (test/method/refer_to_name.lox)
+Passed: 120 Failed: 14 Skipped: 2 (test/method/too_many_arguments.lox)
+Passed: 121 Failed: 14 Skipped: 2 (test/method/too_many_parameters.lox)
+Passed: 122 Failed: 14 Skipped: 2 (test/nil/literal.lox)
+Passed: 123 Failed: 14 Skipped: 2 (test/number/decimal_point_at_eof.lox)
+Passed: 124 Failed: 14 Skipped: 2 (test/number/leading_dot.lox)
+Passed: 125 Failed: 14 Skipped: 2 (test/number/literals.lox)
+Passed: 126 Failed: 14 Skipped: 2 (test/number/nan_equality.lox)
+Passed: 127 Failed: 14 Skipped: 2 (test/number/trailing_dot.lox)
+Passed: 128 Failed: 14 Skipped: 2 (test/operator/add.lox)
+Passed: 129 Failed: 14 Skipped: 2 (test/operator/add_bool_nil.lox)
+Passed: 130 Failed: 14 Skipped: 2 (test/operator/add_bool_num.lox)
+Passed: 131 Failed: 14 Skipped: 2 (test/operator/add_bool_string.lox)
+Passed: 132 Failed: 14 Skipped: 2 (test/operator/add_nil_nil.lox)
+Passed: 133 Failed: 14 Skipped: 2 (test/operator/add_num_nil.lox)
+Passed: 134 Failed: 14 Skipped: 2 (test/operator/add_string_nil.lox)
+Passed: 135 Failed: 14 Skipped: 2 (test/operator/comparison.lox)
+Passed: 136 Failed: 14 Skipped: 2 (test/operator/divide.lox)
+Passed: 137 Failed: 14 Skipped: 2 (test/operator/divide_nonnum_num.lox)
+Passed: 138 Failed: 14 Skipped: 2 (test/operator/divide_num_nonnum.lox)
+Passed: 139 Failed: 14 Skipped: 2 (test/operator/equals.lox)
+Passed: 140 Failed: 14 Skipped: 2 (test/operator/equals_class.lox)
+Passed: 141 Failed: 14 Skipped: 2 (test/operator/equals_method.lox)
+Passed: 142 Failed: 14 Skipped: 2 (test/operator/greater_nonnum_num.lox)
+Passed: 143 Failed: 14 Skipped: 2 (test/operator/greater_num_nonnum.lox)
+Passed: 144 Failed: 14 Skipped: 2 (test/operator/greater_or_equal_nonnum_num.lox)
+Passed: 145 Failed: 14 Skipped: 2 (test/operator/greater_or_equal_num_nonnum.lox)
+Passed: 146 Failed: 14 Skipped: 2 (test/operator/less_nonnum_num.lox)
+Passed: 147 Failed: 14 Skipped: 2 (test/operator/less_num_nonnum.lox)
+Passed: 148 Failed: 14 Skipped: 2 (test/operator/less_or_equal_nonnum_num.lox)
+Passed: 149 Failed: 14 Skipped: 2 (test/operator/less_or_equal_num_nonnum.lox)
+Passed: 150 Failed: 14 Skipped: 2 (test/operator/multiply.lox)
+Passed: 151 Failed: 14 Skipped: 2 (test/operator/multiply_nonnum_num.lox)
+Passed: 152 Failed: 14 Skipped: 2 (test/operator/multiply_num_nonnum.lox)
+Passed: 153 Failed: 14 Skipped: 2 (test/operator/negate.lox)
+Passed: 154 Failed: 14 Skipped: 2 (test/operator/negate_nonnum.lox)
+Passed: 155 Failed: 14 Skipped: 2 (test/operator/not.lox)
+Passed: 156 Failed: 14 Skipped: 2 (test/operator/not_class.lox)
+Passed: 157 Failed: 14 Skipped: 2 (test/operator/not_equals.lox)
+Passed: 158 Failed: 14 Skipped: 2 (test/operator/subtract.lox)
+Passed: 159 Failed: 14 Skipped: 2 (test/operator/subtract_nonnum_num.lox)
+Passed: 160 Failed: 14 Skipped: 2 (test/operator/subtract_num_nonnum.lox)
+Passed: 161 Failed: 14 Skipped: 2 (test/precedence.lox)
+Passed: 162 Failed: 14 Skipped: 2 (test/print/missing_argument.lox)
+Passed: 163 Failed: 14 Skipped: 2 (test/regression/394.lox)
 FAIL test/regression/394.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -343,25 +333,25 @@ FAIL test/regression/394.lox
      Missing expected output 'B' on line 4.
 
 
-Passed: 161 Failed: 17 Skipped: 2 (test/regression/40.lox)
-Passed: 162 Failed: 17 Skipped: 2 (test/return/after_else.lox)
-Passed: 163 Failed: 17 Skipped: 2 (test/return/after_if.lox)
-Passed: 164 Failed: 17 Skipped: 2 (test/return/after_while.lox)
-Passed: 165 Failed: 17 Skipped: 2 (test/return/at_top_level.lox)
-Passed: 166 Failed: 17 Skipped: 2 (test/return/in_function.lox)
-Passed: 167 Failed: 17 Skipped: 2 (test/return/in_method.lox)
-Passed: 168 Failed: 17 Skipped: 2 (test/return/return_nil_if_no_value.lox)
-Passed: 169 Failed: 17 Skipped: 2 (test/scanning/identifiers.lox)
-Passed: 169 Failed: 17 Skipped: 3 (test/scanning/keywords.lox)
-Passed: 169 Failed: 17 Skipped: 4 (test/scanning/numbers.lox)
-Passed: 169 Failed: 17 Skipped: 5 (test/scanning/punctuators.lox)
-Passed: 169 Failed: 17 Skipped: 6 (test/scanning/strings.lox)
-Passed: 169 Failed: 17 Skipped: 7 (test/scanning/whitespace.lox)
-Passed: 169 Failed: 17 Skipped: 8 (test/string/error_after_multiline.lox)
-Passed: 170 Failed: 17 Skipped: 8 (test/string/literals.lox)
-Passed: 171 Failed: 17 Skipped: 8 (test/string/multiline.lox)
-Passed: 172 Failed: 17 Skipped: 8 (test/string/unterminated.lox)
-Passed: 173 Failed: 17 Skipped: 8 (test/super/bound_method.lox)
+Passed: 163 Failed: 15 Skipped: 2 (test/regression/40.lox)
+Passed: 164 Failed: 15 Skipped: 2 (test/return/after_else.lox)
+Passed: 165 Failed: 15 Skipped: 2 (test/return/after_if.lox)
+Passed: 166 Failed: 15 Skipped: 2 (test/return/after_while.lox)
+Passed: 167 Failed: 15 Skipped: 2 (test/return/at_top_level.lox)
+Passed: 168 Failed: 15 Skipped: 2 (test/return/in_function.lox)
+Passed: 169 Failed: 15 Skipped: 2 (test/return/in_method.lox)
+Passed: 170 Failed: 15 Skipped: 2 (test/return/return_nil_if_no_value.lox)
+Passed: 171 Failed: 15 Skipped: 2 (test/scanning/identifiers.lox)
+Passed: 171 Failed: 15 Skipped: 3 (test/scanning/keywords.lox)
+Passed: 171 Failed: 15 Skipped: 4 (test/scanning/numbers.lox)
+Passed: 171 Failed: 15 Skipped: 5 (test/scanning/punctuators.lox)
+Passed: 171 Failed: 15 Skipped: 6 (test/scanning/strings.lox)
+Passed: 171 Failed: 15 Skipped: 7 (test/scanning/whitespace.lox)
+Passed: 171 Failed: 15 Skipped: 8 (test/string/error_after_multiline.lox)
+Passed: 172 Failed: 15 Skipped: 8 (test/string/literals.lox)
+Passed: 173 Failed: 15 Skipped: 8 (test/string/multiline.lox)
+Passed: 174 Failed: 15 Skipped: 8 (test/string/unterminated.lox)
+Passed: 175 Failed: 15 Skipped: 8 (test/super/bound_method.lox)
 FAIL test/super/bound_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -373,7 +363,7 @@ FAIL test/super/bound_method.lox
      Missing expected output 'A.method(arg)' on line 19.
 
 
-Passed: 173 Failed: 18 Skipped: 8 (test/super/call_other_method.lox)
+Passed: 175 Failed: 16 Skipped: 8 (test/super/call_other_method.lox)
 FAIL test/super/call_other_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -386,7 +376,7 @@ FAIL test/super/call_other_method.lox
      Missing expected output 'Base.foo()' on line 16.
 
 
-Passed: 173 Failed: 19 Skipped: 8 (test/super/call_same_method.lox)
+Passed: 175 Failed: 17 Skipped: 8 (test/super/call_same_method.lox)
 FAIL test/super/call_same_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -399,7 +389,7 @@ FAIL test/super/call_same_method.lox
      Missing expected output 'Base.foo()' on line 16.
 
 
-Passed: 173 Failed: 20 Skipped: 8 (test/super/closure.lox)
+Passed: 175 Failed: 18 Skipped: 8 (test/super/closure.lox)
 FAIL test/super/closure.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -411,7 +401,7 @@ FAIL test/super/closure.lox
      Missing expected output 'Base' on line 17.
 
 
-Passed: 173 Failed: 21 Skipped: 8 (test/super/constructor.lox)
+Passed: 175 Failed: 19 Skipped: 8 (test/super/constructor.lox)
 FAIL test/super/constructor.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -424,7 +414,7 @@ FAIL test/super/constructor.lox
      Missing expected output 'Base.init(a, b)' on line 16.
 
 
-Passed: 173 Failed: 22 Skipped: 8 (test/super/extra_arguments.lox)
+Passed: 175 Failed: 20 Skipped: 8 (test/super/extra_arguments.lox)
 FAIL test/super/extra_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 4.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -436,7 +426,7 @@ FAIL test/super/extra_arguments.lox
      Missing expected output 'Derived.foo()' on line 9.
 
 
-Passed: 173 Failed: 23 Skipped: 8 (test/super/indirectly_inherited.lox)
+Passed: 175 Failed: 21 Skipped: 8 (test/super/indirectly_inherited.lox)
 FAIL test/super/indirectly_inherited.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -449,7 +439,7 @@ FAIL test/super/indirectly_inherited.lox
      Missing expected output 'A.foo()' on line 18.
 
 
-Passed: 173 Failed: 24 Skipped: 8 (test/super/missing_arguments.lox)
+Passed: 175 Failed: 22 Skipped: 8 (test/super/missing_arguments.lox)
 FAIL test/super/missing_arguments.lox
      Expected runtime error 'Expected 2 arguments but got 1.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -460,7 +450,7 @@ FAIL test/super/missing_arguments.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 25 Skipped: 8 (test/super/no_superclass_bind.lox)
+Passed: 175 Failed: 23 Skipped: 8 (test/super/no_superclass_bind.lox)
 FAIL test/super/no_superclass_bind.lox
      Unexpected error:
      [line 3] Error at 'super': Can't use 'super' outside of a class.
@@ -475,7 +465,7 @@ FAIL test/super/no_superclass_bind.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 26 Skipped: 8 (test/super/no_superclass_call.lox)
+Passed: 175 Failed: 24 Skipped: 8 (test/super/no_superclass_call.lox)
 FAIL test/super/no_superclass_call.lox
      Unexpected error:
      [line 3] Error at 'super': Can't use 'super' outside of a class.
@@ -490,7 +480,7 @@ FAIL test/super/no_superclass_call.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 27 Skipped: 8 (test/super/no_superclass_method.lox)
+Passed: 175 Failed: 25 Skipped: 8 (test/super/no_superclass_method.lox)
 FAIL test/super/no_superclass_method.lox
      Expected runtime error 'Undefined property 'doesNotExist'.' and got:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -501,7 +491,7 @@ FAIL test/super/no_superclass_method.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 28 Skipped: 8 (test/super/parenthesized.lox)
+Passed: 175 Failed: 26 Skipped: 8 (test/super/parenthesized.lox)
 FAIL test/super/parenthesized.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -513,7 +503,7 @@ FAIL test/super/parenthesized.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 29 Skipped: 8 (test/super/reassign_superclass.lox)
+Passed: 175 Failed: 27 Skipped: 8 (test/super/reassign_superclass.lox)
 FAIL test/super/reassign_superclass.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -526,7 +516,7 @@ FAIL test/super/reassign_superclass.lox
      Missing expected output 'Base.method()' on line 22.
 
 
-Passed: 173 Failed: 30 Skipped: 8 (test/super/super_at_top_level.lox)
+Passed: 175 Failed: 28 Skipped: 8 (test/super/super_at_top_level.lox)
 FAIL test/super/super_at_top_level.lox
      Unexpected error:
      [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
@@ -542,7 +532,7 @@ FAIL test/super/super_at_top_level.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 31 Skipped: 8 (test/super/super_in_closure_in_inherited_method.lox)
+Passed: 175 Failed: 29 Skipped: 8 (test/super/super_in_closure_in_inherited_method.lox)
 FAIL test/super/super_in_closure_in_inherited_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -554,7 +544,7 @@ FAIL test/super/super_in_closure_in_inherited_method.lox
      Missing expected output 'A' on line 26.
 
 
-Passed: 173 Failed: 32 Skipped: 8 (test/super/super_in_inherited_method.lox)
+Passed: 175 Failed: 30 Skipped: 8 (test/super/super_in_inherited_method.lox)
 FAIL test/super/super_in_inherited_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -566,7 +556,7 @@ FAIL test/super/super_in_inherited_method.lox
      Missing expected output 'A' on line 23.
 
 
-Passed: 173 Failed: 33 Skipped: 8 (test/super/super_in_top_level_function.lox)
+Passed: 175 Failed: 31 Skipped: 8 (test/super/super_in_top_level_function.lox)
 FAIL test/super/super_in_top_level_function.lox
      Unexpected error:
      [line 1] Error at 'super': Can't use 'super' in a class with no superclass.
@@ -581,7 +571,7 @@ FAIL test/super/super_in_top_level_function.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 34 Skipped: 8 (test/super/super_without_dot.lox)
+Passed: 175 Failed: 32 Skipped: 8 (test/super/super_without_dot.lox)
 FAIL test/super/super_without_dot.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -593,7 +583,7 @@ FAIL test/super/super_without_dot.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 35 Skipped: 8 (test/super/super_without_name.lox)
+Passed: 175 Failed: 33 Skipped: 8 (test/super/super_without_name.lox)
 FAIL test/super/super_without_name.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -605,7 +595,7 @@ FAIL test/super/super_without_name.lox
      note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 
-Passed: 173 Failed: 36 Skipped: 8 (test/super/this_in_superclass_method.lox)
+Passed: 175 Failed: 34 Skipped: 8 (test/super/this_in_superclass_method.lox)
 FAIL test/super/this_in_superclass_method.lox
      Unexpected output on stderr:
      thread 'main' panicked at 'Should not be called while developing the compiler!', src/compiler.rs:464:9
@@ -618,40 +608,40 @@ FAIL test/super/this_in_superclass_method.lox
      Missing expected output 'b' on line 16.
 
 
-Passed: 173 Failed: 37 Skipped: 8 (test/this/closure.lox)
-Passed: 174 Failed: 37 Skipped: 8 (test/this/nested_class.lox)
-Passed: 175 Failed: 37 Skipped: 8 (test/this/nested_closure.lox)
-Passed: 176 Failed: 37 Skipped: 8 (test/this/this_at_top_level.lox)
-Passed: 177 Failed: 37 Skipped: 8 (test/this/this_in_method.lox)
-Passed: 178 Failed: 37 Skipped: 8 (test/this/this_in_top_level_function.lox)
-Passed: 179 Failed: 37 Skipped: 8 (test/unexpected_character.lox)
-Passed: 180 Failed: 37 Skipped: 8 (test/variable/collide_with_parameter.lox)
-Passed: 181 Failed: 37 Skipped: 8 (test/variable/duplicate_local.lox)
-Passed: 182 Failed: 37 Skipped: 8 (test/variable/duplicate_parameter.lox)
-Passed: 183 Failed: 37 Skipped: 8 (test/variable/early_bound.lox)
-Passed: 184 Failed: 37 Skipped: 8 (test/variable/in_middle_of_block.lox)
-Passed: 185 Failed: 37 Skipped: 8 (test/variable/in_nested_block.lox)
-Passed: 186 Failed: 37 Skipped: 8 (test/variable/local_from_method.lox)
-Passed: 187 Failed: 37 Skipped: 8 (test/variable/redeclare_global.lox)
-Passed: 188 Failed: 37 Skipped: 8 (test/variable/redefine_global.lox)
-Passed: 189 Failed: 37 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
-Passed: 190 Failed: 37 Skipped: 8 (test/variable/shadow_and_local.lox)
-Passed: 191 Failed: 37 Skipped: 8 (test/variable/shadow_global.lox)
-Passed: 192 Failed: 37 Skipped: 8 (test/variable/shadow_local.lox)
-Passed: 193 Failed: 37 Skipped: 8 (test/variable/undefined_global.lox)
-Passed: 194 Failed: 37 Skipped: 8 (test/variable/undefined_local.lox)
-Passed: 195 Failed: 37 Skipped: 8 (test/variable/uninitialized.lox)
-Passed: 196 Failed: 37 Skipped: 8 (test/variable/unreached_undefined.lox)
-Passed: 197 Failed: 37 Skipped: 8 (test/variable/use_false_as_var.lox)
-Passed: 198 Failed: 37 Skipped: 8 (test/variable/use_global_in_initializer.lox)
-Passed: 199 Failed: 37 Skipped: 8 (test/variable/use_local_in_initializer.lox)
-Passed: 200 Failed: 37 Skipped: 8 (test/variable/use_nil_as_var.lox)
-Passed: 201 Failed: 37 Skipped: 8 (test/variable/use_this_as_var.lox)
-Passed: 202 Failed: 37 Skipped: 8 (test/while/class_in_body.lox)
-Passed: 203 Failed: 37 Skipped: 8 (test/while/closure_in_body.lox)
-Passed: 204 Failed: 37 Skipped: 8 (test/while/fun_in_body.lox)
-Passed: 205 Failed: 37 Skipped: 8 (test/while/return_closure.lox)
-Passed: 206 Failed: 37 Skipped: 8 (test/while/return_inside.lox)
-Passed: 207 Failed: 37 Skipped: 8 (test/while/syntax.lox)
-Passed: 208 Failed: 37 Skipped: 8 (test/while/var_in_body.lox)
-209 tests passed. 37 tests failed.
+Passed: 175 Failed: 35 Skipped: 8 (test/this/closure.lox)
+Passed: 176 Failed: 35 Skipped: 8 (test/this/nested_class.lox)
+Passed: 177 Failed: 35 Skipped: 8 (test/this/nested_closure.lox)
+Passed: 178 Failed: 35 Skipped: 8 (test/this/this_at_top_level.lox)
+Passed: 179 Failed: 35 Skipped: 8 (test/this/this_in_method.lox)
+Passed: 180 Failed: 35 Skipped: 8 (test/this/this_in_top_level_function.lox)
+Passed: 181 Failed: 35 Skipped: 8 (test/unexpected_character.lox)
+Passed: 182 Failed: 35 Skipped: 8 (test/variable/collide_with_parameter.lox)
+Passed: 183 Failed: 35 Skipped: 8 (test/variable/duplicate_local.lox)
+Passed: 184 Failed: 35 Skipped: 8 (test/variable/duplicate_parameter.lox)
+Passed: 185 Failed: 35 Skipped: 8 (test/variable/early_bound.lox)
+Passed: 186 Failed: 35 Skipped: 8 (test/variable/in_middle_of_block.lox)
+Passed: 187 Failed: 35 Skipped: 8 (test/variable/in_nested_block.lox)
+Passed: 188 Failed: 35 Skipped: 8 (test/variable/local_from_method.lox)
+Passed: 189 Failed: 35 Skipped: 8 (test/variable/redeclare_global.lox)
+Passed: 190 Failed: 35 Skipped: 8 (test/variable/redefine_global.lox)
+Passed: 191 Failed: 35 Skipped: 8 (test/variable/scope_reuse_in_different_blocks.lox)
+Passed: 192 Failed: 35 Skipped: 8 (test/variable/shadow_and_local.lox)
+Passed: 193 Failed: 35 Skipped: 8 (test/variable/shadow_global.lox)
+Passed: 194 Failed: 35 Skipped: 8 (test/variable/shadow_local.lox)
+Passed: 195 Failed: 35 Skipped: 8 (test/variable/undefined_global.lox)
+Passed: 196 Failed: 35 Skipped: 8 (test/variable/undefined_local.lox)
+Passed: 197 Failed: 35 Skipped: 8 (test/variable/uninitialized.lox)
+Passed: 198 Failed: 35 Skipped: 8 (test/variable/unreached_undefined.lox)
+Passed: 199 Failed: 35 Skipped: 8 (test/variable/use_false_as_var.lox)
+Passed: 200 Failed: 35 Skipped: 8 (test/variable/use_global_in_initializer.lox)
+Passed: 201 Failed: 35 Skipped: 8 (test/variable/use_local_in_initializer.lox)
+Passed: 202 Failed: 35 Skipped: 8 (test/variable/use_nil_as_var.lox)
+Passed: 203 Failed: 35 Skipped: 8 (test/variable/use_this_as_var.lox)
+Passed: 204 Failed: 35 Skipped: 8 (test/while/class_in_body.lox)
+Passed: 205 Failed: 35 Skipped: 8 (test/while/closure_in_body.lox)
+Passed: 206 Failed: 35 Skipped: 8 (test/while/fun_in_body.lox)
+Passed: 207 Failed: 35 Skipped: 8 (test/while/return_closure.lox)
+Passed: 208 Failed: 35 Skipped: 8 (test/while/return_inside.lox)
+Passed: 209 Failed: 35 Skipped: 8 (test/while/syntax.lox)
+Passed: 210 Failed: 35 Skipped: 8 (test/while/var_in_body.lox)
+211 tests passed. 35 tests failed.

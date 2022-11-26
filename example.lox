@@ -1,3 +1,11 @@
-class Foo {}
+var f;
 
-var foo = Foo(1, 2, 3); // expect runtime error: Expected 0 arguments but got 3.
+fun foo(param) {
+  fun f_() {
+    print param;
+  }
+  f = f_;
+}
+foo("param");
+
+f(); // expect: param
