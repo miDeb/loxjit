@@ -8,7 +8,7 @@
 /// rsi: (re-)stored by the caller
 /// rip: (re-)stored by call/ret instruction
 /// rbp: (re-)stored by the callee
-/// 
+///
 /// Registers used by the VM:
 ///
 /// rsi: pointer to the current ObjClosure (used to read/store upvalues)
@@ -234,6 +234,9 @@ impl Emitter {
             ; -> uninit_field:
             ;; handle_error!(ops, uninit_field)
 
+            ; -> super_must_be_class:
+            ;; handle_error!(ops, super_must_be_class)
+
             ; ->exit_error:
             ; mov r15, [r12]
             ; mov r14, [r12+0x8]
@@ -316,13 +319,14 @@ impl Emitter {
             ; over:
 
             ; push rbp
+            ; push rsi
             ; push null_mut::<ObjString>() as i32
             ; lea r8, [<clock]
             ; push r8
             ; mov r8, rsp
             ; mov r9, 0
             ;; call_extern_alloc!(self.ops, alloc_closure)
-            ; add rsp, 0x18
+            ; add rsp, 0x20
             ; push rax
         );
     }
@@ -654,6 +658,7 @@ impl Emitter {
         }
         dynasm!(self.ops
             ; push rbp
+            ; push rsi
             ; mov r8, QWORD name.to_bits() as _
             ; push r8
             ; lea r8, [=>fn_info.start]
@@ -661,7 +666,7 @@ impl Emitter {
             ; mov r8, rsp
             ; mov r9, len as _
             ;; call_extern_alloc!(self.ops, alloc_closure)
-            ; add rsp, 0x18 + 0x10 * len as i32
+            ; add rsp, 0x20 + 0x10 * len as i32
             ; push rax
         )
     }
@@ -862,6 +867,76 @@ impl Emitter {
         )
     }
 
+    pub fn inherit(&mut self) {
+        dynasm!(self.ops
+            ; pop r9
+            ; mov r8, [rsp]
+
+            ; mov rax, r8
+            ; and rax, [->tag_obj]
+            ; cmp rax, [->tag_obj]
+            ; jne >super_not_class
+            ; and r8, [->tag_obj_not]
+            ; cmp [r8], BYTE ObjType::ObjClass as _
+            ; jne >super_not_class
+
+            ;; call_extern_alloc!(self.ops, inherit)
+            ; jmp >ok
+
+            ; super_not_class:
+            ; call ->super_must_be_class
+
+            ; ok:
+        )
+    }
+
+    pub fn get_super(&mut self, name: GcCell<ObjString>) {
+        dynasm!(self.ops
+            ; pop r8
+            ; and r8, [->tag_obj_not]
+            ; mov r9, QWORD name.to_bits() as _
+            ;; call_extern_alloc!(self.ops, get_super)
+            ; mov [rsp], rax
+            ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
+            ; cmp rax, rcx
+            ; jne >ok
+            ; mov r8, QWORD name.to_bits() as _
+            ; call ->uninit_field
+
+            ; ok:
+        )
+    }
+
+    pub fn invoke_super(&mut self, name: GcCell<ObjString>, arity: u8) {
+        dynasm!(self.ops
+            ; pop rcx
+            ; and rcx, [->tag_obj_not]
+
+            ; mov rdx, QWORD name.to_bits() as _
+
+            ;; call_extern!(self.ops, invoke_super)
+            ; cmp rax, 0
+            ; je >unhappy_path
+
+            ; mov rcx, arity as _
+
+            ; push rsi
+            ; mov rsi, rax
+            ; mov rax, [rax + 8]
+            ; call rax
+            ; pop rsi
+            ; add rsp, (arity * 8) as _
+            ; mov [rsp], rax
+            ; jmp >ok
+
+            ; unhappy_path:
+            ; mov r8, QWORD name.to_bits() as _
+            ; call ->uninit_field
+
+            ; ok:
+        );
+    }
+
     pub fn get_new_label(&mut self) -> DynamicLabel {
         self.ops.new_dynamic_label()
     }
@@ -979,13 +1054,14 @@ extern "win64" fn alloc_closure(
 ) -> u64 {
     let instructions_ptr: *const u8 = unsafe { *args_ptr.cast() };
     let name_ptr: *mut ObjString = unsafe { *args_ptr.add(0x8).cast() };
+    let closure: GcCell<ObjClosure> = unsafe { *args_ptr.add(0x10).cast() };
 
     let mut upvalues = Vec::with_capacity(args_count as usize);
 
     for i in 0..(args_count as usize) {
-        let base_ptr = unsafe { *args_ptr.add(0x10).cast::<*mut u8>() };
-        let index = unsafe { *args_ptr.add(0x18 + i * 0x10).cast::<i32>() };
-        let is_local = unsafe { *args_ptr.add(0x20 + i * 0x10).cast::<i32>() } != 0;
+        let base_ptr = unsafe { *args_ptr.add(0x18).cast::<*mut u8>() };
+        let index = unsafe { *args_ptr.add(0x20 + i * 0x10).cast::<i32>() };
+        let is_local = unsafe { *args_ptr.add(0x28 + i * 0x10).cast::<i32>() } != 0;
 
         upvalues.push(if is_local {
             let upvalue = capture_upvalue(
@@ -995,13 +1071,12 @@ extern "win64" fn alloc_closure(
             unsafe {
                 // Write the upvalue to the stack (temporarily) so it is not gc'ed
                 args_ptr
-                    .add(0x18 + i * 0x10)
+                    .add(0x20 + i * 0x10)
                     .cast::<Value>()
                     .write(upvalue.into());
             }
             upvalue
         } else {
-            let closure = unsafe { *base_ptr.cast::<Value>() }.as_obj_closure();
             unsafe { *closure.upvalues.0.add(index as usize) }
         })
     }
@@ -1058,12 +1133,56 @@ extern "win64" fn set_property(
     }
 }
 
+extern "win64" fn inherit(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    superclass: Value,
+    subclass: Value,
+) {
+    let mut subclass = subclass.as_obj_class();
+    let superclass = superclass.as_obj_class();
+    subclass.shape = register_object(ObjShape::clone(&superclass.shape), stack_start..stack_end);
+    subclass.methods = superclass.methods.clone();
+    subclass.init = superclass.init;
+}
+
+extern "win64" fn get_super(
+    stack_start: *const Value,
+    stack_end: *const Value,
+    receiver: GcCell<ObjClass>,
+    name: GcCell<ObjString>,
+) -> Value {
+    if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
+        match entry {
+            ShapeEntry::Present { .. } => UNINIT_VAL,
+            ShapeEntry::Method { offset } => register_object(
+                ObjBoundMethod::new(receiver.into(), receiver.methods[offset]),
+                stack_start..stack_end,
+            )
+            .into(),
+            _ => unreachable!(),
+        }
+    } else {
+        UNINIT_VAL
+    }
+}
+
 extern "win64" fn invoke(
     receiver: GcCell<ObjInstance>,
     name: GcCell<ObjString>,
 ) -> *const ObjClosure {
     match ObjShape::resolve_get_property(receiver.shape, name) {
         Some(ShapeEntry::Method { offset }) => receiver.class.methods[offset].as_ptr(),
+        _ => null(),
+    }
+}
+
+extern "win64" fn invoke_super(
+    receiver: GcCell<ObjClass>,
+    name: GcCell<ObjString>,
+) -> *const ObjClosure {
+    match ObjShape::resolve_get_property(receiver.shape, name) {
+        Some(ShapeEntry::Method { offset }) => receiver.methods[offset].as_ptr(),
         _ => null(),
     }
 }
@@ -1136,6 +1255,10 @@ extern "win64" fn property_requires_instance(ip: *const u8, base_ptr: *const u8)
 }
 extern "win64" fn uninit_field(ip: *const u8, base_ptr: *const u8, name: GcCell<ObjString>) {
     eprintln!("Undefined property '{name}'.");
+    print_stacktrace(ip, base_ptr)
+}
+extern "win64" fn super_must_be_class(ip: *const u8, base_ptr: *const u8) {
+    eprintln!("Superclass must be a class.");
     print_stacktrace(ip, base_ptr)
 }
 

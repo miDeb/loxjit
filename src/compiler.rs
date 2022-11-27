@@ -632,24 +632,23 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn super_(&mut self, _can_assign: bool) {
         if let Some(class_compiler) = &self.class_compiler {
             if !class_compiler.has_superclass {
-                self.error("Can't use 'super' outside of a class.");
+                self.error("Can't use 'super' in a class with no superclass.");
             }
         } else {
-            self.error("Can't use 'super' in a class with no superclass.");
+            self.error("Can't use 'super' outside of a class.");
         }
         self.consume(TokenType::Dot, "Expect '.' after 'super'.");
         self.consume(TokenType::Identifier, "Expect superclass method name.");
-        // let name = self.identifier_constant(self.previous.source);
+        let name = self.identifier_constant(self.previous.source);
 
         self.named_variable("this", false);
         if self.match_token(TokenType::LeftParen) {
             let arg_count = self.argument_list();
             self.named_variable("super", false);
-            self.emit_bytes(OpCode::SuperInvoke, 0);
-            self.emit_byte(arg_count);
+            self.emitter.invoke_super(name, arg_count);
         } else {
             self.named_variable("super", false);
-            self.emit_bytes(OpCode::GetSuper, 0)
+            self.emitter.get_super(name)
         }
     }
 
@@ -985,7 +984,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
 
             self.named_variable(class_name, false);
-            self.emit_byte(OpCode::Inherit);
+            self.emitter.inherit();
             self.class_compiler.as_mut().unwrap().has_superclass = true;
 
             self.begin_scope();

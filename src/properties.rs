@@ -23,6 +23,7 @@ pub enum ShapeEntry {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct ObjShape {
     header: ObjHeader,
     pub entries: FxHashMap<GcCell<ObjString>, ShapeEntry>,

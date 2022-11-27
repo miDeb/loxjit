@@ -113,7 +113,7 @@ objImpl!(
 );
 objImpl!(ObjShape, is_obj_shape, as_obj_shape, as_obj_shape_mut);
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 #[repr(u8)]
 pub enum ObjType {
     ObjFunction,
@@ -126,7 +126,7 @@ pub enum ObjType {
     ObjShape,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[repr(C)]
 pub struct ObjHeader {
     pub obj_type: ObjType,
