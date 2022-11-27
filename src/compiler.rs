@@ -7,7 +7,6 @@ use replace_with::replace_with_or_abort;
 use crate::emitter::GlobalVarIndex;
 use crate::gc::intern_const_string;
 use crate::{
-    chunk::{Chunk, OpCode},
     emitter::Emitter,
     gc::GcCell,
     object::{ObjFunction, ObjString},
@@ -337,7 +336,7 @@ impl<'a> Compiler<'a> {
         enclosing: Option<Box<Compiler<'a>>>,
     ) -> Self {
         let mut compiler = Self {
-            function: Box::new(ObjFunction::new(0, Chunk::new(), fun_name, None)),
+            function: Box::new(ObjFunction::new(0, fun_name, None)),
             fun_type,
             locals: Vec::with_capacity(u8::MAX as usize + 1),
             scope_depth: 0,
@@ -410,10 +409,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    fn current_chunk(&mut self) -> &mut Chunk {
-        &mut self.compiler.function.chunk
-    }
-
     fn advance(&mut self) {
         self.previous = self.current;
         self.emitter.set_line(self.previous.line);
@@ -442,7 +437,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.error_at(self.current, message)
     }
 
-    #[must_use]
     fn error_at(&mut self, token: Token, message: &str) {
         if self.panic_mode {
             return;
@@ -456,17 +450,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             _ => eprint!(" at '{}'", token.source),
         }
         eprintln!(": {}", message);
-    }
-
-    fn emit_byte(&mut self, byte: impl Into<u8>) {
-        let line = self.previous.line;
-        self.current_chunk().push(byte.into(), line);
-        panic!("Should not be called while developing the compiler!");
-    }
-
-    fn emit_bytes(&mut self, byte1: impl Into<u8>, byte2: impl Into<u8>) {
-        self.emit_byte(byte1);
-        self.emit_byte(byte2);
     }
 
     fn end_compiler(&mut self) {
@@ -944,10 +927,8 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.emitter.set_jump_target(jmp);
 
-        self.emitter.enter_function_scope(
-            self.compiler.function.name.clone(),
-            self.compiler.function.arity,
-        );
+        self.emitter
+            .enter_function_scope(self.compiler.function.name, self.compiler.function.arity);
 
         self.emitter.end_fn(
             fn_info,
@@ -1155,7 +1136,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 | TokenType::Return => return,
                 _ => {}
             }
-            _ = self.advance();
+            self.advance();
         }
     }
 

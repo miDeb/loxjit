@@ -7,6 +7,7 @@
 #![feature(slice_from_ptr_range)]
 #![feature(vec_into_raw_parts)]
 #![feature(link_llvm_intrinsics)]
+#![allow(clippy::fn_to_numeric_cast)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -17,7 +18,6 @@ use emitter::Emitter;
 
 use crate::vm::interpret;
 
-mod chunk;
 mod common;
 mod compiler;
 mod emitter;
@@ -56,6 +56,7 @@ fn repl() {
         interpret(&line, &mut emitter, &mut globals);
         // FIXME: In case of an error the compiler/emitter are left in a bad state
         // and produce wrong results in subsequent invocations.
+        // This is due to dynasm not getting to see some labels
         print!("> ");
     }
 }

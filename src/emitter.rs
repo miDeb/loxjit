@@ -452,7 +452,7 @@ impl Emitter {
             ; jne >fail
 
             ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::ObjString as _
+            ; cmp [r8], BYTE ObjType::String as _
             ; jne >fail
 
             ; mov rax, r9
@@ -461,7 +461,7 @@ impl Emitter {
             ; jne >fail
 
             ; and r9, [->tag_obj_not]
-            ; cmp [r9], BYTE ObjType::ObjString as _
+            ; cmp [r9], BYTE ObjType::String as _
             ; jne >fail
 
             ; add rsp, 8
@@ -686,13 +686,13 @@ impl Emitter {
             ; jne >fail
 
             ; and rax, [->tag_obj_not]
-            ; cmp [rax], BYTE ObjType::ObjClosure as _
+            ; cmp [rax], BYTE ObjType::Closure as _
             ; je >call_closure
 
-            ; cmp [rax], BYTE ObjType::ObjBoundMethod as _
+            ; cmp [rax], BYTE ObjType::BoundMethod as _
             ; je >call_bound_method
 
-            ; cmp [rax], BYTE ObjType::ObjClass as _
+            ; cmp [rax], BYTE ObjType::Class as _
             ; jne >fail
             ; mov r8, rax
             // preserve r8 and rcx on the stack
@@ -808,7 +808,7 @@ impl Emitter {
             ; jne >fail
 
             ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::ObjInstance as _
+            ; cmp [r8], BYTE ObjType::Instance as _
             ; jne >fail
 
             ; mov r9, QWORD name.to_bits() as _
@@ -839,7 +839,7 @@ impl Emitter {
             ; jne >fail
 
             ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::ObjInstance as _
+            ; cmp [r8], BYTE ObjType::Instance as _
             ; jne >fail
 
             ; mov r9, QWORD name.to_bits() as _
@@ -877,7 +877,7 @@ impl Emitter {
             ; cmp rax, [->tag_obj]
             ; jne >super_not_class
             ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::ObjClass as _
+            ; cmp [r8], BYTE ObjType::Class as _
             ; jne >super_not_class
 
             ;; call_extern_alloc!(self.ops, inherit)
@@ -1083,7 +1083,7 @@ extern "win64" fn alloc_closure(
 
     let closure = ObjClosure::new(
         instructions_ptr,
-        if name_ptr == null_mut() {
+        if name_ptr.is_null() {
             None
         } else {
             Some(unsafe { GcCell::from_bits(name_ptr as _) })

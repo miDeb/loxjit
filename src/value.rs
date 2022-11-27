@@ -21,43 +21,27 @@ pub const UNINIT_VAL: Value = Value(QNAN | TAG_UNINIT);
 pub struct Value(u64);
 
 impl Value {
-    pub fn from_f64(value: f64) -> Self {
-        Self(value.to_bits())
-    }
-
-    pub fn from_bool(value: bool) -> Self {
-        if value {
-            TRUE_VAL
-        } else {
-            FALSE_VAL
-        }
-    }
-
     pub fn from_obj(obj: GcCell<ObjHeader>) -> Self {
         Self(SIGN_BIT | QNAN | obj.to_bits())
     }
 
-    pub fn is_number(&self) -> bool {
+    pub fn is_number(self) -> bool {
         (self.0 & QNAN) != QNAN
     }
 
-    pub fn as_number(&self) -> f64 {
+    pub fn as_number(self) -> f64 {
         f64::from_bits(self.0)
     }
 
-    pub fn is_falsey(&self) -> bool {
-        self.0 == NIL_VAL.0 || self.0 == FALSE_VAL.0
-    }
-
-    pub fn is_obj(&self) -> bool {
+    pub fn is_obj(self) -> bool {
         ((self.0) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT)
     }
 
-    pub fn as_obj(&self) -> GcCell<ObjHeader> {
+    pub fn as_obj(self) -> GcCell<ObjHeader> {
         unsafe { GcCell::from_bits((self.0) & !(SIGN_BIT | QNAN)) }
     }
 
-    pub fn to_bits(&self) -> u64 {
+    pub fn to_bits(self) -> u64 {
         self.0
     }
 }

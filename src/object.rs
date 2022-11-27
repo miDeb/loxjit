@@ -7,7 +7,6 @@ use std::ops::Range;
 
 use once_cell::sync::Lazy;
 
-use crate::chunk::Chunk;
 use crate::emitter::FnInfo;
 use crate::gc::{intern_const_string, register_object, GcCell};
 use crate::properties::{ObjShape, PropertyList};
@@ -17,10 +16,10 @@ pub static mut INIT_STRING: Lazy<GcCell<ObjString>> =
     Lazy::new(|| intern_const_string("init".into()));
 
 macro_rules! objImpl {
-    ($obj_name: ident, $is_fn: ident, $as_fn: ident,$as_mut_fn: ident) => {
+    ($obj_name: ident, $enum_name: ident, $is_fn: ident, $as_fn: ident,$as_mut_fn: ident) => {
         impl ObjHeader {
             pub fn $is_fn(&self) -> bool {
-                self.obj_type == ObjType::$obj_name
+                self.obj_type == ObjType::$enum_name
             }
 
             pub fn $as_fn(&self) -> &$obj_name {
@@ -37,18 +36,18 @@ macro_rules! objImpl {
         impl $obj_name {
             pub fn header() -> ObjHeader {
                 ObjHeader {
-                    obj_type: ObjType::$obj_name,
+                    obj_type: ObjType::$enum_name,
                 }
             }
         }
 
         impl Value {
             pub fn $is_fn(&self) -> bool {
-                self.is_obj() && self.as_obj().obj_type == ObjType::$obj_name
+                self.is_obj() && self.as_obj().obj_type == ObjType::$enum_name
             }
 
             pub fn $as_fn(&self) -> GcCell<$obj_name> {
-                debug_assert_eq!(self.as_obj().obj_type, ObjType::$obj_name);
+                debug_assert_eq!(self.as_obj().obj_type, ObjType::$enum_name);
                 unsafe { self.as_obj().cast() }
             }
         }
@@ -79,51 +78,74 @@ macro_rules! objImpl {
     };
 }
 
-objImpl!(ObjString, is_obj_string, as_obj_string, as_obj_string_mut);
+objImpl!(
+    ObjString,
+    String,
+    is_obj_string,
+    as_obj_string,
+    as_obj_string_mut
+);
 objImpl!(
     ObjClosure,
+    Closure,
     is_obj_closure,
     as_obj_closure,
     as_obj_closure_mut
 );
 objImpl!(
     ObjFunction,
+    Function,
     is_obj_function,
     as_obj_function,
     as_obj_function_mut
 );
 objImpl!(
     ObjUpvalue,
+    Upvalue,
     is_obj_upvalue,
     as_obj_upvalue,
     as_obj_upvalue_mut
 );
-objImpl!(ObjClass, is_obj_class, as_obj_class, as_obj_class_mut);
+objImpl!(
+    ObjClass,
+    Class,
+    is_obj_class,
+    as_obj_class,
+    as_obj_class_mut
+);
 objImpl!(
     ObjInstance,
+    Instance,
     is_obj_instance,
     as_obj_instance,
     as_obj_instance_mut
 );
 objImpl!(
     ObjBoundMethod,
+    BoundMethod,
     is_obj_bound_method,
     as_obj_bound_method,
     as_obj_bound_method_mut
 );
-objImpl!(ObjShape, is_obj_shape, as_obj_shape, as_obj_shape_mut);
+objImpl!(
+    ObjShape,
+    Shape,
+    is_obj_shape,
+    as_obj_shape,
+    as_obj_shape_mut
+);
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 #[repr(u8)]
 pub enum ObjType {
-    ObjFunction,
-    ObjString,
-    ObjClosure,
-    ObjUpvalue,
-    ObjClass,
-    ObjInstance,
-    ObjBoundMethod,
-    ObjShape,
+    Function,
+    String,
+    Closure,
+    Upvalue,
+    Class,
+    Instance,
+    BoundMethod,
+    Shape,
 }
 
 #[derive(Debug, Clone)]
@@ -135,12 +157,12 @@ pub struct ObjHeader {
 impl Display for ObjHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.obj_type {
-            ObjType::ObjFunction => self.as_obj_function().fmt(f),
-            ObjType::ObjString => self.as_obj_string().fmt(f),
-            ObjType::ObjClosure => self.as_obj_closure().fmt(f),
-            ObjType::ObjClass => self.as_obj_class().fmt(f),
-            ObjType::ObjInstance => self.as_obj_instance().fmt(f),
-            ObjType::ObjBoundMethod => self.as_obj_bound_method().fmt(f),
+            ObjType::Function => self.as_obj_function().fmt(f),
+            ObjType::String => self.as_obj_string().fmt(f),
+            ObjType::Closure => self.as_obj_closure().fmt(f),
+            ObjType::Class => self.as_obj_class().fmt(f),
+            ObjType::Instance => self.as_obj_instance().fmt(f),
+            ObjType::BoundMethod => self.as_obj_bound_method().fmt(f),
             t => panic!("tried to format internal VM value {t:?}"),
         }
     }
@@ -194,23 +216,16 @@ pub struct ObjFunction {
     header: ObjHeader,
 
     pub arity: u8,
-    pub chunk: Chunk,
     pub name: Option<GcCell<ObjString>>,
     pub upvalue_count: usize,
     pub fn_info: Option<FnInfo>,
 }
 
 impl ObjFunction {
-    pub fn new(
-        arity: u8,
-        chunk: Chunk,
-        name: Option<GcCell<ObjString>>,
-        fn_info: Option<FnInfo>,
-    ) -> Self {
+    pub fn new(arity: u8, name: Option<GcCell<ObjString>>, fn_info: Option<FnInfo>) -> Self {
         Self {
             header: Self::header(),
             arity,
-            chunk,
             name,
             upvalue_count: 0,
             fn_info,

@@ -21,7 +21,7 @@ use crate::{
     value::Value,
 };
 
-static mut GLOBAL_GC: Lazy<GC> = Lazy::new(|| GC::new());
+static mut GLOBAL_GC: Lazy<GC> = Lazy::new(GC::new);
 
 pub fn intern_const_string(string: String) -> GcCell<ObjString> {
     unsafe { GLOBAL_GC.intern_string(string, None, true) }
@@ -34,9 +34,6 @@ pub fn register_object<T>(val: T, stack: Range<*const Value>) -> GcCell<T> {
 }
 pub fn register_object_no_gc<T>(val: T) -> GcCell<T> {
     unsafe { GLOBAL_GC.register_object(val, None, false) }
-}
-pub fn register_const_object<T>(val: T) -> GcCell<T> {
-    unsafe { GLOBAL_GC.register_object(val, None, true) }
 }
 
 #[repr(u8)]
@@ -172,38 +169,38 @@ impl GC {
         let ptr = obj as *mut _;
         unsafe {
             match obj.value.obj_type {
-                ObjType::ObjFunction => {
+                ObjType::Function => {
                     drop(Box::from_raw(ptr as *mut GcInner<ObjFunction>));
                     *occupied -= std::mem::size_of::<GcInner<ObjFunction>>();
                 }
 
-                ObjType::ObjString => {
+                ObjType::String => {
                     drop(Box::from_raw(ptr as *mut GcInner<ObjString>));
                     *occupied -= std::mem::size_of::<GcInner<ObjString>>();
                 }
-                ObjType::ObjClosure => {
+                ObjType::Closure => {
                     drop(Box::from_raw(ptr as *mut GcInner<ObjClosure>));
                     *occupied -= std::mem::size_of::<GcInner<ObjClosure>>();
                 }
-                ObjType::ObjUpvalue => {
+                ObjType::Upvalue => {
                     drop(Box::from_raw(ptr as *mut GcInner<ObjUpvalue>));
                     *occupied -= std::mem::size_of::<GcInner<ObjUpvalue>>();
                 }
-                ObjType::ObjClass => {
+                ObjType::Class => {
                     drop(Box::from_raw(ptr as *mut GcInner<ObjClass>));
                     *occupied -= std::mem::size_of::<GcInner<ObjClass>>();
                 }
-                ObjType::ObjInstance => {
+                ObjType::Instance => {
                     drop(Box::from_raw(ptr as *mut GcInner<ObjInstance>));
                     *occupied -= std::mem::size_of::<GcInner<ObjInstance>>();
                 }
-                ObjType::ObjBoundMethod => {
+                ObjType::BoundMethod => {
                     drop(Box::from_raw(ptr as *mut GcInner<ObjBoundMethod>));
                     *occupied -= std::mem::size_of::<GcInner<ObjBoundMethod>>();
                 }
-                ObjType::ObjShape => {
+                ObjType::Shape => {
                     let ptr = ptr as *mut GcInner<ObjShape>;
-                    (&mut *ptr).value.dispose();
+                    (*ptr).value.dispose();
                     drop(Box::from_raw(ptr));
                     *occupied -= std::mem::size_of::<GcInner<ObjShape>>();
                 }
@@ -236,8 +233,8 @@ impl GC {
                 GcFlags::Marked | GcFlags::Constant => return,
             }
             match obj.obj_type {
-                ObjType::ObjFunction | ObjType::ObjString => {}
-                ObjType::ObjClosure => {
+                ObjType::Function | ObjType::String => {}
+                ObjType::Closure => {
                     let closure = obj.as_obj_closure();
                     let upvalues = unsafe {
                         Vec::from_raw_parts(
@@ -250,21 +247,21 @@ impl GC {
                         .extend(upvalues.iter().map(|v| Value::from(*v)));
                     std::mem::forget(upvalues);
                 }
-                ObjType::ObjUpvalue => {
+                ObjType::Upvalue => {
                     let upvalue = obj.as_obj_upvalue();
                     if upvalue.location as *const _ == upvalue.closed.as_ptr() {
                         self.gray_objects
                             .push(unsafe { upvalue.closed.assume_init() })
                     }
                 }
-                ObjType::ObjClass => {
+                ObjType::Class => {
                     let class = obj.as_obj_class();
                     class.name.to_inner().mark();
                     self.gray_objects.push(class.shape.into());
                     self.gray_objects
                         .extend(class.methods.iter().map(Into::<Value>::into));
                 }
-                ObjType::ObjInstance => {
+                ObjType::Instance => {
                     let instance = obj.as_obj_instance();
                     self.gray_objects.push(instance.class.into());
                     self.gray_objects
@@ -275,11 +272,11 @@ impl GC {
                         shape = s.parent.map(|p| p.0);
                     }
                 }
-                ObjType::ObjBoundMethod => {
+                ObjType::BoundMethod => {
                     let obj_bound_method = obj.as_obj_bound_method();
-                    self.gray_objects.push(obj_bound_method.receiver.into());
+                    self.gray_objects.push(obj_bound_method.receiver);
                 }
-                ObjType::ObjShape => {
+                ObjType::Shape => {
                     let shape = obj.as_obj_shape();
                     self.gray_objects
                         .extend(shape.entries.keys().map(Into::<Value>::into));
@@ -313,14 +310,14 @@ pub struct GcCell<T>(NonNull<T>);
 
 impl<T> Clone for GcCell<T> {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(self.0)
     }
 }
 
 impl<T> Copy for GcCell<T> {}
 
 impl<T> GcCell<T> {
-    fn to_inner(&self) -> &mut GcInner<ObjHeader> {
+    fn to_inner(self) -> &'static mut GcInner<ObjHeader> {
         unsafe { &mut *self.0.as_ptr().cast::<u8>().sub(16).cast() }
     }
 
@@ -332,7 +329,7 @@ impl<T> GcCell<T> {
         Self(NonNull::new_unchecked(bits as *mut T))
     }
 
-    pub fn to_bits(&self) -> u64 {
+    pub fn to_bits(self) -> u64 {
         self.0.as_ptr() as u64
     }
 
@@ -375,7 +372,7 @@ impl<T: Hash> Hash for GcCell<T> {
 
 impl<T: PartialEq> PartialEq for GcCell<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.deref().eq(&other)
+        self.deref().eq(other)
     }
 }
 

@@ -20,7 +20,7 @@ impl<'a> Scanner<'a> {
     pub fn advance(&mut self) -> char {
         let (idx, char) = self.current.char_indices().next().unwrap();
         self.current = &self.current[(idx + char.len_utf8())..];
-        return char;
+        char
     }
 
     fn peek(&self) -> Option<char> {
@@ -82,10 +82,7 @@ impl<'a> Scanner<'a> {
 
     fn number<'b>(&'b mut self) -> Token<'a> {
         fn is_digit(c: Option<char>) -> bool {
-            match c {
-                Some(c) if c.is_ascii_digit() => true,
-                _ => false,
-            }
+            matches!(c, Some(c) if c.is_ascii_digit())
         }
 
         while is_digit(self.peek()) {
