@@ -278,8 +278,12 @@ impl GC {
                 }
                 ObjType::Shape => {
                     let shape = obj.as_obj_shape();
-                    self.gray_objects
-                        .extend(shape.entries.keys().map(Into::<Value>::into));
+                    self.gray_objects.extend(
+                        shape
+                            .entries
+                            .keys()
+                            .map(|k| Value::from(GcCell::from_non_null(*k))),
+                    );
                     if let Some(parent) = shape.parent {
                         self.gray_objects.push(parent.0.into())
                     }
@@ -335,6 +339,14 @@ impl<T> GcCell<T> {
 
     pub fn as_ptr(&self) -> *const T {
         self.0.as_ptr()
+    }
+
+    pub fn as_non_null(&self) -> NonNull<T> {
+        self.0
+    }
+
+    pub fn from_non_null(ptr: NonNull<T>) -> Self {
+        Self(ptr)
     }
 }
 

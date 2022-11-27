@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{ops::Range, ptr::NonNull};
 
 use rustc_hash::FxHashMap;
 
@@ -26,7 +26,7 @@ pub enum ShapeEntry {
 #[derive(Clone)]
 pub struct ObjShape {
     header: ObjHeader,
-    pub entries: FxHashMap<GcCell<ObjString>, ShapeEntry>,
+    pub entries: FxHashMap<NonNull<ObjString>, ShapeEntry>,
     pub parent: Option<(GcCell<ObjShape>, GcCell<ObjString>)>,
 }
 
@@ -42,7 +42,7 @@ impl ObjShape {
             }
         }
         if let Some((parent_shape, parent_key)) = &mut self.parent {
-            parent_shape.entries.remove(parent_key);
+            parent_shape.entries.remove(&parent_key.as_non_null());
         }
     }
 
@@ -62,7 +62,7 @@ impl ObjShape {
         shape: GcCell<ObjShape>,
         name: GcCell<ObjString>,
     ) -> Option<ShapeEntry> {
-        match shape.entries.get(&name) {
+        match shape.entries.get(&name.as_non_null()) {
             Some(ShapeEntry::MissingWithKnownShape {
                 method_offset: Some(offset),
                 ..
@@ -73,9 +73,10 @@ impl ObjShape {
     }
 
     pub fn add_method(mut shape: GcCell<ObjShape>, name: GcCell<ObjString>, method_len: usize) {
-        shape
-            .entries
-            .insert(name, ShapeEntry::Method { offset: method_len });
+        shape.entries.insert(
+            name.as_non_null(),
+            ShapeEntry::Method { offset: method_len },
+        );
     }
 
     pub fn resolve_set_property(
@@ -84,11 +85,11 @@ impl ObjShape {
         name: GcCell<ObjString>,
         property_len: usize,
     ) -> ShapeEntry {
-        match shape.entries.get(&name) {
+        match shape.entries.get(&name.as_non_null()) {
             e @ None | e @ Some(ShapeEntry::Method { .. }) => {
                 let mut new_shape = register_object(ObjShape::new(Some((shape, name))), stack);
                 new_shape.entries.insert(
-                    name,
+                    name.as_non_null(),
                     ShapeEntry::Present {
                         offset: property_len,
                     },
@@ -101,7 +102,7 @@ impl ObjShape {
                         None
                     },
                 };
-                shape.entries.insert(name, entry);
+                shape.entries.insert(name.as_non_null(), entry);
                 entry
             }
             Some(e) => *e,
