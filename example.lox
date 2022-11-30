@@ -1,11 +1,3 @@
-class Base {}
+class Foo {}
 
-class Derived < Base {
-  getClosure() {
-    fun closure() {
-      return super.toString;
-    }
-  }
-}
-
-Derived().getClosure();
+Foo().x = 1;

@@ -57,26 +57,9 @@ macro_rules! my_dynasm {
 macro_rules! call_extern {
     ($ops:expr, $fun:expr) => {
         dynasm!($ops
-            ; push rbp
-            ; mov rbp, rsp
-            ; and spl, BYTE 0xF0 as _
-
-            ; mov rax, QWORD $fun as _
-            ; call rax
-            ; mov rsp, rbp
-            ; pop rbp
-        )
-    };
-}
-
-macro_rules! call_extern_alloc {
-    ($ops:expr, $fun:expr) => {
-        dynasm!($ops
             // We need to align the stack to 0x10.
             ; push rbp
             ; mov rbp, rsp
-            ; mov rdx, [r12+0x40]
-            ; mov rcx, rsp
             ; and spl, BYTE 0xF0 as _
 
             ; mov rax, QWORD $fun as _
@@ -321,11 +304,11 @@ impl Emitter {
             ; push rbp
             ; push rsi
             ; push null_mut::<ObjString>() as i32
-            ; lea r8, [<clock]
-            ; push r8
-            ; mov r8, rsp
-            ; mov r9, 0
-            ;; call_extern_alloc!(self.ops, alloc_closure)
+            ; lea rcx, [<clock]
+            ; push rcx
+            ; mov rcx, rsp
+            ; mov rdx, 0
+            ;; call_extern!(self.ops, alloc_closure)
             ; add rsp, 0x20
             ; push rax
         );
@@ -443,29 +426,29 @@ impl Emitter {
             ; jmp >end
 
             ; add_strings:
-            ; mov r9, [rsp]
-            ; mov r8, [rsp+8]
+            ; mov rdx, [rsp]
+            ; mov rcx, [rsp+8]
 
-            ; mov rax, r8
+            ; mov rax, rcx
             ; and rax, [->tag_obj]
             ; cmp rax, [->tag_obj]
             ; jne >fail
 
-            ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::String as _
+            ; and rcx, [->tag_obj_not]
+            ; cmp [rcx], BYTE ObjType::String as _
             ; jne >fail
 
-            ; mov rax, r9
+            ; mov rax, rdx
             ; and rax, [->tag_obj]
             ; cmp rax, [->tag_obj]
             ; jne >fail
 
-            ; and r9, [->tag_obj_not]
-            ; cmp [r9], BYTE ObjType::String as _
+            ; and rdx, [->tag_obj_not]
+            ; cmp [rdx], BYTE ObjType::String as _
             ; jne >fail
 
             ; add rsp, 8
-            ;; call_extern_alloc!(self.ops, concat_strings)
+            ;; call_extern!(self.ops, concat_strings)
             ; mov [rsp], rax
             ; jmp >end
 
@@ -659,13 +642,13 @@ impl Emitter {
         dynasm!(self.ops
             ; push rbp
             ; push rsi
-            ; mov r8, QWORD name.to_bits() as _
-            ; push r8
-            ; lea r8, [=>fn_info.start]
-            ; push r8
-            ; mov r8, rsp
-            ; mov r9, len as _
-            ;; call_extern_alloc!(self.ops, alloc_closure)
+            ; mov rcx, QWORD name.to_bits() as _
+            ; push rcx
+            ; lea rcx, [=>fn_info.start]
+            ; push rcx
+            ; mov rcx, rsp
+            ; mov rdx, len as _
+            ;; call_extern!(self.ops, alloc_closure)
             ; add rsp, 0x20 + 0x10 * len as i32
             ; push rax
         )
@@ -678,11 +661,10 @@ impl Emitter {
     pub fn call(&mut self, arity: u8) {
         dynasm!(self.ops
             ; mov rax, [rsp + (arity * 8) as _]
-            ; mov rcx, arity as _
 
-            ; mov r8, rax
-            ; and r8, [->tag_obj]
-            ; cmp r8, [->tag_obj]
+            ; mov rdx, rax
+            ; and rdx, [->tag_obj]
+            ; cmp rdx, [->tag_obj]
             ; jne >fail
 
             ; and rax, [->tag_obj_not]
@@ -694,21 +676,20 @@ impl Emitter {
 
             ; cmp [rax], BYTE ObjType::Class as _
             ; jne >fail
-            ; mov r8, rax
-            // preserve r8 and rcx on the stack
-            ; push r8
+            ; mov rcx, rax
+            // preserve rcx on the stack
             ; push rcx
-            ;; call_extern_alloc!(self.ops, alloc_instance)
+            ;; call_extern!(self.ops, alloc_instance)
             ; pop rcx
-            ; pop r8
             // move [instance] to parameter 0 position
             ; mov [rsp + (arity * 8) as _], rax
-            ; cmp QWORD [r8 + 0x10], 0
+            ; cmp QWORD [rcx + 0x10], 0
             ; je >default_constructor
-            ; mov rax, [r8 + 0x10]
+            ; mov rax, [rcx + 0x10]
             ; push rsi
             ; mov rsi, rax
             ; mov rax, [rax + 8]
+            ; mov rcx, arity as _
             ; call rax
             ; pop rsi
             ; add rsp, (arity * 8) as _
@@ -716,11 +697,17 @@ impl Emitter {
 
             // check that there are exactly 0 arguments
             ; default_constructor:
-            ; cmp rcx, 0
-            ; je >ok
-            ; mov r8, rcx
-            ; xor r9, r9
-            ; call ->fn_arity_mismatch
+            ;; if arity == 0 {
+                dynasm!(self.ops
+                    ; jmp >ok
+                )
+            } else {
+                dynasm!(self.ops
+                    ; mov r8, arity as _
+                    ; xor r9, r9
+                    ; call ->fn_arity_mismatch
+                )
+            }
 
             ; call_bound_method:
             // [slot 0] <- receiver
@@ -733,6 +720,7 @@ impl Emitter {
             ; push rsi
             ; mov rsi, rax
             ; mov rax, [rax + 8]
+            ; mov rcx, arity as _
             ; call rax
             ; pop rsi
             ; add rsp, (arity * 8) as _
@@ -786,8 +774,8 @@ impl Emitter {
 
     pub fn push_class(&mut self, name: GcCell<ObjString>) {
         dynasm!(self.ops
-            ; mov r8, QWORD name.to_bits() as _
-            ;; call_extern_alloc!(self.ops, alloc_class)
+            ; mov rcx, QWORD name.to_bits() as _
+            ;; call_extern!(self.ops, alloc_class)
             ; push rax
         )
     }
@@ -799,20 +787,20 @@ impl Emitter {
     /// Gets the property `name` from the instance at [rsp + stack_offset] and writes the result to that location.
     fn get_property_with_stack_offset(&mut self, name: GcCell<ObjString>, stack_offset: i32) {
         dynasm!(self.ops
-            ; mov r8, [rsp + stack_offset]
+            ; mov rcx, [rsp + stack_offset]
 
             // TODO: common check
-            ; mov rcx, r8
-            ; and rcx, [->tag_obj]
-            ; cmp rcx, [->tag_obj]
+            ; mov r8, rcx
+            ; and r8, [->tag_obj]
+            ; cmp r8, [->tag_obj]
             ; jne >fail
 
-            ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::Instance as _
+            ; and rcx, [->tag_obj_not]
+            ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
 
-            ; mov r9, QWORD name.to_bits() as _
-            ;; call_extern_alloc!(self.ops, get_property)
+            ; mov rdx, QWORD name.to_bits() as _
+            ;; call_extern!(self.ops, get_property)
             ; mov [rsp + stack_offset], rax
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rax, rcx
@@ -830,20 +818,20 @@ impl Emitter {
 
     pub fn set_property(&mut self, name: GcCell<ObjString>) {
         dynasm!(self.ops
-            ; mov r8, [rsp + 0x8]
+            ; mov rcx, [rsp + 0x8]
 
             // TODO: common check
-            ; mov r9, r8
-            ; and r9, [->tag_obj]
-            ; cmp r9, [->tag_obj]
+            ; mov r8, rcx
+            ; and r8, [->tag_obj]
+            ; cmp r8, [->tag_obj]
             ; jne >fail
 
-            ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::Instance as _
+            ; and rcx, [->tag_obj_not]
+            ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
 
-            ; mov r9, QWORD name.to_bits() as _
-            ;; call_extern_alloc!(self.ops, set_property)
+            ; mov rdx, QWORD name.to_bits() as _
+            ;; call_extern!(self.ops, set_property)
             ; pop rcx
             ; mov [rax], rcx
             ; add rsp, 0x8
@@ -869,18 +857,18 @@ impl Emitter {
 
     pub fn inherit(&mut self) {
         dynasm!(self.ops
-            ; pop r9
-            ; mov r8, [rsp]
+            ; pop rdx
+            ; mov rcx, [rsp]
 
-            ; mov rax, r8
+            ; mov rax, rcx
             ; and rax, [->tag_obj]
             ; cmp rax, [->tag_obj]
             ; jne >super_not_class
-            ; and r8, [->tag_obj_not]
-            ; cmp [r8], BYTE ObjType::Class as _
+            ; and rcx, [->tag_obj_not]
+            ; cmp [rcx], BYTE ObjType::Class as _
             ; jne >super_not_class
 
-            ;; call_extern_alloc!(self.ops, inherit)
+            ;; call_extern!(self.ops, inherit)
             ; jmp >ok
 
             ; super_not_class:
@@ -892,10 +880,10 @@ impl Emitter {
 
     pub fn get_super(&mut self, name: GcCell<ObjString>) {
         dynasm!(self.ops
-            ; pop r8
-            ; and r8, [->tag_obj_not]
-            ; mov r9, QWORD name.to_bits() as _
-            ;; call_extern_alloc!(self.ops, get_super)
+            ; pop rcx
+            ; and rcx, [->tag_obj_not]
+            ; mov rdx, QWORD name.to_bits() as _
+            ;; call_extern!(self.ops, get_super)
             ; mov [rsp], rax
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rax, rcx
@@ -1028,30 +1016,32 @@ extern "win64" fn print_value(value: Value) {
     }
 }
 
-extern "win64" fn alloc_class(
-    stack_start: *const Value,
-    stack_end: *const Value,
-    name: GcCell<ObjString>,
-) -> Value {
-    let class = ObjClass::new(name, stack_start..stack_end);
+extern "C" {
+    #[link_name = "llvm.frameaddress"]
+    fn frameaddress(level: i32) -> *const Value;
+}
+
+macro_rules! stack {
+    () => {
+        unsafe {
+            // add 0x18 to frameaddress to jump over [the beginning of the current frame], [rip], [a dummy value pushed to align the stack or otherwise rbp]
+            let range = frameaddress(0).add(3)..(GLOBALS[8] as *const Value);
+            range
+         }
+    };
+}
+
+extern "win64" fn alloc_class(name: GcCell<ObjString>) -> Value {
+    let class = ObjClass::new(name, stack!());
     Value::from(register_object_no_gc(class))
 }
 
-extern "win64" fn alloc_instance(
-    stack_start: *const Value,
-    stack_end: *const Value,
-    class: GcCell<ObjClass>,
-) -> Value {
+extern "win64" fn alloc_instance(class: GcCell<ObjClass>) -> Value {
     let instance = ObjInstance::new(class);
-    Value::from(register_object(instance, stack_start..stack_end))
+    Value::from(register_object(instance, stack!()))
 }
 
-extern "win64" fn alloc_closure(
-    stack_start: *const Value,
-    stack_end: *const Value,
-    args_ptr: *mut u8,
-    args_count: i32,
-) -> u64 {
+extern "win64" fn alloc_closure(args_ptr: *mut u8, args_count: i32) -> u64 {
     let instructions_ptr: *const u8 = unsafe { *args_ptr.cast() };
     let name_ptr: *mut ObjString = unsafe { *args_ptr.add(0x8).cast() };
     let closure: GcCell<ObjClosure> = unsafe { *args_ptr.add(0x10).cast() };
@@ -1066,7 +1056,7 @@ extern "win64" fn alloc_closure(
         upvalues.push(if is_local {
             let upvalue = capture_upvalue(
                 unsafe { base_ptr.sub(index as usize * 0x8).cast() },
-                stack_start..stack_end,
+                stack!(),
             );
             unsafe {
                 // Write the upvalue to the stack (temporarily) so it is not gc'ed
@@ -1090,21 +1080,16 @@ extern "win64" fn alloc_closure(
         },
         upvalues,
     );
-    Value::from(register_object(closure, stack_start..stack_end)).to_bits()
+    Value::from(register_object(closure, stack!())).to_bits()
 }
 
-extern "win64" fn get_property(
-    stack_start: *const Value,
-    stack_end: *const Value,
-    receiver: GcCell<ObjInstance>,
-    name: GcCell<ObjString>,
-) -> Value {
+extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjString>) -> Value {
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
             ShapeEntry::Present { offset } => *receiver.fields.get(offset),
             ShapeEntry::Method { offset } => register_object(
                 ObjBoundMethod::new(receiver.into(), receiver.class.methods[offset]),
-                stack_start..stack_end,
+                stack!(),
             )
             .into(),
             _ => unreachable!(),
@@ -1115,14 +1100,11 @@ extern "win64" fn get_property(
 }
 
 extern "win64" fn set_property(
-    stack_start: *const Value,
-    stack_end: *const Value,
     mut receiver: GcCell<ObjInstance>,
     name: GcCell<ObjString>,
 ) -> *mut Value {
     let property_len = receiver.fields.len();
-    match ObjShape::resolve_set_property(stack_start..stack_end, receiver.shape, name, property_len)
-    {
+    match ObjShape::resolve_set_property(stack!(), receiver.shape, name, property_len) {
         ShapeEntry::Present { offset } => receiver.fields.get_mut(offset),
         ShapeEntry::MissingWithKnownShape { shape, .. } => {
             receiver.shape = shape;
@@ -1133,31 +1115,21 @@ extern "win64" fn set_property(
     }
 }
 
-extern "win64" fn inherit(
-    stack_start: *const Value,
-    stack_end: *const Value,
-    superclass: Value,
-    subclass: Value,
-) {
+extern "win64" fn inherit(superclass: Value, subclass: Value) {
     let mut subclass = subclass.as_obj_class();
     let superclass = superclass.as_obj_class();
-    subclass.shape = register_object(ObjShape::clone(&superclass.shape), stack_start..stack_end);
+    subclass.shape = register_object(ObjShape::clone(&superclass.shape), stack!());
     subclass.methods = superclass.methods.clone();
     subclass.init = superclass.init;
 }
 
-extern "win64" fn get_super(
-    stack_start: *const Value,
-    stack_end: *const Value,
-    receiver: GcCell<ObjClass>,
-    name: GcCell<ObjString>,
-) -> Value {
+extern "win64" fn get_super(receiver: GcCell<ObjClass>, name: GcCell<ObjString>) -> Value {
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
             ShapeEntry::Present { .. } => UNINIT_VAL,
             ShapeEntry::Method { offset } => register_object(
                 ObjBoundMethod::new(receiver.into(), receiver.methods[offset]),
-                stack_start..stack_end,
+                stack!(),
             )
             .into(),
             _ => unreachable!(),
@@ -1198,12 +1170,7 @@ extern "win64" fn add_method(class: Value, closure: Value, name: GcCell<ObjStrin
     class.methods.push(closure);
 }
 
-extern "win64" fn concat_strings(
-    stack_start: *const Value,
-    stack_end: *const Value,
-    ptr_a: *const ObjString,
-    ptr_b: *const ObjString,
-) -> u64 {
+extern "win64" fn concat_strings(ptr_a: *const ObjString, ptr_b: *const ObjString) -> u64 {
     let new_str = unsafe {
         let a_str = &(*ptr_a).string;
         let b_str = &(*ptr_b).string;
@@ -1212,7 +1179,7 @@ extern "win64" fn concat_strings(
         new_str.push_str(b_str);
         new_str
     };
-    Value::from(intern_string(new_str, stack_start..stack_end)).to_bits()
+    Value::from(intern_string(new_str, stack!())).to_bits()
 }
 
 extern "win64" fn expected_number(ip: *const u8, base_ptr: *const u8) {
