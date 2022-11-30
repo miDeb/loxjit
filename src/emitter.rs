@@ -36,10 +36,13 @@ static mut GLOBALS: Vec<u64> = Vec::new();
 static mut GLOBALS_NAMES: Vec<GcCell<ObjString>> = Vec::new();
 const RESERVED_GLOBAL_VARS: usize = 9;
 
+static mut ASSEMBLER: *mut Assembler = null_mut();
+static mut ASSEMBLY_BASE: *const u8 = null();
+
 const FRAMES_MAX: u8 = 64;
 
 pub fn global_vars() -> &'static [Value] {
-    unsafe { std::mem::transmute(&GLOBALS[9..]) }
+    unsafe { std::mem::transmute(&GLOBALS[RESERVED_GLOBAL_VARS..]) }
 }
 
 macro_rules! my_dynasm {
@@ -119,6 +122,25 @@ macro_rules! handle_error {
     };
 }
 
+macro_rules! get_property_ic {
+    ($ops:expr, $shape_id:expr, $offset:expr, $stack_offset:expr) => {
+        dynasm!($ops
+            // rax = receiver.shape
+            ; mov rax, QWORD [rcx + 0x10]
+            ; mov r8, QWORD $shape_id as _
+            ; cmp r8, [rax + 0x8]
+            ; jne >end_ic
+            // rax = receiver.fields
+            ; mov rax, QWORD [rcx + 0x18]
+            ; mov rax, QWORD [rax + $offset as i32 * 0x8]
+            ; mov QWORD [rsp + $stack_offset], rax
+            ; jmp >ok
+
+            ; end_ic:
+        )
+    };
+}
+
 fn entrypoint_prologue(ops: &mut Assembler) {
     my_dynasm!(ops,
         ; mov [rcx], r15
@@ -169,9 +191,6 @@ impl Emitter {
         let mut ops = Assembler::new().unwrap();
 
         dynasm!(ops
-            ; -> restore_rsp:
-            ; .qword 0
-
             ; -> sign_bit:
             ; .qword SIGN_BIT as _
 
@@ -798,7 +817,9 @@ impl Emitter {
             ; and rcx, [->tag_obj_not]
             ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
+            ;; get_property_ic!(self.ops, 0xcafebabeu32, 1110, stack_offset)
 
+            ; end_ic:
             ; mov rdx, QWORD name.to_bits() as _
             ;; call_extern!(self.ops, get_property)
             ; mov [rsp + stack_offset], rax
@@ -996,8 +1017,15 @@ impl Emitter {
             std::mem::transmute::<_, extern "win64" fn(*mut u64) -> bool>(reader.ptr(self.start))
         };
         self.start = self.ops.offset();
+        unsafe {
+            ASSEMBLY_BASE = reader.ptr(AssemblyOffset(0));
+            ASSEMBLER = &mut self.ops as _;
+        }
+        // compile the prologue for the next time.
         entrypoint_prologue(&mut self.ops);
 
+        // lie that we don't use the memory in 'reader' anymore
+        drop(reader);
         fun(unsafe { GLOBALS.as_mut_ptr() })
     }
 }
@@ -1019,6 +1047,8 @@ extern "win64" fn print_value(value: Value) {
 extern "C" {
     #[link_name = "llvm.frameaddress"]
     fn frameaddress(level: i32) -> *const Value;
+    #[link_name = "llvm.returnaddress"]
+    fn returnaddress(level: i32) -> *const u8;
 }
 
 macro_rules! stack {
@@ -1028,6 +1058,12 @@ macro_rules! stack {
             let range = frameaddress(0).add(3)..(GLOBALS[8] as *const Value);
             range
          }
+    };
+}
+
+macro_rules! asm_offset {
+    () => {
+        unsafe { returnaddress(0).sub_ptr(ASSEMBLY_BASE) }
     };
 }
 
@@ -1084,9 +1120,24 @@ extern "win64" fn alloc_closure(args_ptr: *mut u8, args_count: i32) -> u64 {
 }
 
 extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjString>) -> Value {
+    let asm_offset = asm_offset!();
+
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
-            ShapeEntry::Present { offset } => *receiver.fields.get(offset),
+            ShapeEntry::Present { offset } => {
+                // BEGIN IC
+                unsafe { &mut *ASSEMBLER }
+                    .alter(|modifier| {
+                        modifier.goto(AssemblyOffset(asm_offset - 0x4A + 2));
+                        modifier.push_u64(receiver.shape.id as u64);
+                        modifier.goto(AssemblyOffset(asm_offset - 0x32 + 3));
+                        modifier.push_i32((offset * 8) as i32);
+                    })
+                    .unwrap();
+                // END IC
+
+                *receiver.fields.get(offset)
+            }
             ShapeEntry::Method { offset } => register_object(
                 ObjBoundMethod::new(receiver.into(), receiver.class.methods[offset]),
                 stack!(),

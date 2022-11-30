@@ -1,4 +1,4 @@
-use std::{ops::Range, ptr::NonNull};
+use std::{ops::Range, ptr::NonNull, sync::atomic::AtomicUsize};
 
 use rustc_hash::FxHashMap;
 
@@ -22,10 +22,14 @@ pub enum ShapeEntry {
     },
 }
 
+// 0 is a reserved shape id
+static SHAPE_ID: AtomicUsize = AtomicUsize::new(1);
+
 #[repr(C)]
 #[derive(Clone)]
 pub struct ObjShape {
     header: ObjHeader,
+    pub id: usize,
     pub entries: FxHashMap<NonNull<ObjString>, ShapeEntry>,
     pub parent: Option<(GcCell<ObjShape>, GcCell<ObjString>)>,
 }
@@ -49,6 +53,7 @@ impl ObjShape {
     fn new(parent: Option<(GcCell<ObjShape>, GcCell<ObjString>)>) -> Self {
         Self {
             header: Self::header(),
+            id: SHAPE_ID.fetch_add(1, std::sync::atomic::Ordering::AcqRel),
             parent,
             entries: if let Some(parent) = parent {
                 parent.0.entries.clone()

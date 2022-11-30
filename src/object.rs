@@ -323,8 +323,8 @@ impl Display for ObjClass {
 pub struct ObjInstance {
     header: ObjHeader,
     pub class: GcCell<ObjClass>,
-    pub fields: PropertyList,
     pub shape: GcCell<ObjShape>,
+    pub fields: PropertyList,
 }
 
 impl ObjInstance {
