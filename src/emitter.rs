@@ -57,8 +57,16 @@ macro_rules! my_dynasm {
     }
 }
 
+/// Utility to make sure we use the right offsets to overwrite the ICs
+fn check_asm_offsets(current: usize, starts: &[usize], expected: &[usize]) {
+    assert_eq!(starts.len(), expected.len());
+    for (i, offset) in starts.iter().enumerate() {
+        assert_eq!(expected[i], current - offset);
+    }
+}
+
 macro_rules! call_extern {
-    ($ops:expr, $fun:expr) => {
+    ($ops:expr, $fun:expr $(,$check_offsets:expr, $expected_offsets:expr)?) => {
         dynasm!($ops
             // We need to align the stack to 0x10.
             ; push rbp
@@ -67,6 +75,11 @@ macro_rules! call_extern {
 
             ; mov rax, QWORD $fun as _
             ; call rax
+            $(
+                // When calling a function that will update the preceding IC we make sure
+                // the function will use the right offset from the return address.
+                ;; check_asm_offsets($ops.offset().0, &$check_offsets, &$expected_offsets)
+            )?
             ; mov rsp, rbp
             ; pop rbp
         )
@@ -122,22 +135,38 @@ macro_rules! handle_error {
     };
 }
 
+/// Loads the current assembly offset into a variable, adding additional offset.
+macro_rules! load_asm_offset {
+    ($ops:expr, $target:ident, $additional_offset:literal) => {
+        $target = $ops.offset().0 + $additional_offset
+    };
+}
+
+const GET_PROP_IC_SHAPE_OFFSET: usize = 0x48;
+const GET_PROP_IC_INDEX_OFFSET: usize = 0x2F;
 macro_rules! get_property_ic {
     ($ops:expr, $stack_offset:expr) => {
-        dynasm!($ops
-            // rax = receiver.shape
-            ; mov rax, QWORD [rcx + 0x10]
-            ; mov r8, QWORD 0 as _
-            ; cmp r8, [rax + 0x8]
-            ; jne >end_ic
-            // rax = receiver.fields
-            ; mov rax, QWORD [rcx + 0x18]
-            ; mov rax, QWORD [rax + i32::MAX]
-            ; mov QWORD [rsp + $stack_offset], rax
-            ; jmp >ok
+        {
+            let shape_offset;
+            let index_offset;
+            dynasm!($ops
+                // rax = receiver.shape
+                ; mov rax, QWORD [rcx + 0x10]
+                ;; load_asm_offset!($ops, shape_offset, 0x2)
+                ; mov r8, QWORD 0 as _
+                ; cmp r8, [rax + 0x8]
+                ; jne >end_ic
+                // rax = receiver.fields
+                ; mov rax, QWORD [rcx + 0x18]
+                ;; load_asm_offset!($ops, index_offset, 0x3)
+                ; mov rax, QWORD [rax + i32::MAX]
+                ; mov QWORD [rsp + $stack_offset], rax
+                ; jmp >ok
 
-            ; end_ic:
-        )
+                ; end_ic:
+            );
+            [shape_offset, index_offset]
+        }
     };
 }
 
@@ -805,6 +834,7 @@ impl Emitter {
 
     /// Gets the property `name` from the instance at [rsp + stack_offset] and writes the result to that location.
     fn get_property_with_stack_offset(&mut self, name: GcCell<ObjString>, stack_offset: i32) {
+        let check_offsets;
         dynasm!(self.ops
             ; mov rcx, [rsp + stack_offset]
 
@@ -817,11 +847,11 @@ impl Emitter {
             ; and rcx, [->tag_obj_not]
             ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
-            ;; get_property_ic!(self.ops, stack_offset)
+            ;; check_offsets = get_property_ic!(self.ops, stack_offset)
 
             ; end_ic:
             ; mov rdx, QWORD name.to_bits() as _
-            ;; call_extern!(self.ops, get_property)
+            ;; call_extern!(self.ops, get_property, check_offsets, [GET_PROP_IC_SHAPE_OFFSET, GET_PROP_IC_INDEX_OFFSET])
             ; mov [rsp + stack_offset], rax
             ; mov rcx, QWORD UNINIT_VAL.to_bits() as _
             ; cmp rax, rcx
@@ -1135,12 +1165,12 @@ extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjSt
                 // BEGIN IC
 
                 // Do not recompile the IC if it was compiled previously
-                if unsafe { *return_address.sub(0x4A - 2).cast::<usize>() } == 0 {
+                if unsafe { *return_address.sub(GET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
                     unsafe { &mut *ASSEMBLER }
                         .alter(|modifier| {
-                            modifier.goto(AssemblyOffset(asm_offset - 0x4A + 2));
+                            modifier.goto(AssemblyOffset(asm_offset - GET_PROP_IC_SHAPE_OFFSET));
                             modifier.push_u64(receiver.shape.id as u64);
-                            modifier.goto(AssemblyOffset(asm_offset - 0x32 + 3));
+                            modifier.goto(AssemblyOffset(asm_offset - GET_PROP_IC_INDEX_OFFSET));
                             modifier.push_i32((offset * 8) as i32);
                         })
                         .unwrap();
