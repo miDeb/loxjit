@@ -56,7 +56,27 @@ impl ObjShape {
             id: SHAPE_ID.fetch_add(1, std::sync::atomic::Ordering::AcqRel),
             parent,
             entries: if let Some(parent) = parent {
-                parent.0.entries.clone()
+                parent
+                    .0
+                    .entries
+                    .iter()
+                    .filter_map(|(&name, &entry)| match entry {
+                        ShapeEntry::MissingWithKnownShape {
+                            method_offset: Some(method_offset),
+                            ..
+                        } => Some((
+                            name,
+                            ShapeEntry::Method {
+                                offset: method_offset,
+                            },
+                        )),
+                        ShapeEntry::MissingWithKnownShape {
+                            method_offset: None,
+                            ..
+                        } => None,
+                        e => Some((name, e)),
+                    })
+                    .collect()
             } else {
                 FxHashMap::default()
             },
