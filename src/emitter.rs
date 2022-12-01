@@ -123,16 +123,16 @@ macro_rules! handle_error {
 }
 
 macro_rules! get_property_ic {
-    ($ops:expr, $shape_id:expr, $offset:expr, $stack_offset:expr) => {
+    ($ops:expr, $stack_offset:expr) => {
         dynasm!($ops
             // rax = receiver.shape
             ; mov rax, QWORD [rcx + 0x10]
-            ; mov r8, QWORD $shape_id as _
+            ; mov r8, QWORD 0 as _
             ; cmp r8, [rax + 0x8]
             ; jne >end_ic
             // rax = receiver.fields
             ; mov rax, QWORD [rcx + 0x18]
-            ; mov rax, QWORD [rax + $offset as i32 * 0x8]
+            ; mov rax, QWORD [rax + i32::MAX]
             ; mov QWORD [rsp + $stack_offset], rax
             ; jmp >ok
 
@@ -817,7 +817,7 @@ impl Emitter {
             ; and rcx, [->tag_obj_not]
             ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
-            ;; get_property_ic!(self.ops, 0xcafebabeu32, 1110, stack_offset)
+            ;; get_property_ic!(self.ops, stack_offset)
 
             ; end_ic:
             ; mov rdx, QWORD name.to_bits() as _
