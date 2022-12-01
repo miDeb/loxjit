@@ -1061,6 +1061,12 @@ macro_rules! stack {
     };
 }
 
+macro_rules! return_address {
+    () => {
+        unsafe { returnaddress(0) }
+    };
+}
+
 macro_rules! asm_offset {
     () => {
         unsafe { returnaddress(0).sub_ptr(ASSEMBLY_BASE) }
@@ -1121,19 +1127,24 @@ extern "win64" fn alloc_closure(args_ptr: *mut u8, args_count: i32) -> u64 {
 
 extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjString>) -> Value {
     let asm_offset = asm_offset!();
+    let return_address = return_address!();
 
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
             ShapeEntry::Present { offset } => {
                 // BEGIN IC
-                unsafe { &mut *ASSEMBLER }
-                    .alter(|modifier| {
-                        modifier.goto(AssemblyOffset(asm_offset - 0x4A + 2));
-                        modifier.push_u64(receiver.shape.id as u64);
-                        modifier.goto(AssemblyOffset(asm_offset - 0x32 + 3));
-                        modifier.push_i32((offset * 8) as i32);
-                    })
-                    .unwrap();
+
+                // Do not recompile the IC if it was compiled previously
+                if unsafe { *return_address.sub(0x4A - 2).cast::<usize>() } == 0 {
+                    unsafe { &mut *ASSEMBLER }
+                        .alter(|modifier| {
+                            modifier.goto(AssemblyOffset(asm_offset - 0x4A + 2));
+                            modifier.push_u64(receiver.shape.id as u64);
+                            modifier.goto(AssemblyOffset(asm_offset - 0x32 + 3));
+                            modifier.push_i32((offset * 8) as i32);
+                        })
+                        .unwrap();
+                }
                 // END IC
 
                 *receiver.fields.get(offset)
