@@ -38,7 +38,7 @@ fn main() {
     } else if args.len() == 2 {
         runfile(args.last().unwrap());
     } else {
-        eprintln!("Usage: rlox [path]");
+        eprintln!("Usage: loxjit [path]");
         std::process::exit(64);
     }
 }
