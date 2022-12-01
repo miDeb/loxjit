@@ -1,8 +1,4 @@
 #![feature(ptr_sub_ptr)]
-#![feature(hash_set_entry)]
-#![feature(result_flattening)]
-#![feature(try_blocks)]
-#![feature(cell_update)]
 #![feature(let_chains)]
 #![feature(slice_from_ptr_range)]
 #![feature(vec_into_raw_parts)]
