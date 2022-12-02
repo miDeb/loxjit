@@ -296,7 +296,6 @@ pub struct ObjClass {
     header: ObjHeader,
     pub name: GcCell<ObjString>,
     pub init: Option<GcCell<ObjClosure>>,
-    pub methods: Vec<GcCell<ObjClosure>>,
     pub shape: GcCell<ObjShape>,
 }
 
@@ -306,7 +305,6 @@ impl ObjClass {
             header: Self::header(),
             name,
             init: None,
-            methods: Default::default(),
             shape: register_const_object(ObjShape::empty()),
         }
     }

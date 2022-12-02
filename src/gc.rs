@@ -11,6 +11,7 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHashSet;
 
 use crate::common::{DEBUG_PRINT_GC_STATS, DEBUG_STRESS_GC};
+use crate::properties::ShapeEntry;
 use crate::{
     emitter::global_vars,
     object::{
@@ -259,7 +260,14 @@ impl GC {
                     class.name.to_inner().mark();
                     self.gray_objects.push(class.shape.into());
                     self.gray_objects
-                        .extend(class.methods.iter().map(Into::<Value>::into));
+                        .extend(class.shape.entries.values().filter_map(|e| match e {
+                            ShapeEntry::Method { closure }
+                            | ShapeEntry::MissingWithKnownShape {
+                                method_closure: Some(closure),
+                                ..
+                            } => Some(Value::from(closure)),
+                            _ => None,
+                        }));
                 }
                 ObjType::Instance => {
                     let instance = obj.as_obj_instance();

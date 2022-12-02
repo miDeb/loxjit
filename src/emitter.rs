@@ -214,6 +214,33 @@ macro_rules! set_property_ic {
     };
 }
 
+const INVOKE_IC_SHAPE_OFFSET: usize = 62;
+const INVOKE_IC_METHOD_OFFSET: usize = 43;
+macro_rules! invoke_ic {
+    ($ops:expr) => {
+        {
+            let shape_offset;
+            let method_offset;
+
+            dynasm!($ops
+                // rax = receiver.shape
+                ; mov rax, QWORD [rcx + 0x10]
+                ;; load_asm_offset!($ops, shape_offset, 0x2)
+                ; mov r8, QWORD 0 as i64
+                ; cmp r8, rax
+                ; jne >end_ic
+                ;; load_asm_offset!($ops, method_offset, 0x2)
+                ; mov rax, QWORD i64::MAX
+                ; jmp >after_resolve_method
+
+                ; end_ic:
+            );
+
+            [shape_offset, method_offset]
+    }
+    };
+}
+
 fn entrypoint_prologue(ops: &mut Assembler) {
     my_dynasm!(ops,
         ; mov [rcx], r15
@@ -826,6 +853,7 @@ impl Emitter {
     }
 
     pub fn invoke(&mut self, name: GcCell<ObjString>, arity: u8) {
+        //let check_offsets;
         dynasm!(self.ops
             ; mov rcx, [rsp + (arity * 8) as _]
 
@@ -836,12 +864,15 @@ impl Emitter {
 
             ; and rcx, [->tag_obj_not]
 
+            ;; let check_offsets = invoke_ic!(self.ops)
+
             ; mov rdx, QWORD name.to_bits() as _
 
-            ;; call_extern!(self.ops, invoke)
+            ;; call_extern!(self.ops, invoke, check_offsets, [INVOKE_IC_SHAPE_OFFSET, INVOKE_IC_METHOD_OFFSET])
             ; cmp rax, 0
             ; je >unhappy_path
 
+            ; after_resolve_method:
             ; mov rcx, arity as _
 
             ; push rsi
@@ -1235,8 +1266,8 @@ extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjSt
 
                 *receiver.fields.get(offset)
             }
-            ShapeEntry::Method { offset } => register_object(
-                ObjBoundMethod::new(receiver.into(), receiver.class.methods[offset]),
+            ShapeEntry::Method { closure } => register_object(
+                ObjBoundMethod::new(receiver.into(), closure),
                 stack!(),
             )
             .into(),
@@ -1312,7 +1343,6 @@ extern "win64" fn inherit(superclass: Value, subclass: Value) {
     let mut subclass = subclass.as_obj_class();
     let superclass = superclass.as_obj_class();
     subclass.shape = register_object(ObjShape::clone(&superclass.shape), stack!());
-    subclass.methods = superclass.methods.clone();
     subclass.init = superclass.init;
 }
 
@@ -1320,8 +1350,8 @@ extern "win64" fn get_super(receiver: GcCell<ObjClass>, name: GcCell<ObjString>)
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
             ShapeEntry::Present { .. } => UNINIT_VAL,
-            ShapeEntry::Method { offset } => register_object(
-                ObjBoundMethod::new(receiver.into(), receiver.methods[offset]),
+            ShapeEntry::Method {  closure } => register_object(
+                ObjBoundMethod::new(receiver.into(), closure),
                 stack!(),
             )
             .into(),
@@ -1336,8 +1366,24 @@ extern "win64" fn invoke(
     receiver: GcCell<ObjInstance>,
     name: GcCell<ObjString>,
 ) -> *const ObjClosure {
+    let return_address = return_address!();
+    let asm_offset = asm_offset!();
+
     match ObjShape::resolve_get_property(receiver.shape, name) {
-        Some(ShapeEntry::Method { offset }) => receiver.class.methods[offset].as_ptr(),
+        Some(ShapeEntry::Method { closure }) => {
+            if unsafe { *return_address.sub(INVOKE_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
+                unsafe { &mut *ASSEMBLER }
+                    .alter(|modifier| {
+                        modifier.goto(AssemblyOffset(asm_offset - INVOKE_IC_SHAPE_OFFSET));
+                        modifier.push_u64(receiver.shape.as_ptr() as u64);
+                        modifier.goto(AssemblyOffset(asm_offset - INVOKE_IC_METHOD_OFFSET));
+                        modifier.push_u64(closure.as_ptr() as _);
+                    })
+                    .unwrap();
+            }
+
+            closure.as_ptr()
+        }
         _ => null(),
     }
 }
@@ -1347,7 +1393,7 @@ extern "win64" fn invoke_super(
     name: GcCell<ObjString>,
 ) -> *const ObjClosure {
     match ObjShape::resolve_get_property(receiver.shape, name) {
-        Some(ShapeEntry::Method { offset }) => receiver.methods[offset].as_ptr(),
+        Some(ShapeEntry::Method { closure }) => closure.as_ptr(),
         _ => null(),
     }
 }
@@ -1358,9 +1404,7 @@ extern "win64" fn add_method(class: Value, closure: Value, name: GcCell<ObjStrin
     if name == unsafe { *INIT_STRING } {
         class.init = Some(closure)
     }
-    ObjShape::add_method(class.shape, name, class.methods.len());
-
-    class.methods.push(closure);
+    ObjShape::add_method(class.shape, name, closure);
 }
 
 extern "win64" fn concat_strings(ptr_a: *const ObjString, ptr_b: *const ObjString) -> u64 {

@@ -4,7 +4,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     gc::{register_const_object, GcCell},
-    object::{ObjHeader, ObjString},
+    object::{ObjClosure, ObjHeader, ObjString},
     value::Value,
 };
 
@@ -14,11 +14,11 @@ pub enum ShapeEntry {
         offset: usize,
     },
     Method {
-        offset: usize,
+        closure: GcCell<ObjClosure>,
     },
     MissingWithKnownShape {
         shape: GcCell<ObjShape>,
-        method_offset: Option<usize>,
+        method_closure: Option<GcCell<ObjClosure>>,
     },
 }
 
@@ -43,16 +43,16 @@ impl ObjShape {
                     .iter()
                     .filter_map(|(&name, &entry)| match entry {
                         ShapeEntry::MissingWithKnownShape {
-                            method_offset: Some(method_offset),
+                            method_closure: Some(method_closure),
                             ..
                         } => Some((
                             name,
                             ShapeEntry::Method {
-                                offset: method_offset,
+                                closure: method_closure,
                             },
                         )),
                         ShapeEntry::MissingWithKnownShape {
-                            method_offset: None,
+                            method_closure: None,
                             ..
                         } => None,
                         e => Some((name, e)),
@@ -70,19 +70,22 @@ impl ObjShape {
     ) -> Option<ShapeEntry> {
         match shape.entries.get(&name.as_non_null()) {
             Some(ShapeEntry::MissingWithKnownShape {
-                method_offset: Some(offset),
+                method_closure: Some(offset),
                 ..
-            }) => Some(ShapeEntry::Method { offset: *offset }),
+            }) => Some(ShapeEntry::Method { closure: *offset }),
             Some(e @ ShapeEntry::Method { .. }) | Some(e @ ShapeEntry::Present { .. }) => Some(*e),
             _ => None,
         }
     }
 
-    pub fn add_method(mut shape: GcCell<ObjShape>, name: GcCell<ObjString>, method_len: usize) {
-        shape.entries.insert(
-            name.as_non_null(),
-            ShapeEntry::Method { offset: method_len },
-        );
+    pub fn add_method(
+        mut shape: GcCell<ObjShape>,
+        name: GcCell<ObjString>,
+        closure: GcCell<ObjClosure>,
+    ) {
+        shape
+            .entries
+            .insert(name.as_non_null(), ShapeEntry::Method { closure });
     }
 
     pub fn resolve_set_property(
@@ -101,8 +104,8 @@ impl ObjShape {
                 );
                 let entry = ShapeEntry::MissingWithKnownShape {
                     shape: new_shape,
-                    method_offset: if let Some(ShapeEntry::Method { offset }) = e {
-                        Some(*offset)
+                    method_closure: if let Some(ShapeEntry::Method { closure }) = e {
+                        Some(*closure)
                     } else {
                         None
                     },
