@@ -3,12 +3,11 @@
 use std::fmt::Display;
 use std::hash::Hash;
 use std::mem::MaybeUninit;
-use std::ops::Range;
 
 use once_cell::sync::Lazy;
 
 use crate::emitter::FnInfo;
-use crate::gc::{intern_const_string, register_object, GcCell};
+use crate::gc::{intern_const_string, register_const_object, GcCell};
 use crate::properties::{ObjShape, PropertyList};
 use crate::value::Value;
 
@@ -302,13 +301,13 @@ pub struct ObjClass {
 }
 
 impl ObjClass {
-    pub fn new(name: GcCell<ObjString>, stack: Range<*const Value>) -> Self {
+    pub fn new(name: GcCell<ObjString>) -> Self {
         Self {
             header: Self::header(),
             name,
             init: None,
             methods: Default::default(),
-            shape: register_object(ObjShape::empty(), stack),
+            shape: register_const_object(ObjShape::empty()),
         }
     }
 }

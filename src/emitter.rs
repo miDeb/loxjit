@@ -21,7 +21,7 @@ use std::ops::Range;
 use std::ptr::{null, null_mut};
 use std::time::Instant;
 
-use crate::gc::{intern_string, register_object, register_object_no_gc, GcCell};
+use crate::gc::{intern_string, register_object, GcCell};
 use crate::object::{
     ObjBoundMethod, ObjClass, ObjClosure, ObjInstance, ObjString, ObjType, ObjUpvalue, INIT_STRING,
 };
@@ -142,7 +142,7 @@ macro_rules! load_asm_offset {
     };
 }
 
-const GET_PROP_IC_SHAPE_OFFSET: usize = 0x48;
+const GET_PROP_IC_SHAPE_OFFSET: usize = 0x47;
 const GET_PROP_IC_INDEX_OFFSET: usize = 0x2F;
 macro_rules! get_property_ic {
     ($ops:expr, $stack_offset:expr) => {
@@ -154,7 +154,7 @@ macro_rules! get_property_ic {
                 ; mov rax, QWORD [rcx + 0x10]
                 ;; load_asm_offset!($ops, shape_offset, 0x2)
                 ; mov r8, QWORD 0 as _
-                ; cmp r8, [rax + 0x8]
+                ; cmp r8, rax
                 ; jne >end_ic
                 // rax = receiver.fields
                 ; mov rax, QWORD [rcx + 0x18]
@@ -166,6 +166,50 @@ macro_rules! get_property_ic {
                 ; end_ic:
             );
             [shape_offset, index_offset]
+        }
+    };
+}
+
+const SET_PROP_IC_SHAPE_OFFSET: usize = 0x61;
+const SET_PROP_IC_INDEX_OFFSET: usize = 0x48;
+const SET_PROP_IC_OFFSET: usize = 0x4B;
+const SET_PROP_IC_END_JMP_OFFSET: usize = 0x3F;
+
+const SET_PROP_IC_LEN: usize = 0x28;
+macro_rules! set_property_ic {
+    ($ops:expr) => {
+        {
+            let shape_offset;
+            let index_offset;
+            let ic_offset;
+            let jmp_offset;
+            dynasm!($ops
+                // rax = receiver.shape
+                ; mov rax, QWORD [rcx + 0x10]
+                ;; load_asm_offset!($ops, shape_offset, 0x2)
+                ; mov r8, QWORD 0 as _
+                ; cmp r8, rax
+                ; jne >end_ic
+                // rax = receiver.fields
+                ; mov rax, QWORD [rcx + 0x18]
+                ; pop rdx
+                ;; load_asm_offset!($ops, ic_offset, 0)
+                ;; load_asm_offset!($ops, index_offset, 0x3)
+                ; mov QWORD [rax + i32::MAX], rdx
+                ; add rsp, 0x8
+                ; push rdx
+                ;; load_asm_offset!($ops, jmp_offset, 0)
+                ; jmp >ok
+                ;; for _ in 0..0x17 {
+                    dynasm!($ops
+                        ; nop
+                    )
+                }
+                ;; assert_eq!(ic_offset + SET_PROP_IC_LEN, $ops.offset().0)
+                ; jmp >ok
+                ; end_ic:
+            );
+            [shape_offset, index_offset, ic_offset, jmp_offset]
         }
     };
 }
@@ -849,7 +893,6 @@ impl Emitter {
             ; jne >fail
             ;; check_offsets = get_property_ic!(self.ops, stack_offset)
 
-            ; end_ic:
             ; mov rdx, QWORD name.to_bits() as _
             ;; call_extern!(self.ops, get_property, check_offsets, [GET_PROP_IC_SHAPE_OFFSET, GET_PROP_IC_INDEX_OFFSET])
             ; mov [rsp + stack_offset], rax
@@ -868,6 +911,8 @@ impl Emitter {
     }
 
     pub fn set_property(&mut self, name: GcCell<ObjString>) {
+        let check_offsets;
+
         dynasm!(self.ops
             ; mov rcx, [rsp + 0x8]
 
@@ -880,9 +925,20 @@ impl Emitter {
             ; and rcx, [->tag_obj_not]
             ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
+            ;; check_offsets = set_property_ic!(self.ops)
 
             ; mov rdx, QWORD name.to_bits() as _
-            ;; call_extern!(self.ops, set_property)
+            ;; call_extern!(
+                self.ops,
+                set_property,
+                check_offsets,
+                [
+                    SET_PROP_IC_SHAPE_OFFSET,
+                    SET_PROP_IC_INDEX_OFFSET,
+                    SET_PROP_IC_OFFSET,
+                    SET_PROP_IC_END_JMP_OFFSET,
+                ]
+            )
             ; pop rcx
             ; mov [rax], rcx
             ; add rsp, 0x8
@@ -1104,8 +1160,8 @@ macro_rules! asm_offset {
 }
 
 extern "win64" fn alloc_class(name: GcCell<ObjString>) -> Value {
-    let class = ObjClass::new(name, stack!());
-    Value::from(register_object_no_gc(class))
+    let class = ObjClass::new(name);
+    Value::from(register_object(class, stack!()))
 }
 
 extern "win64" fn alloc_instance(class: GcCell<ObjClass>) -> Value {
@@ -1169,7 +1225,7 @@ extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjSt
                     unsafe { &mut *ASSEMBLER }
                         .alter(|modifier| {
                             modifier.goto(AssemblyOffset(asm_offset - GET_PROP_IC_SHAPE_OFFSET));
-                            modifier.push_u64(receiver.shape.id as u64);
+                            modifier.push_u64(receiver.shape.as_ptr() as u64);
                             modifier.goto(AssemblyOffset(asm_offset - GET_PROP_IC_INDEX_OFFSET));
                             modifier.push_i32((offset * 8) as i32);
                         })
@@ -1195,16 +1251,61 @@ extern "win64" fn set_property(
     mut receiver: GcCell<ObjInstance>,
     name: GcCell<ObjString>,
 ) -> *mut Value {
+    let return_address = return_address!();
+    let asm_offset = asm_offset!();
     let property_len = receiver.fields.len();
-    match ObjShape::resolve_set_property(stack!(), receiver.shape, name, property_len) {
-        ShapeEntry::Present { offset } => receiver.fields.get_mut(offset),
+    match ObjShape::resolve_set_property(receiver.shape, name, property_len) {
+        ShapeEntry::Present { offset } => {
+            // BEGIN IC
+
+            // Do not recompile the IC if it was compiled previously
+            if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
+                unsafe { &mut *ASSEMBLER }
+                    .alter(|modifier| {
+                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_SHAPE_OFFSET));
+                        modifier.push_u64(receiver.shape.as_ptr() as u64);
+                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_INDEX_OFFSET));
+                        modifier.push_i32((offset * 8) as i32);
+                    })
+                    .unwrap();
+            }
+            // END IC
+            receiver.fields.get_mut(offset)
+        }
         ShapeEntry::MissingWithKnownShape { shape, .. } => {
+            // BEGIN IC
+
+            // Do not recompile the IC if it was compiled previously
+            if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
+                unsafe { &mut *ASSEMBLER }
+                    .alter(|modifier| {
+                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_SHAPE_OFFSET));
+                        modifier.push_u64(receiver.shape.as_ptr() as u64);
+                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_OFFSET));
+                        let start = modifier.offset().0;
+                        dynasm!(modifier
+                            ; push rcx
+                            ;; call_extern!(modifier, push_property)
+                            ; mov r8, QWORD shape.as_ptr() as _
+                            ; pop rcx
+                            ; mov QWORD [rcx + 0x10], r8
+                        );
+                        assert_eq!(modifier.offset().0 - start, SET_PROP_IC_LEN);
+                    })
+                    .unwrap();
+            }
+            // END IC
+
             receiver.shape = shape;
             receiver.fields.push(UNINIT_VAL);
             receiver.fields.get_mut(property_len)
         }
         _ => unreachable!(),
     }
+}
+
+extern "win64" fn push_property(mut receiver: GcCell<ObjInstance>, value: Value) {
+    receiver.fields.push(value);
 }
 
 extern "win64" fn inherit(superclass: Value, subclass: Value) {

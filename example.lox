@@ -8,8 +8,8 @@ class Tree {
       this.left = Tree(item2 - 1, depth);
       this.right = Tree(item2, depth);
     } else {
-      this.right = nil;
       this.left = nil;
+      this.right = nil;
     }
   }
 

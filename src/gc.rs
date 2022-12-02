@@ -11,7 +11,6 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHashSet;
 
 use crate::common::{DEBUG_PRINT_GC_STATS, DEBUG_STRESS_GC};
-use crate::properties::ObjShape;
 use crate::{
     emitter::global_vars,
     object::{
@@ -32,6 +31,10 @@ pub fn intern_string(string: String, stack: Range<*const Value>) -> GcCell<ObjSt
 pub fn register_object<T>(val: T, stack: Range<*const Value>) -> GcCell<T> {
     unsafe { GLOBAL_GC.register_object(val, Some(stack), false) }
 }
+pub fn register_const_object<T>(val: T) -> GcCell<T> {
+    unsafe { GLOBAL_GC.register_object(val, None, true) }
+}
+#[allow(dead_code)]
 pub fn register_object_no_gc<T>(val: T) -> GcCell<T> {
     unsafe { GLOBAL_GC.register_object(val, None, false) }
 }
@@ -199,10 +202,7 @@ impl GC {
                     *occupied -= std::mem::size_of::<GcInner<ObjBoundMethod>>();
                 }
                 ObjType::Shape => {
-                    let ptr = ptr as *mut GcInner<ObjShape>;
-                    (*ptr).value.dispose();
-                    drop(Box::from_raw(ptr));
-                    *occupied -= std::mem::size_of::<GcInner<ObjShape>>();
+                    unreachable!()
                 }
             }
         }
@@ -266,27 +266,13 @@ impl GC {
                     self.gray_objects.push(instance.class.into());
                     self.gray_objects
                         .extend_from_slice(instance.fields.as_slice());
-                    let mut shape = Some(instance.shape);
-                    while let Some(s) = shape {
-                        s.to_inner().flag = GcFlags::Marked;
-                        shape = s.parent.map(|p| p.0);
-                    }
                 }
                 ObjType::BoundMethod => {
                     let obj_bound_method = obj.as_obj_bound_method();
                     self.gray_objects.push(obj_bound_method.receiver);
                 }
                 ObjType::Shape => {
-                    let shape = obj.as_obj_shape();
-                    self.gray_objects.extend(
-                        shape
-                            .entries
-                            .keys()
-                            .map(|k| Value::from(GcCell::from_non_null(*k))),
-                    );
-                    if let Some(parent) = shape.parent {
-                        self.gray_objects.push(parent.0.into())
-                    }
+                    unreachable!()
                 }
             }
         }
@@ -343,10 +329,6 @@ impl<T> GcCell<T> {
 
     pub fn as_non_null(&self) -> NonNull<T> {
         self.0
-    }
-
-    pub fn from_non_null(ptr: NonNull<T>) -> Self {
-        Self(ptr)
     }
 }
 

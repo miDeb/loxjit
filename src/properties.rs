@@ -1,9 +1,9 @@
-use std::{ops::Range, ptr::NonNull, sync::atomic::AtomicUsize};
+use std::ptr::NonNull;
 
 use rustc_hash::FxHashMap;
 
 use crate::{
-    gc::{register_object, GcCell},
+    gc::{register_const_object, GcCell},
     object::{ObjHeader, ObjString},
     value::Value,
 };
@@ -22,16 +22,11 @@ pub enum ShapeEntry {
     },
 }
 
-// 0 is a reserved shape id
-static SHAPE_ID: AtomicUsize = AtomicUsize::new(1);
-
 #[repr(C)]
 #[derive(Clone)]
 pub struct ObjShape {
     header: ObjHeader,
-    pub id: usize,
     pub entries: FxHashMap<NonNull<ObjString>, ShapeEntry>,
-    pub parent: Option<(GcCell<ObjShape>, GcCell<ObjString>)>,
 }
 
 impl ObjShape {
@@ -39,25 +34,11 @@ impl ObjShape {
         Self::new(None)
     }
 
-    pub fn dispose(&mut self) {
-        for v in self.entries.values_mut() {
-            if let ShapeEntry::MissingWithKnownShape { shape, .. } = v {
-                shape.parent = None;
-            }
-        }
-        if let Some((parent_shape, parent_key)) = &mut self.parent {
-            parent_shape.entries.remove(&parent_key.as_non_null());
-        }
-    }
-
-    fn new(parent: Option<(GcCell<ObjShape>, GcCell<ObjString>)>) -> Self {
+    fn new(parent: Option<GcCell<ObjShape>>) -> Self {
         Self {
             header: Self::header(),
-            id: SHAPE_ID.fetch_add(1, std::sync::atomic::Ordering::AcqRel),
-            parent,
             entries: if let Some(parent) = parent {
                 parent
-                    .0
                     .entries
                     .iter()
                     .filter_map(|(&name, &entry)| match entry {
@@ -105,14 +86,13 @@ impl ObjShape {
     }
 
     pub fn resolve_set_property(
-        stack: Range<*const Value>,
         mut shape: GcCell<ObjShape>,
         name: GcCell<ObjString>,
         property_len: usize,
     ) -> ShapeEntry {
         match shape.entries.get(&name.as_non_null()) {
             e @ None | e @ Some(ShapeEntry::Method { .. }) => {
-                let mut new_shape = register_object(ObjShape::new(Some((shape, name))), stack);
+                let mut new_shape = register_const_object(ObjShape::new(Some(shape)));
                 new_shape.entries.insert(
                     name.as_non_null(),
                     ShapeEntry::Present {
