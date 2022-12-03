@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "arrayvec"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -57,11 +63,11 @@ name = "loxjit"
 version = "0.1.0"
 dependencies = [
  "dynasmrt",
- "lazy_static",
  "num_enum",
  "once_cell",
  "replace_with",
  "rustc-hash",
+ "utf8-chars",
 ]
 
 [[package]]
@@ -215,6 +221,15 @@ name = "unicode-ident"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15c61ba63f9235225a22310255a29b806b907c9b8c964bcbd0a2c70f3f2deea7"
+
+[[package]]
+name = "utf8-chars"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ef0a4014b773d93a0fe487750589dc5c5b7d714457454e7e62f54d131c278af"
+dependencies = [
+ "arrayvec",
+]
 
 [[package]]
 name = "version_check"

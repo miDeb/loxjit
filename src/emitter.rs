@@ -1,26 +1,28 @@
-/// Calling convention:
-///
-/// [ saved rsi ] [ saved rip ] [ saved rbp ]
-/// ^
-/// |
-///  base pointer
-///
-/// rsi: (re-)stored by the caller
-/// rip: (re-)stored by call/ret instruction
-/// rbp: (re-)stored by the callee
-///
-/// Registers used by the VM:
-///
-/// rsi: pointer to the current ObjClosure (used to read/store upvalues)
-/// rbp: base pointer of the current call frame
-/// rdi: call frame depth counter for stack overflow checks
-/// r12: ptr to globals table (=a heap allocated vector)
-/// r13-15: true, false, nil
+//! Calling convention:
+//!
+//! [ saved rsi ] [ saved rip ] [ saved rbp ]
+//! ^
+//! |
+//!  base pointer
+//!
+//! rsi: (re-)stored by the caller
+//! rip: (re-)stored by call/ret instruction
+//! rbp: (re-)stored by the callee
+//!
+//! Registers used by the VM:
+//!
+//! rsi: pointer to the current ObjClosure (used to read/store upvalues)
+//! rbp: base pointer of the current call frame
+//! rdi: call frame depth counter for stack overflow checks
+//! r12: ptr to globals table (=a heap allocated vector)
+//! r13-15: true, false, nil
+
 use std::mem::MaybeUninit;
 use std::ops::Range;
 use std::ptr::{null, null_mut};
 use std::time::Instant;
 
+use crate::common::{ENABLE_ICS, LOX_LOX_EXTENSIONS};
 use crate::gc::{intern_string, register_const_object, register_object, GcCell};
 use crate::object::{
     ObjBoundMethod, ObjClass, ObjClosure, ObjInstance, ObjString, ObjType, ObjUpvalue, INIT_STRING,
@@ -28,9 +30,10 @@ use crate::object::{
 use crate::properties::{ObjShape, ShapeEntry};
 use crate::source_mapping::{FnSourceInfo, SourceMapping};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
-use crate::START;
+use crate::{INPUT_STREAM, START};
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
+use utf8_chars::BufReadCharsExt;
 
 static mut GLOBALS: Vec<u64> = Vec::new();
 static mut GLOBALS_NAMES: Vec<GcCell<ObjString>> = Vec::new();
@@ -39,7 +42,7 @@ const RESERVED_GLOBAL_VARS: usize = 9;
 static mut ASSEMBLER: *mut Assembler = null_mut();
 static mut ASSEMBLY_BASE: *const u8 = null();
 
-const FRAMES_MAX: u8 = 64;
+const FRAMES_MAX: u32 = if LOX_LOX_EXTENSIONS { 0xff } else { 0x40 };
 
 pub fn global_vars() -> &'static [Value] {
     unsafe { std::mem::transmute(&GLOBALS[RESERVED_GLOBAL_VARS..]) }
@@ -59,6 +62,9 @@ macro_rules! my_dynasm {
 
 /// Utility to make sure we use the right offsets to overwrite the ICs
 fn check_asm_offsets(current: usize, starts: &[usize], expected: &[usize]) {
+    if !ENABLE_ICS {
+        return;
+    }
     assert_eq!(starts.len(), expected.len());
     for (i, offset) in starts.iter().enumerate() {
         assert_eq!(expected[i], current - offset);
@@ -146,7 +152,7 @@ const GET_PROP_IC_SHAPE_OFFSET: usize = 0x47;
 const GET_PROP_IC_INDEX_OFFSET: usize = 0x2F;
 macro_rules! get_property_ic {
     ($ops:expr, $stack_offset:expr) => {
-        {
+        if ENABLE_ICS {
             let shape_offset;
             let index_offset;
             dynasm!($ops
@@ -166,6 +172,8 @@ macro_rules! get_property_ic {
                 ; end_ic:
             );
             [shape_offset, index_offset]
+        } else {
+            [0, 0]
         }
     };
 }
@@ -178,7 +186,7 @@ const SET_PROP_IC_END_JMP_OFFSET: usize = 0x3F;
 const SET_PROP_IC_LEN: usize = 0x28;
 macro_rules! set_property_ic {
     ($ops:expr) => {
-        {
+        if ENABLE_ICS {
             let shape_offset;
             let index_offset;
             let ic_offset;
@@ -210,6 +218,8 @@ macro_rules! set_property_ic {
                 ; end_ic:
             );
             [shape_offset, index_offset, ic_offset, jmp_offset]
+        } else {
+            [0, 0, 0, 0]
         }
     };
 }
@@ -218,7 +228,7 @@ const INVOKE_IC_SHAPE_OFFSET: usize = 62;
 const INVOKE_IC_METHOD_OFFSET: usize = 43;
 macro_rules! invoke_ic {
     ($ops:expr) => {
-        {
+        if ENABLE_ICS {
             let shape_offset;
             let method_offset;
 
@@ -237,7 +247,9 @@ macro_rules! invoke_ic {
             );
 
             [shape_offset, method_offset]
-    }
+        } else {
+            [0, 0]
+        }
     };
 }
 
@@ -412,18 +424,40 @@ impl Emitter {
         )
     }
 
-    pub fn clock(&mut self) {
+    pub fn builtin_fn_0(&mut self, builtin_fn: extern "win64" fn() -> Value) {
         dynasm!(self.ops
             ; jmp >over
-            ; clock:
-            ;; call_extern!(self.ops, clock)
+            ; builtin_fn:
+            ;; call_extern!(self.ops, builtin_fn)
             ; ret
             ; over:
 
             ; push rbp
             ; push rsi
             ; push null_mut::<ObjString>() as i32
-            ; lea rcx, [<clock]
+            ; lea rcx, [<builtin_fn]
+            ; push rcx
+            ; mov rcx, rsp
+            ; mov rdx, 0
+            ;; call_extern!(self.ops, alloc_closure)
+            ; add rsp, 0x20
+            ; push rax
+        );
+    }
+
+    pub fn builtin_fn_1(&mut self, builtin_fn: extern "win64" fn(arg0: Value) -> Value) {
+        dynasm!(self.ops
+            ; jmp >over
+            ; builtin_fn:
+            ; mov rcx, [rsp + 0x10]
+            ;; call_extern!(self.ops, builtin_fn)
+            ; ret
+            ; over:
+
+            ; push rbp
+            ; push rsi
+            ; push null_mut::<ObjString>() as i32
+            ; lea rcx, [<builtin_fn]
             ; push rcx
             ; mov rcx, rsp
             ; mov rdx, 0
@@ -1138,13 +1172,13 @@ impl Emitter {
             ASSEMBLY_BASE = reader.ptr(AssemblyOffset(0));
             ASSEMBLER = &mut self.ops as _;
         }
-        
+
         // Lie that we don't use the memory in 'reader' anymore.
         // As long as we don't reallocate while executing code this is ok.
         drop(reader);
-        
+
         let result = fun(unsafe { GLOBALS.as_mut_ptr() });
-        
+
         // compile the prologue for the next time.
         entrypoint_prologue(&mut self.ops);
 
@@ -1254,16 +1288,21 @@ extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjSt
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
             ShapeEntry::Present { offset } => {
-                // Do not recompile the IC if it was compiled previously
-                if unsafe { *return_address.sub(GET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
-                    unsafe { &mut *ASSEMBLER }
-                        .alter(|modifier| {
-                            modifier.goto(AssemblyOffset(asm_offset - GET_PROP_IC_SHAPE_OFFSET));
-                            modifier.push_u64(receiver.shape.as_ptr() as u64);
-                            modifier.goto(AssemblyOffset(asm_offset - GET_PROP_IC_INDEX_OFFSET));
-                            modifier.push_i32((offset * 8) as i32);
-                        })
-                        .unwrap();
+                if ENABLE_ICS {
+                    // Do not recompile the IC if it was compiled previously
+                    if unsafe { *return_address.sub(GET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0
+                    {
+                        unsafe { &mut *ASSEMBLER }
+                            .alter(|modifier| {
+                                modifier
+                                    .goto(AssemblyOffset(asm_offset - GET_PROP_IC_SHAPE_OFFSET));
+                                modifier.push_u64(receiver.shape.as_ptr() as u64);
+                                modifier
+                                    .goto(AssemblyOffset(asm_offset - GET_PROP_IC_INDEX_OFFSET));
+                                modifier.push_i32((offset * 8) as i32);
+                            })
+                            .unwrap();
+                    }
                 }
 
                 *receiver.fields.get(offset)
@@ -1287,39 +1326,43 @@ extern "win64" fn set_property(
     let property_len = receiver.fields.len();
     match ObjShape::resolve_set_property(receiver.shape, name, property_len) {
         ShapeEntry::Present { offset } => {
-            // Do not recompile the IC if it was compiled previously
-            if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
-                unsafe { &mut *ASSEMBLER }
-                    .alter(|modifier| {
-                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_SHAPE_OFFSET));
-                        modifier.push_u64(receiver.shape.as_ptr() as u64);
-                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_INDEX_OFFSET));
-                        modifier.push_i32((offset * 8) as i32);
-                    })
-                    .unwrap();
+            if ENABLE_ICS {
+                // Do not recompile the IC if it was compiled previously
+                if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
+                    unsafe { &mut *ASSEMBLER }
+                        .alter(|modifier| {
+                            modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_SHAPE_OFFSET));
+                            modifier.push_u64(receiver.shape.as_ptr() as u64);
+                            modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_INDEX_OFFSET));
+                            modifier.push_i32((offset * 8) as i32);
+                        })
+                        .unwrap();
+                }
             }
 
             receiver.fields.get_mut(offset)
         }
         ShapeEntry::MissingWithKnownShape { shape, .. } => {
-            // Do not recompile the IC if it was compiled previously
-            if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
-                unsafe { &mut *ASSEMBLER }
-                    .alter(|modifier| {
-                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_SHAPE_OFFSET));
-                        modifier.push_u64(receiver.shape.as_ptr() as u64);
-                        modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_OFFSET));
-                        let start = modifier.offset().0;
-                        dynasm!(modifier
-                            ; push rcx
-                            ;; call_extern!(modifier, push_property)
-                            ; mov r8, QWORD shape.as_ptr() as _
-                            ; pop rcx
-                            ; mov QWORD [rcx + 0x10], r8
-                        );
-                        assert_eq!(modifier.offset().0 - start, SET_PROP_IC_LEN);
-                    })
-                    .unwrap();
+            if ENABLE_ICS {
+                // Do not recompile the IC if it was compiled previously
+                if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
+                    unsafe { &mut *ASSEMBLER }
+                        .alter(|modifier| {
+                            modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_SHAPE_OFFSET));
+                            modifier.push_u64(receiver.shape.as_ptr() as u64);
+                            modifier.goto(AssemblyOffset(asm_offset - SET_PROP_IC_OFFSET));
+                            let start = modifier.offset().0;
+                            dynasm!(modifier
+                                ; push rcx
+                                ;; call_extern!(modifier, push_property)
+                                ; mov r8, QWORD shape.as_ptr() as _
+                                ; pop rcx
+                                ; mov QWORD [rcx + 0x10], r8
+                            );
+                            assert_eq!(modifier.offset().0 - start, SET_PROP_IC_LEN);
+                        })
+                        .unwrap();
+                }
             }
 
             receiver.shape = shape;
@@ -1364,18 +1407,19 @@ extern "win64" fn invoke(
 
     match ObjShape::resolve_get_property(receiver.shape, name) {
         Some(ShapeEntry::Method { closure }) => {
-            // Do not recompile the IC if it was compiled previously
-            if unsafe { *return_address.sub(INVOKE_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
-                unsafe { &mut *ASSEMBLER }
-                    .alter(|modifier| {
-                        modifier.goto(AssemblyOffset(asm_offset - INVOKE_IC_SHAPE_OFFSET));
-                        modifier.push_u64(receiver.shape.as_ptr() as u64);
-                        modifier.goto(AssemblyOffset(asm_offset - INVOKE_IC_METHOD_OFFSET));
-                        modifier.push_u64(closure.as_ptr() as _);
-                    })
-                    .unwrap();
+            if ENABLE_ICS {
+                // Do not recompile the IC if it was compiled previously
+                if unsafe { *return_address.sub(INVOKE_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
+                    unsafe { &mut *ASSEMBLER }
+                        .alter(|modifier| {
+                            modifier.goto(AssemblyOffset(asm_offset - INVOKE_IC_SHAPE_OFFSET));
+                            modifier.push_u64(receiver.shape.as_ptr() as u64);
+                            modifier.goto(AssemblyOffset(asm_offset - INVOKE_IC_METHOD_OFFSET));
+                            modifier.push_u64(closure.as_ptr() as _);
+                        })
+                        .unwrap();
+                }
             }
-
             closure.as_ptr()
         }
         _ => null(),
@@ -1512,6 +1556,34 @@ fn print_stacktrace(ip: *const u8, base_ptr: *const u8) {
     unsafe { SOURCE_MAPPING.print_stacktrace(INSTRUCTIONS_BASE_PTR, ip, base_ptr) }
 }
 
-extern "win64" fn clock() -> u64 {
-    (Instant::now().duration_since(*START).as_micros() as f64 / 1000000f64).to_bits()
+pub extern "win64" fn clock() -> Value {
+    (Instant::now().duration_since(*START).as_micros() as f64 / 1000000f64).into()
+}
+
+// Read a byte from stdin
+pub extern "win64" fn getc() -> Value {
+    // A null byte is treated like an EOF to allow for executing LoxLox inside of LoxLox.
+    if let Ok(Some(char)) = INPUT_STREAM.lock().unwrap().read_char() && char != '\0' {
+        Value::from(char as u32 as f64)
+    } else {
+        Value::from(-1f64)
+    }
+}
+
+// Convert given character code number to a single-character string
+pub extern "win64" fn chr(code: Value) -> Value {
+    let code = code.as_number();
+
+    Value::from(intern_string(char::from(code as u8).to_string(), stack!()))
+}
+
+// Exit with given status code
+pub extern "win64" fn exit(code: Value) -> Value {
+    std::process::exit(code.as_number() as i32)
+}
+
+// Print message string on stderr
+pub extern "win64" fn print_error(message: Value) -> Value {
+    eprintln!("{}", message.as_obj_string());
+    NIL_VAL
 }

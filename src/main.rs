@@ -5,12 +5,16 @@
 #![feature(link_llvm_intrinsics)]
 #![allow(clippy::fn_to_numeric_cast)]
 
-#[macro_use]
-extern crate lazy_static;
-
-use std::{collections::HashMap, ffi::OsString, io::Write, time::Instant};
+use std::sync::Mutex;
+use std::{
+    collections::HashMap,
+    ffi::OsString,
+    io::{BufReader, Stdin, Write},
+    time::Instant,
+};
 
 use emitter::Emitter;
+use once_cell::sync::Lazy;
 
 use crate::vm::interpret;
 
@@ -25,9 +29,11 @@ mod source_mapping;
 mod value;
 mod vm;
 
-lazy_static! {
-    pub static ref START: Instant = Instant::now();
-}
+pub static START: Lazy<Instant> = Lazy::new(Instant::now);
+
+// Used when *not* running in REPL mode.
+pub static INPUT_STREAM: Lazy<Mutex<BufReader<Stdin>>> =
+    Lazy::new(|| Mutex::new(BufReader::new(std::io::stdin())));
 
 fn main() {
     // initialize START

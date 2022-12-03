@@ -4,7 +4,8 @@ use std::mem::MaybeUninit;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use replace_with::replace_with_or_abort;
 
-use crate::emitter::GlobalVarIndex;
+use crate::common::LOX_LOX_EXTENSIONS;
+use crate::emitter::{chr, clock, exit, getc, print_error, GlobalVarIndex};
 use crate::gc::intern_const_string;
 use crate::{
     emitter::Emitter,
@@ -383,9 +384,39 @@ impl<'a, 'b> Parser<'a, 'b> {
         if globals.is_empty() {
             let name = intern_const_string("clock".to_string());
             let index = emitter.add_global(name);
-            emitter.clock();
+            emitter.builtin_fn_0(clock);
             emitter.define_global(index);
             globals.insert(name, index);
+
+            if LOX_LOX_EXTENSIONS {
+                // getc
+                let name = intern_const_string("getc".to_string());
+                let index = emitter.add_global(name);
+                emitter.builtin_fn_0(getc);
+                emitter.define_global(index);
+                globals.insert(name, index);
+
+                // chr(ch)
+                let name = intern_const_string("chr".to_string());
+                let index = emitter.add_global(name);
+                emitter.builtin_fn_1(chr);
+                emitter.define_global(index);
+                globals.insert(name, index);
+
+                // exit(status)
+                let name = intern_const_string("exit".to_string());
+                let index = emitter.add_global(name);
+                emitter.builtin_fn_1(exit);
+                emitter.define_global(index);
+                globals.insert(name, index);
+
+                // print_error(message)
+                let name = intern_const_string("print_error".to_string());
+                let index = emitter.add_global(name);
+                emitter.builtin_fn_1(print_error);
+                emitter.define_global(index);
+                globals.insert(name, index);
+            }
         }
         emitter.enter_function_scope(None, 0);
         Self {
