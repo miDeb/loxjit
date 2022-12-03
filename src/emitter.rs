@@ -21,7 +21,7 @@ use std::ops::Range;
 use std::ptr::{null, null_mut};
 use std::time::Instant;
 
-use crate::gc::{intern_string, register_object, GcCell};
+use crate::gc::{intern_string, register_const_object, register_object, GcCell};
 use crate::object::{
     ObjBoundMethod, ObjClass, ObjClosure, ObjInstance, ObjString, ObjType, ObjUpvalue, INIT_STRING,
 };
@@ -230,7 +230,7 @@ macro_rules! invoke_ic {
                 ; cmp r8, rax
                 ; jne >end_ic
                 ;; load_asm_offset!($ops, method_offset, 0x2)
-                ; mov rax, QWORD i64::MAX
+                ; mov rax, QWORD 0 as i64
                 ; jmp >after_resolve_method
 
                 ; end_ic:
@@ -1138,12 +1138,17 @@ impl Emitter {
             ASSEMBLY_BASE = reader.ptr(AssemblyOffset(0));
             ASSEMBLER = &mut self.ops as _;
         }
+        
+        // Lie that we don't use the memory in 'reader' anymore.
+        // As long as we don't reallocate while executing code this is ok.
+        drop(reader);
+        
+        let result = fun(unsafe { GLOBALS.as_mut_ptr() });
+        
         // compile the prologue for the next time.
         entrypoint_prologue(&mut self.ops);
 
-        // lie that we don't use the memory in 'reader' anymore
-        drop(reader);
-        fun(unsafe { GLOBALS.as_mut_ptr() })
+        result
     }
 }
 
@@ -1249,8 +1254,6 @@ extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjSt
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
             ShapeEntry::Present { offset } => {
-                // BEGIN IC
-
                 // Do not recompile the IC if it was compiled previously
                 if unsafe { *return_address.sub(GET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
                     unsafe { &mut *ASSEMBLER }
@@ -1262,15 +1265,12 @@ extern "win64" fn get_property(receiver: GcCell<ObjInstance>, name: GcCell<ObjSt
                         })
                         .unwrap();
                 }
-                // END IC
 
                 *receiver.fields.get(offset)
             }
-            ShapeEntry::Method { closure } => register_object(
-                ObjBoundMethod::new(receiver.into(), closure),
-                stack!(),
-            )
-            .into(),
+            ShapeEntry::Method { closure } => {
+                register_object(ObjBoundMethod::new(receiver.into(), closure), stack!()).into()
+            }
             _ => unreachable!(),
         }
     } else {
@@ -1287,8 +1287,6 @@ extern "win64" fn set_property(
     let property_len = receiver.fields.len();
     match ObjShape::resolve_set_property(receiver.shape, name, property_len) {
         ShapeEntry::Present { offset } => {
-            // BEGIN IC
-
             // Do not recompile the IC if it was compiled previously
             if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
                 unsafe { &mut *ASSEMBLER }
@@ -1300,12 +1298,10 @@ extern "win64" fn set_property(
                     })
                     .unwrap();
             }
-            // END IC
+
             receiver.fields.get_mut(offset)
         }
         ShapeEntry::MissingWithKnownShape { shape, .. } => {
-            // BEGIN IC
-
             // Do not recompile the IC if it was compiled previously
             if unsafe { *return_address.sub(SET_PROP_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
                 unsafe { &mut *ASSEMBLER }
@@ -1325,7 +1321,6 @@ extern "win64" fn set_property(
                     })
                     .unwrap();
             }
-            // END IC
 
             receiver.shape = shape;
             receiver.fields.push(UNINIT_VAL);
@@ -1342,7 +1337,7 @@ extern "win64" fn push_property(mut receiver: GcCell<ObjInstance>, value: Value)
 extern "win64" fn inherit(superclass: Value, subclass: Value) {
     let mut subclass = subclass.as_obj_class();
     let superclass = superclass.as_obj_class();
-    subclass.shape = register_object(ObjShape::clone(&superclass.shape), stack!());
+    subclass.shape = register_const_object(ObjShape::clone(&superclass.shape));
     subclass.init = superclass.init;
 }
 
@@ -1350,11 +1345,9 @@ extern "win64" fn get_super(receiver: GcCell<ObjClass>, name: GcCell<ObjString>)
     if let Some(entry) = ObjShape::resolve_get_property(receiver.shape, name) {
         match entry {
             ShapeEntry::Present { .. } => UNINIT_VAL,
-            ShapeEntry::Method {  closure } => register_object(
-                ObjBoundMethod::new(receiver.into(), closure),
-                stack!(),
-            )
-            .into(),
+            ShapeEntry::Method { closure } => {
+                register_object(ObjBoundMethod::new(receiver.into(), closure), stack!()).into()
+            }
             _ => unreachable!(),
         }
     } else {
@@ -1371,6 +1364,7 @@ extern "win64" fn invoke(
 
     match ObjShape::resolve_get_property(receiver.shape, name) {
         Some(ShapeEntry::Method { closure }) => {
+            // Do not recompile the IC if it was compiled previously
             if unsafe { *return_address.sub(INVOKE_IC_SHAPE_OFFSET).cast::<usize>() } == 0 {
                 unsafe { &mut *ASSEMBLER }
                     .alter(|modifier| {
