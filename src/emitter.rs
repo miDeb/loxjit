@@ -924,7 +924,7 @@ impl Emitter {
             ; jmp >ok2
 
             ; fail2:
-            ; call ->expected_callable
+            ; call ->property_requires_instance
             ; ok2:
         );
     }
