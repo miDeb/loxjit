@@ -887,7 +887,6 @@ impl Emitter {
     }
 
     pub fn invoke(&mut self, name: GcCell<ObjString>, arity: u8) {
-        //let check_offsets;
         dynasm!(self.ops
             ; mov rcx, [rsp + (arity * 8) as _]
 
@@ -943,7 +942,6 @@ impl Emitter {
 
     /// Gets the property `name` from the instance at [rsp + stack_offset] and writes the result to that location.
     fn get_property_with_stack_offset(&mut self, name: GcCell<ObjString>, stack_offset: i32) {
-        let check_offsets;
         dynasm!(self.ops
             ; mov rcx, [rsp + stack_offset]
 
@@ -956,7 +954,7 @@ impl Emitter {
             ; and rcx, [->tag_obj_not]
             ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
-            ;; check_offsets = get_property_ic!(self.ops, stack_offset)
+            ;; let check_offsets = get_property_ic!(self.ops, stack_offset)
 
             ; mov rdx, QWORD name.to_bits() as _
             ;; call_extern!(self.ops, get_property, check_offsets, [GET_PROP_IC_SHAPE_OFFSET, GET_PROP_IC_INDEX_OFFSET])
@@ -976,8 +974,6 @@ impl Emitter {
     }
 
     pub fn set_property(&mut self, name: GcCell<ObjString>) {
-        let check_offsets;
-
         dynasm!(self.ops
             ; mov rcx, [rsp + 0x8]
 
@@ -990,7 +986,7 @@ impl Emitter {
             ; and rcx, [->tag_obj_not]
             ; cmp [rcx], BYTE ObjType::Instance as _
             ; jne >fail
-            ;; check_offsets = set_property_ic!(self.ops)
+            ;; let check_offsets = set_property_ic!(self.ops)
 
             ; mov rdx, QWORD name.to_bits() as _
             ;; call_extern!(
