@@ -1,6 +1,6 @@
-//! Calling convention:
+//! Internal calling convention:
 //!
-//! [ saved rsi ] [ saved rip ] [ saved rbp ]
+//! [ this (implicit first argument) ] [ explicit function arguments ]* [ saved rsi ] [ saved rip ] [ saved rbp ] [ local variables ]*
 //! ^
 //! |
 //!  base pointer

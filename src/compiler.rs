@@ -928,7 +928,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         let fn_info = self.emitter.start_fn(self.compiler.function.arity);
         self.compiler.function.fn_info = Some(fn_info);
 
-        // JIT needs to preserve rbp and rip here. Don't use those spots.
+        // JIT needs to preserve rsi, rip and rbp here. Don't use those spots.
+        // See emitter.rs for the documentation of the internal calling convention.
         self.compiler.locals.push(Local {
             name: "",
             depth: -1,

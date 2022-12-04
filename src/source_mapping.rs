@@ -41,8 +41,9 @@ impl SourceMapping {
             eprint!("[line {}] ", line.line);
             if let Some(name) = function.name {
                 eprintln!("in {name}()");
-                ip = unsafe { *bp.sub(function.arg_count as usize * 0x8 + 0x8).cast() };
-                bp = unsafe { *bp.sub(function.arg_count as usize * 0x8 + 0x10).cast() };
+                // For calculation of offsets see documentation of calling convention in emitter.rs
+                ip = unsafe { *bp.sub(function.arg_count as usize * 0x8 + 0x10).cast() };
+                bp = unsafe { *bp.sub(function.arg_count as usize * 0x8 + 0x18).cast() };
             } else {
                 eprintln!("in script");
                 break;
