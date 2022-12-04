@@ -7,6 +7,10 @@ loxjit uses inline caches (ICs) to speed up property lookups and method calls.
 
 Another optimization that has a noticeable effect is the removal of hash lookups for accessing global variables. Instead, global variables are addressed by an index assigned by the compiler.
 
+## Compiling
+
+Nightly Rust is required to compile loxjit.
+
 ## Running LoxLox
 
 loxjit supports running [LoxLox](https://github.com/benhoyt/loxlox), a Lox interpreter written in Lox. Support is enabled using the `LOX_LOX_EXTENSIONS` constant in `lib/common.rs` (defaults to true).
