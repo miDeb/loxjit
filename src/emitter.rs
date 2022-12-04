@@ -253,6 +253,35 @@ macro_rules! invoke_ic {
     };
 }
 
+const SUPER_INVOKE_IC_SHAPE_OFFSET: usize = 62;
+const SUPER_INVOKE_IC_METHOD_OFFSET: usize = 43;
+macro_rules! super_invoke_ic {
+    ($ops:expr) => {
+        if ENABLE_ICS {
+            let shape_offset;
+            let method_offset;
+
+            dynasm!($ops
+                // rax = class.shape
+                ; mov rax, QWORD [rcx + 0x18]
+                ;; load_asm_offset!($ops, shape_offset, 0x2)
+                ; mov r8, QWORD 0 as i64
+                ; cmp r8, rax
+                ; jne >end_ic
+                ;; load_asm_offset!($ops, method_offset, 0x2)
+                ; mov rax, QWORD 0 as i64
+                ; jmp >after_resolve_method
+
+                ; end_ic:
+            );
+
+            [shape_offset, method_offset]
+        } else {
+            [0, 0]
+        }
+    };
+}
+
 fn entrypoint_prologue(ops: &mut Assembler) {
     my_dynasm!(ops,
         ; mov [rcx], r15
@@ -1068,12 +1097,15 @@ impl Emitter {
             ; pop rcx
             ; and rcx, [->tag_obj_not]
 
+            ;; let check_offsets = super_invoke_ic!(self.ops)
+
             ; mov rdx, QWORD name.to_bits() as _
 
-            ;; call_extern!(self.ops, invoke_super)
+            ;; call_extern!(self.ops, invoke_super, check_offsets, [SUPER_INVOKE_IC_SHAPE_OFFSET, SUPER_INVOKE_IC_METHOD_OFFSET])
             ; cmp rax, 0
             ; je >unhappy_path
 
+            ; after_resolve_method:
             ; mov rcx, arity as _
 
             ; push rsi
@@ -1423,11 +1455,36 @@ extern "win64" fn invoke(
 }
 
 extern "win64" fn invoke_super(
-    receiver: GcCell<ObjClass>,
+    class: GcCell<ObjClass>,
     name: GcCell<ObjString>,
 ) -> *const ObjClosure {
-    match ObjShape::resolve_get_property(receiver.shape, name) {
-        Some(ShapeEntry::Method { closure }) => closure.as_ptr(),
+    let return_address = return_address!();
+    let asm_offset = asm_offset!();
+
+    match ObjShape::resolve_get_property(class.shape, name) {
+        Some(ShapeEntry::Method { closure }) => {
+            if ENABLE_ICS {
+                // Do not recompile the IC if it was compiled previously
+                if unsafe {
+                    *return_address
+                        .sub(SUPER_INVOKE_IC_SHAPE_OFFSET)
+                        .cast::<usize>()
+                } == 0
+                {
+                    unsafe { &mut *ASSEMBLER }
+                        .alter(|modifier| {
+                            modifier
+                                .goto(AssemblyOffset(asm_offset - SUPER_INVOKE_IC_SHAPE_OFFSET));
+                            modifier.push_u64(class.shape.as_ptr() as u64);
+                            modifier
+                                .goto(AssemblyOffset(asm_offset - SUPER_INVOKE_IC_METHOD_OFFSET));
+                            modifier.push_u64(closure.as_ptr() as _);
+                        })
+                        .unwrap();
+                }
+            }
+            closure.as_ptr()
+        }
         _ => null(),
     }
 }
