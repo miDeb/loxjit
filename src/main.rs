@@ -5,6 +5,8 @@
 #![feature(link_llvm_intrinsics)]
 #![allow(clippy::fn_to_numeric_cast)]
 
+use std::io::BufRead;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::{
     collections::HashMap,
@@ -31,9 +33,9 @@ mod vm;
 
 pub static START: Lazy<Instant> = Lazy::new(Instant::now);
 
-// Used when *not* running in REPL mode.
 pub static INPUT_STREAM: Lazy<Mutex<BufReader<Stdin>>> =
     Lazy::new(|| Mutex::new(BufReader::new(std::io::stdin())));
+pub static REPL_IGNORE_NEXT_NEWLINE: AtomicBool = AtomicBool::new(false);
 
 fn main() {
     // initialize START
@@ -54,12 +56,17 @@ fn repl() {
     std::io::stdout().flush().unwrap();
     let mut emitter = Emitter::new();
     let mut globals = HashMap::new();
-    for line in std::io::stdin().lines().flatten() {
-        interpret(&line, &mut emitter, &mut globals);
-        // FIXME: In case of an error the compiler/emitter are left in a bad state
-        // and produce wrong results in subsequent invocations.
-        // This is due to dynasm not getting to see some labels
+    let mut buffer = String::new();
+    while INPUT_STREAM.lock().unwrap().read_line(&mut buffer).is_ok() {
+        if REPL_IGNORE_NEXT_NEWLINE.load(Ordering::Relaxed) {
+            REPL_IGNORE_NEXT_NEWLINE.store(false, Ordering::Relaxed);
+            buffer.clear();
+            continue;
+        }
+        interpret(&buffer, &mut emitter, &mut globals);
         print!("> ");
+        std::io::stdout().flush().unwrap();
+        buffer.clear();
     }
 }
 

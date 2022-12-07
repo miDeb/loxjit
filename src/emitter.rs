@@ -20,6 +20,7 @@
 use std::mem::MaybeUninit;
 use std::ops::Range;
 use std::ptr::{null, null_mut};
+use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use crate::common::{ENABLE_ICS, LOX_LOX_EXTENSIONS};
@@ -30,7 +31,7 @@ use crate::object::{
 use crate::properties::{ObjShape, ShapeEntry};
 use crate::source_mapping::{FnSourceInfo, SourceMapping};
 use crate::value::{Value, FALSE_VAL, NIL_VAL, QNAN, SIGN_BIT, TRUE_VAL, UNINIT_VAL};
-use crate::{INPUT_STREAM, START};
+use crate::{INPUT_STREAM, REPL_IGNORE_NEXT_NEWLINE, START};
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynamicLabel, DynasmApi, DynasmLabelApi};
 use utf8_chars::BufReadCharsExt;
@@ -1180,6 +1181,11 @@ impl Emitter {
             .begin_function(self.ops.offset(), FnSourceInfo::new(name, args_count))
     }
 
+    pub fn prepare_emitter(&mut self) {
+        self.start = self.ops.offset();
+        entrypoint_prologue(&mut self.ops);
+    }
+
     pub fn run(&mut self) -> bool {
         dynasm!(self.ops
             ; jmp -> exit_success
@@ -1190,13 +1196,11 @@ impl Emitter {
         let reader = self.ops.reader();
         let reader = reader.lock();
 
-        unsafe { INSTRUCTIONS_BASE_PTR = reader.as_ptr() }
-
         let fun = unsafe {
             std::mem::transmute::<_, extern "win64" fn(*mut u64) -> bool>(reader.ptr(self.start))
         };
-        self.start = self.ops.offset();
         unsafe {
+            INSTRUCTIONS_BASE_PTR = reader.as_ptr();
             ASSEMBLY_BASE = reader.ptr(AssemblyOffset(0));
             ASSEMBLER = &mut self.ops as _;
         }
@@ -1205,12 +1209,7 @@ impl Emitter {
         // As long as we don't reallocate while executing code this is ok.
         drop(reader);
 
-        let result = fun(unsafe { GLOBALS.as_mut_ptr() });
-
-        // compile the prologue for the next time.
-        entrypoint_prologue(&mut self.ops);
-
-        result
+        fun(unsafe { GLOBALS.as_mut_ptr() })
     }
 }
 
@@ -1617,6 +1616,11 @@ pub extern "win64" fn clock() -> Value {
 pub extern "win64" fn getc() -> Value {
     // A null byte is treated like an EOF to allow for executing LoxLox inside of LoxLox.
     if let Ok(Some(char)) = INPUT_STREAM.lock().unwrap().read_char() && char != '\0' {
+        // The repl should ignore the line the user just typed.
+        // Otherwise the repl would try to execute what is left over of the input line and print "> > "
+        // as a prompt if there is a trailing newline that was not consumed.
+        REPL_IGNORE_NEXT_NEWLINE.store(char != '\n', Ordering::Relaxed);
+
         Value::from(char as u32 as f64)
     } else {
         Value::from(-1f64)

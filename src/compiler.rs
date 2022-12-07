@@ -417,6 +417,41 @@ impl<'a, 'b> Parser<'a, 'b> {
                 emitter.define_global(index);
                 globals.insert(name, index);
             }
+        } else {
+            // We need to re-set the builtins because the instruction buffer might have been
+            // reallocated. TODO: Maybe use a different buffer for builtins?
+            emitter.builtin_fn_0(clock);
+            emitter.define_global(
+                *globals
+                    .get(&intern_const_string("clock".to_string()))
+                    .unwrap(),
+            );
+            if LOX_LOX_EXTENSIONS {
+                emitter.builtin_fn_0(getc);
+                emitter.define_global(
+                    *globals
+                        .get(&intern_const_string("getc".to_string()))
+                        .unwrap(),
+                );
+                emitter.builtin_fn_1(chr);
+                emitter.define_global(
+                    *globals
+                        .get(&intern_const_string("chr".to_string()))
+                        .unwrap(),
+                );
+                emitter.builtin_fn_1(exit);
+                emitter.define_global(
+                    *globals
+                        .get(&intern_const_string("exit".to_string()))
+                        .unwrap(),
+                );
+                emitter.builtin_fn_1(print_error);
+                emitter.define_global(
+                    *globals
+                        .get(&intern_const_string("print_error".to_string()))
+                        .unwrap(),
+                );
+            }
         }
         emitter.enter_function_scope(None, 0);
         Self {
