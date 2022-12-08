@@ -7,6 +7,10 @@ loxjit uses inline caches (ICs) to speed up property lookups and method calls.
 
 Another optimization that has a noticeable effect is the removal of hash lookups for accessing global variables. Instead, global variables are addressed by an index assigned by the compiler.
 
+## Blog Post
+
+You can read more `loxjit` in [this blog post](https://blog.debertol.com/posts/lox-jit/).
+
 ## Compiling
 
 Nightly Rust is required to compile loxjit.
