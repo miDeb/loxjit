@@ -43,7 +43,18 @@ const RESERVED_GLOBAL_VARS: usize = 9;
 static mut ASSEMBLER: *mut Assembler = null_mut();
 static mut ASSEMBLY_BASE: *const u8 = null();
 
-const FRAMES_MAX: u32 = if LOX_LOX_EXTENSIONS { 0xff } else { 0x40 };
+const FRAMES_MAX: u32 = if LOX_LOX_EXTENSIONS {
+    #[cfg(not(windows))]
+    {
+        0xff
+    }
+    #[cfg(windows)]
+    {
+        0xd0
+    }
+} else {
+    0x40
+};
 
 pub fn global_vars() -> &'static [Value] {
     unsafe { std::mem::transmute(&GLOBALS[RESERVED_GLOBAL_VARS..]) }
