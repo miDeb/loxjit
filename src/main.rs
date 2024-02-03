@@ -30,6 +30,8 @@ mod scanner;
 mod source_mapping;
 mod value;
 mod vm;
+mod assembler;
+mod builtins;
 
 pub static START: Lazy<Instant> = Lazy::new(Instant::now);
 

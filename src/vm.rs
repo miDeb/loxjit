@@ -18,12 +18,13 @@ pub fn interpret(
     emitter: &mut Emitter,
     globals: &mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
 ) -> InterpretResult {
-    emitter.prepare_emitter();
+    emitter.create_entrypoint();
     let parser = Parser::new(source, emitter, globals);
     match parser.compile() {
         Err(_) => InterpretResult::CompileError,
-        Ok(_) => {
-            if emitter.run() {
+        Ok(function) => {
+            let result =  function(emitter.get_globals_ptr());
+            if result == 1 {
                 InterpretResult::Ok
             } else {
                 InterpretResult::RuntimeError

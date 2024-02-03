@@ -13,7 +13,6 @@ use rustc_hash::FxHashSet;
 use crate::common::{DEBUG_PRINT_GC_STATS, DEBUG_STRESS_GC};
 use crate::properties::ShapeEntry;
 use crate::{
-    emitter::global_vars,
     object::{
         ObjBoundMethod, ObjClass, ObjClosure, ObjFunction, ObjHeader, ObjInstance, ObjString,
         ObjType, ObjUpvalue,
@@ -220,7 +219,8 @@ impl GC {
 
     fn mark_roots(&mut self, stack: Range<*const Value>) {
         self.gray_objects.clear();
-        self.gray_objects.extend_from_slice(global_vars());
+        // TODO: global variables
+        //self.gray_objects.extend_from_slice(global_vars());
         let stack = unsafe { std::slice::from_ptr_range(stack) };
         self.gray_objects.extend_from_slice(stack);
     }

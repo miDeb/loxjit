@@ -5,7 +5,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use replace_with::replace_with_or_abort;
 
 use crate::common::LOX_LOX_EXTENSIONS;
-use crate::emitter::{chr, clock, exit, getc, print_error, GlobalVarIndex};
+use crate::emitter::GlobalVarIndex;
 use crate::gc::intern_const_string;
 use crate::{
     emitter::Emitter,
@@ -381,7 +381,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         emitter: &'b mut Emitter,
         globals: &'b mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
     ) -> Self {
-        if globals.is_empty() {
+        /*if globals.is_empty() {
             let name = intern_const_string("clock".to_string());
             let index = emitter.add_global(name);
             emitter.builtin_fn_0(clock);
@@ -452,8 +452,8 @@ impl<'a, 'b> Parser<'a, 'b> {
                         .unwrap(),
                 );
             }
-        }
-        emitter.enter_function_scope(None, 0);
+        }*/
+        //emitter.enter_function_scope(None, 0);
         Self {
             current: Token {
                 token_type: TokenType::Error,
@@ -477,7 +477,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn advance(&mut self) {
         self.previous = self.current;
-        self.emitter.set_line(self.previous.line);
+        //todo!();//self.emitter.set_line(self.previous.line);
         loop {
             self.current = self.scanner.scan_token();
             if !matches!(self.current.token_type, TokenType::Error) {
@@ -538,9 +538,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         {
             let local = self.compiler.locals.last().unwrap();
             if local.is_captured {
-                self.emitter.close_upvalue();
+                todo!();//self.emitter.close_upvalue();
             } else {
-                self.emitter.pop();
+                todo!();//self.emitter.pop();
             }
             self.compiler.locals.pop();
         }
@@ -548,13 +548,13 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn emit_return(&mut self) {
         match self.compiler.fun_type {
-            FunctionType::Initializer => self.emitter.get_local(0),
-            FunctionType::Function | FunctionType::Method => self.emitter.nil(),
+            FunctionType::Initializer => todo!(), //self.emitter.get_local(0),
+            FunctionType::Function | FunctionType::Method => todo!(), //self.emitter.nil(),
             FunctionType::Script => return,
         }
 
         if let Some(fn_info) = self.compiler.function.fn_info {
-            self.emitter.ret(fn_info);
+            todo!();//self.emitter.ret(fn_info);
         } else {
             assert!(self.had_error);
         }
@@ -586,8 +586,8 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.parse_precedence(Precedence::Unary);
         match operator_type {
-            TokenType::Bang => self.emitter.not(),
-            TokenType::Minus => self.emitter.negate(),
+            TokenType::Bang => todo!(),  //self.emitter.not(),
+            TokenType::Minus => todo!(), //self.emitter.negate(),
             _ => (),
         }
     }
@@ -598,16 +598,16 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.parse_precedence((Into::<u8>::into(rule.precedence) + 1).try_into().unwrap());
 
         match operator_type {
-            TokenType::BangEqual => self.emitter.ne(),
-            TokenType::EqualEqual => self.emitter.eq(),
-            TokenType::Greater => self.emitter.gt(),
-            TokenType::GreaterEqual => self.emitter.ge(),
-            TokenType::Less => self.emitter.lt(),
-            TokenType::LessEqual => self.emitter.le(),
-            TokenType::Plus => self.emitter.add(),
-            TokenType::Minus => self.emitter.sub(),
-            TokenType::Star => self.emitter.mul(),
-            TokenType::Slash => self.emitter.div(),
+            TokenType::BangEqual => todo!(),    //self.emitter.ne(),
+            TokenType::EqualEqual => todo!(),   //self.emitter.eq(),
+            TokenType::Greater => todo!(),      //self.emitter.gt(),
+            TokenType::GreaterEqual => todo!(), //self.emitter.ge(),
+            TokenType::Less => todo!(),         //self.emitter.lt(),
+            TokenType::LessEqual => todo!(),    //self.emitter.le(),
+            TokenType::Plus => todo!(),         //self.emitter.add(),
+            TokenType::Minus => todo!(),        //self.emitter.sub(),
+            TokenType::Star => todo!(),         //self.emitter.mul(),
+            TokenType::Slash => todo!(),        //self.emitter.div(),
             _ => unreachable!(),
         }
     }
@@ -632,7 +632,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn call(&mut self, _can_assign: bool) {
         let arg_count = self.argument_list();
-        self.emitter.call(arg_count);
+        todo!();//self.emitter.call(arg_count);
     }
 
     fn dot(&mut self, can_assign: bool) {
@@ -641,20 +641,20 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         if can_assign && self.match_token(TokenType::Equal) {
             self.expression();
-            self.emitter.set_property(name)
+            todo!();//self.emitter.set_property(name)
         } else if self.match_token(TokenType::LeftParen) {
             let arg_count = self.argument_list();
-            self.emitter.invoke(name, arg_count)
+            todo!();//self.emitter.invoke(name, arg_count)
         } else {
-            self.emitter.get_property(name)
+            todo!();//self.emitter.get_property(name)
         }
     }
 
     fn literal(&mut self, _can_assign: bool) {
         match self.previous.token_type {
-            TokenType::False => self.emitter.false_(),
-            TokenType::True => self.emitter.true_(),
-            TokenType::Nil => self.emitter.nil(),
+            TokenType::False => todo!(), //self.emitter.false_(),
+            TokenType::True => todo!(),  //self.emitter.true_(),
+            TokenType::Nil => todo!(),   //self.emitter.nil(),
             _ => unreachable!(),
         }
     }
@@ -671,7 +671,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let obj = intern_const_string(
             self.previous.source[1..self.previous.source.len() - 1].to_string(),
         );
-        self.emitter.value(Value::from_obj(unsafe { obj.cast() }));
+        todo!() //self.emitter.value(Value::from_obj(unsafe { obj.cast() }));
     }
 
     fn variable(&mut self, can_assign: bool) {
@@ -694,10 +694,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         if self.match_token(TokenType::LeftParen) {
             let arg_count = self.argument_list();
             self.named_variable("super", false);
-            self.emitter.invoke_super(name, arg_count);
+            todo!();//self.emitter.invoke_super(name, arg_count);
         } else {
             self.named_variable("super", false);
-            self.emitter.get_super(name)
+            todo!();//self.emitter.get_super(name)
         }
     }
 
@@ -705,7 +705,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if let Some(value) = self.globals.get(&string) {
             *value
         } else {
-            let index = self.emitter.add_global(string);
+            let index = self.emitter.add_global();
             self.globals.insert(string, index);
             index
         }
@@ -721,9 +721,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         {
             if can_assign && self.match_token(TokenType::Equal) {
                 self.expression();
-                self.emitter.set_local(index);
+                todo!();//self.emitter.set_local(index);
             } else {
-                self.emitter.get_local(index);
+                todo!();//self.emitter.get_local(index);
             }
         } else if let Some(index) = self
             .compiler
@@ -734,9 +734,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         {
             if can_assign && self.match_token(TokenType::Equal) {
                 self.expression();
-                self.emitter.set_upvalue(index);
+                todo!();//self.emitter.set_upvalue(index);
             } else {
-                self.emitter.get_upvalue(index);
+                todo!();//self.emitter.get_upvalue(index);
             }
         } else {
             let constant = self.identifier_constant(name);
@@ -819,7 +819,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if self.match_token(TokenType::Equal) {
             self.expression();
         } else {
-            self.emitter.nil();
+            todo!();//self.emitter.nil();
         }
 
         self.consume(
@@ -847,23 +847,23 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn and(&mut self, _can_assign: bool) {
-        let end_jmp = self.emitter.get_new_label();
-        self.emitter.jump_if_false(end_jmp);
+        let end_jmp = todo!();//self.emitter.get_new_label();
+        todo!();//self.emitter.jump_if_false(end_jmp);
 
-        self.emitter.pop();
+        todo!();//self.emitter.pop();
         self.parse_precedence(Precedence::And);
 
-        self.emitter.set_jump_target(end_jmp);
+        todo!();//self.emitter.set_jump_target(end_jmp);
     }
 
     fn or(&mut self, _can_assign: bool) {
-        let end_jmp = self.emitter.get_new_label();
-        self.emitter.jump_if_true(end_jmp);
+        let end_jmp = todo!();//self.emitter.get_new_label();
+        todo!();//self.emitter.jump_if_true(end_jmp);
 
-        self.emitter.pop();
+        todo!();//self.emitter.pop();
         self.parse_precedence(Precedence::Or);
 
-        self.emitter.set_jump_target(end_jmp);
+        todo!();//self.emitter.set_jump_target(end_jmp);
     }
 
     fn statement(&mut self) {
@@ -896,7 +896,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         } else {
             self.expression();
             self.consume(TokenType::Semicolon, "Expect ';' after return value.");
-            self.emitter.ret(self.compiler.function.fn_info.unwrap());
+            todo!();//self.emitter.ret(self.compiler.function.fn_info.unwrap());
         }
     }
 
@@ -905,22 +905,22 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expression();
         self.consume(TokenType::RightParen, "Expect ')' after condition.");
 
-        let then_jmp = self.emitter.get_new_label();
-        self.emitter.jump_if_false(then_jmp);
-        self.emitter.pop();
+        let then_jmp = todo!();//self.emitter.get_new_label();
+        todo!();//self.emitter.jump_if_false(then_jmp);
+        todo!();//self.emitter.pop();
         self.statement();
 
-        let else_jmp = self.emitter.get_new_label();
-        self.emitter.jump(else_jmp);
+        //let else_jmp = todo!();//self.emitter.get_new_label();
+        todo!();//self.emitter.jump(else_jmp);
 
-        self.emitter.set_jump_target(then_jmp);
-        self.emitter.pop();
+        todo!();//self.emitter.set_jump_target(then_jmp);
+        todo!();//self.emitter.pop();
 
         if self.match_token(TokenType::Else) {
             self.statement();
         }
 
-        self.emitter.set_jump_target(else_jmp);
+        todo!();//self.emitter.set_jump_target(else_jmp);
     }
 
     fn fun_declaration(&mut self) {
@@ -931,80 +931,82 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn function(&mut self, function_type: FunctionType) {
-        let jmp = self.emitter.get_new_label();
-        self.emitter.jump(jmp);
+        todo!(); /*
+                 let jmp = todo!();//self.emitter.get_new_label();
+                 todo!();//self.emitter.jump(jmp);
 
-        let fn_name = intern_const_string(self.previous.source.to_owned());
+                 let fn_name = intern_const_string(self.previous.source.to_owned());
 
-        replace_with_or_abort(&mut self.compiler, |compiler| {
-            Box::new(Compiler::new(function_type, Some(fn_name), Some(compiler)))
-        });
+                 replace_with_or_abort(&mut self.compiler, |compiler| {
+                     Box::new(Compiler::new(function_type, Some(fn_name), Some(compiler)))
+                 });
 
-        self.begin_scope();
+                 self.begin_scope();
 
-        self.consume(TokenType::LeftParen, "Expect '(' after function name.");
+                 self.consume(TokenType::LeftParen, "Expect '(' after function name.");
 
-        if !self.check(TokenType::RightParen) {
-            loop {
-                if self.compiler.function.arity == u8::MAX {
-                    return self.error_at_current("Can't have more than 255 parameters.");
-                }
-                self.compiler.function.arity += 1;
-                let constant = self.parse_variable("Expect parameter name.");
-                self.define_variable(constant);
-                if !self.match_token(TokenType::Comma) {
-                    break;
-                }
-            }
-        }
-        self.emitter
-            .enter_function_scope(self.compiler.function.name, self.compiler.function.arity);
+                 if !self.check(TokenType::RightParen) {
+                     loop {
+                         if self.compiler.function.arity == u8::MAX {
+                             return self.error_at_current("Can't have more than 255 parameters.");
+                         }
+                         self.compiler.function.arity += 1;
+                         let constant = self.parse_variable("Expect parameter name.");
+                         self.define_variable(constant);
+                         if !self.match_token(TokenType::Comma) {
+                             break;
+                         }
+                     }
+                 }
+                 self.emitter
+                     .enter_function_scope(self.compiler.function.name, self.compiler.function.arity);
 
-        let fn_info = self.emitter.start_fn(self.compiler.function.arity);
-        self.compiler.function.fn_info = Some(fn_info);
+                 let fn_info = todo!();//self.emitter.start_fn(self.compiler.function.arity);
+                 self.compiler.function.fn_info = Some(fn_info);
 
-        // JIT needs to preserve rsi, rip and rbp here. Don't use those spots.
-        // See emitter.rs for the documentation of the internal calling convention.
-        self.compiler.locals.push(Local {
-            name: "",
-            depth: -1,
-            is_captured: false,
-        });
-        self.compiler.locals.push(Local {
-            name: "",
-            depth: -1,
-            is_captured: false,
-        });
-        self.compiler.locals.push(Local {
-            name: "",
-            depth: -1,
-            is_captured: false,
-        });
+                 // JIT needs to preserve rsi, rip and rbp here. Don't use those spots.
+                 // See emitter.rs for the documentation of the internal calling convention.
+                 self.compiler.locals.push(Local {
+                     name: "",
+                     depth: -1,
+                     is_captured: false,
+                 });
+                 self.compiler.locals.push(Local {
+                     name: "",
+                     depth: -1,
+                     is_captured: false,
+                 });
+                 self.compiler.locals.push(Local {
+                     name: "",
+                     depth: -1,
+                     is_captured: false,
+                 });
 
-        self.consume(TokenType::RightParen, "Expect ')' after parameters.");
-        self.consume(TokenType::LeftBrace, "Expect '{' before function body.");
-        self.block();
-        self.end_compiler();
+                 self.consume(TokenType::RightParen, "Expect ')' after parameters.");
+                 self.consume(TokenType::LeftBrace, "Expect '{' before function body.");
+                 self.block();
+                 self.end_compiler();
 
-        let enclosing = self.compiler.enclosing.take();
-        let compiler = std::mem::replace(&mut self.compiler, enclosing.unwrap());
-        let upvalue_count = compiler.function.upvalue_count;
+                 let enclosing = self.compiler.enclosing.take();
+                 let compiler = std::mem::replace(&mut self.compiler, enclosing.unwrap());
+                 let upvalue_count = compiler.function.upvalue_count;
 
-        self.emitter.fn_epilogue(fn_info);
+                 todo!();//self.emitter.fn_epilogue(fn_info);
 
-        self.emitter.set_jump_target(jmp);
+                 todo!();//self.emitter.set_jump_target(jmp);
 
-        self.emitter
-            .enter_function_scope(self.compiler.function.name, self.compiler.function.arity);
+                 self.emitter
+                     .enter_function_scope(self.compiler.function.name, self.compiler.function.arity);
 
-        self.emitter.end_fn(
-            fn_info,
-            fn_name,
-            (0..upvalue_count).map(|i| {
-                let upvalue = unsafe { compiler.upvalues[i].assume_init_ref() };
-                (upvalue.is_local, upvalue.index)
-            }),
-        );
+                 todo!();//self.emitter.end_fn(
+                     fn_info,
+                     fn_name,
+                     (0..upvalue_count).map(|i| {
+                         let upvalue = unsafe { compiler.upvalues[i].assume_init_ref() };
+                         (upvalue.is_local, upvalue.index)
+                     }),
+                 );
+                 */
     }
 
     fn class_declaration(&mut self) {
@@ -1015,7 +1017,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let name_constant = self.identifier_constant(self.previous.source);
         self.declare_variable();
 
-        self.emitter.push_class(name_constant);
+        todo!();//self.emitter.push_class(name_constant);
         self.define_variable(Some(name_constant));
 
         self.class_compiler = Some(Box::new(ClassCompiler {
@@ -1032,7 +1034,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
 
             self.named_variable(class_name, false);
-            self.emitter.inherit();
+            todo!();//self.emitter.inherit();
             self.class_compiler.as_mut().unwrap().has_superclass = true;
 
             self.begin_scope();
@@ -1048,7 +1050,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' after class body.");
-        self.emitter.pop();
+        todo!();//self.emitter.pop();
 
         if self.class_compiler.as_ref().unwrap().has_superclass {
             self.end_scope();
@@ -1067,26 +1069,26 @@ impl<'a, 'b> Parser<'a, 'b> {
             FunctionType::Method
         });
 
-        self.emitter.add_method(name)
+        todo!();//self.emitter.add_method(name)
     }
 
     fn while_statement(&mut self) {
-        let loop_start = self.emitter.get_new_label();
-        self.emitter.set_jump_target(loop_start);
+        let loop_start = todo!();//self.emitter.get_new_label();
+        todo!();//self.emitter.set_jump_target(loop_start);
 
         self.consume(TokenType::LeftParen, "Expect '(' after 'while'.");
         self.expression();
         self.consume(TokenType::RightParen, "Expect ')' after condition.");
 
-        let exit_jmp = self.emitter.get_new_label();
-        self.emitter.jump_if_false(exit_jmp);
-        self.emitter.pop();
+        let exit_jmp = todo!();//self.emitter.get_new_label();
+        todo!();//self.emitter.jump_if_false(exit_jmp);
+        todo!();//self.emitter.pop();
         self.statement();
 
-        self.emitter.jump(loop_start);
+        todo!();//self.emitter.jump(loop_start);
 
-        self.emitter.set_jump_target(exit_jmp);
-        self.emitter.pop();
+        todo!();//self.emitter.set_jump_target(exit_jmp);
+        todo!();//self.emitter.pop();
     }
 
     fn for_statement(&mut self) {
@@ -1101,40 +1103,40 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.expression_statement();
         }
 
-        let mut loop_start = self.emitter.get_new_label();
-        self.emitter.set_jump_target(loop_start);
+        //let mut loop_start = todo!();//self.emitter.get_new_label();
+        todo!();//self.emitter.set_jump_target(loop_start);
 
-        let exit_jump = self.emitter.get_new_label();
+        //let exit_jump = todo!();//self.emitter.get_new_label();
 
         if !self.match_token(TokenType::Semicolon) {
             self.expression();
             self.consume(TokenType::Semicolon, "Expect ';' after loop condition.");
 
-            self.emitter.jump_if_false(exit_jump);
-            self.emitter.pop();
+            todo!();//self.emitter.jump_if_false(exit_jump);
+            todo!();//self.emitter.pop();
         }
 
         if !self.match_token(TokenType::RightParen) {
-            let body_jmp = self.emitter.get_new_label();
-            self.emitter.jump(body_jmp);
+            let body_jmp = todo!();//self.emitter.get_new_label();
+            todo!();//self.emitter.jump(body_jmp);
 
-            let increment_start = self.emitter.get_new_label();
-            self.emitter.set_jump_target(increment_start);
+            //let increment_start = todo!();//self.emitter.get_new_label();
+            todo!();//self.emitter.set_jump_target(increment_start);
             self.expression();
-            self.emitter.pop();
+            todo!();//self.emitter.pop();
             self.consume(TokenType::RightParen, "Expect ')' after for clauses.");
 
-            self.emitter.jump(loop_start);
-            loop_start = increment_start;
-            self.emitter.set_jump_target(body_jmp);
+            todo!();//self.emitter.jump(loop_start);
+            //loop_start = increment_start;
+            todo!();//self.emitter.set_jump_target(body_jmp);
         }
 
         self.statement();
 
-        self.emitter.jump(loop_start);
+        todo!();//self.emitter.jump(loop_start);
 
-        self.emitter.set_jump_target(exit_jump);
-        self.emitter.pop();
+        todo!();//self.emitter.set_jump_target(exit_jump);
+        todo!();//self.emitter.pop();
 
         self.end_scope();
     }
@@ -1207,7 +1209,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    pub fn compile(mut self) -> Result<(), ()> {
+    pub fn compile(mut self) -> Result< extern "win64" fn(*mut Value) -> u8, ()> {
         self.advance();
         while !self.match_token(TokenType::Eof) {
             self.declaration();
@@ -1216,7 +1218,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.end_compiler();
         match self.had_error {
             true => Err(()),
-            false => Ok(()),
+            false => Ok(self.emitter.finish()),
         }
     }
 }
