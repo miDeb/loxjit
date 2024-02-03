@@ -18,7 +18,6 @@ pub fn interpret(
     emitter: &mut Emitter,
     globals: &mut HashMap<GcCell<ObjString>, GlobalVarIndex>,
 ) -> InterpretResult {
-    emitter.create_entrypoint();
     let parser = Parser::new(source, emitter, globals);
     match parser.compile() {
         Err(_) => InterpretResult::CompileError,
