@@ -6,7 +6,7 @@ use crate::{
 };
 
 pub extern "win64" fn print(value: Value) {
-    print!("{}", value)
+    println!("{}", value)
 }
 
 pub extern "win64" fn handle_global_uninit(
