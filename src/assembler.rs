@@ -303,6 +303,19 @@ impl Assembler {
         }
     }
 
+    pub fn cmove(&mut self, dest: Operand, src: Operand) {
+        match (dest, src) {
+            // cmove reg, reg
+            (Operand::Register(dest), Operand::Register(src)) => {
+                self.append_rexw_for_modrm(dest, src);
+                self.append(0x0f);
+                self.append(0x44);
+                self.append_modrm(Mod::Direct, dest, src);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn movsd(&mut self, dest: FloatOperand, src: FloatOperand) {
         match (dest, src) {
             // movsd memory, reg
@@ -555,6 +568,19 @@ impl Assembler {
 
     fn restore_stack_after_call(&mut self) {
         self.pop(Operand::Register(Register::Rsp));
+    }
+
+    pub fn xor(&mut self, dest: Operand, src: Operand) {
+        match (dest, src) {
+            // xor memory, reg
+            (Operand::Memory(dest, offset), Operand::Register(src)) => {
+                self.append_rexw_for_modrm(src, dest);
+                self.append(0x31);
+                self.append_modrm(Mod::IndirectDisplacement, src, dest);
+                self.append_i32(offset);
+            }
+            _ => unimplemented!(),
+        }
     }
 
     pub fn or(&mut self, dest: Operand, src: Operand) {

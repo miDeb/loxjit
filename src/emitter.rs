@@ -30,7 +30,10 @@
 
 use crate::{
     assembler::{FloatOperand, FloatRegister, Label, Operand, Register},
-    builtins::{concat_strings, handle_global_uninit, handle_unexpected_add_operands, print},
+    builtins::{
+        concat_strings, handle_expected_add_operands, handle_expected_number, handle_global_uninit,
+        print,
+    },
     gc::GcCell,
     object::ObjString,
     source_mapping::{FnSourceInfo, SourceMapping},
@@ -92,6 +95,11 @@ fn create_error_handler(assembler: &mut Assembler, handler: u64) -> Label {
     label
 }
 
+const REG_TRUE: Register = Register::R13;
+const REG_FALSE: Register = Register::R14;
+const REG_NIL: Register = Register::R15;
+const REG_QNAN: Register = Register::Rbx;
+
 pub struct Emitter {
     assembler: Assembler,
     executable: Option<Mmap>,
@@ -102,15 +110,18 @@ pub struct Emitter {
     // Failure labels
     global_uninit: Label,
     expected_addition_operands: Label,
+    expected_number: Label,
 }
 
 impl Emitter {
     pub fn new() -> Self {
         let mut assembler = Assembler::new();
 
+        // Error handling functions
         let global_uninit = create_error_handler(&mut assembler, handle_global_uninit as u64);
         let expected_addition_operands =
-            create_error_handler(&mut assembler, handle_unexpected_add_operands as u64);
+            create_error_handler(&mut assembler, handle_expected_add_operands as u64);
+        let expected_number = create_error_handler(&mut assembler, handle_expected_number as u64);
 
         let mut source_mapping = SourceMapping::new();
         source_mapping.begin_function(assembler.get_current_offset(), FnSourceInfo::new(None, 0));
@@ -124,6 +135,7 @@ impl Emitter {
             globals_names: Vec::new(),
             global_uninit,
             expected_addition_operands,
+            expected_number,
         }
     }
 
@@ -157,17 +169,17 @@ impl Emitter {
         );
 
         self.assembler
-            .mov(Operand::Register(Register::Rbx), Operand::Imm64(QNAN));
+            .mov(Operand::Register(REG_QNAN), Operand::Imm64(QNAN));
         self.assembler.mov(
-            Operand::Register(Register::R13),
+            Operand::Register(REG_TRUE),
             Operand::Imm64(TRUE_VAL.to_bits()),
         );
         self.assembler.mov(
-            Operand::Register(Register::R14),
+            Operand::Register(REG_FALSE),
             Operand::Imm64(FALSE_VAL.to_bits()),
         );
         self.assembler.mov(
-            Operand::Register(Register::R15),
+            Operand::Register(REG_NIL),
             Operand::Imm64(NIL_VAL.to_bits()),
         );
 
@@ -226,15 +238,15 @@ impl Emitter {
     }
 
     pub fn nil(&mut self) {
-        self.assembler.push(Operand::Register(Register::R15));
+        self.assembler.push(Operand::Register(REG_NIL));
     }
 
     pub fn true_(&mut self) {
-        self.assembler.push(Operand::Register(Register::R13));
+        self.assembler.push(Operand::Register(REG_TRUE));
     }
 
     pub fn false_(&mut self) {
-        self.assembler.push(Operand::Register(Register::R14));
+        self.assembler.push(Operand::Register(REG_FALSE));
     }
 
     pub fn add_global(&mut self, name: GcCell<ObjString>) -> GlobalVarIndex {
@@ -328,6 +340,72 @@ impl Emitter {
             .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
     }
 
+    pub fn not(&mut self) {
+        let mut end = self.assembler.create_label();
+
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+
+        // Check for false
+        self.assembler.cmp(
+            Operand::Register(Register::Rax),
+            Operand::Register(REG_FALSE),
+        );
+        self.assembler.cmove(
+            Operand::Register(Register::Rax),
+            Operand::Register(REG_TRUE),
+        );
+        self.assembler.je(&mut end);
+
+        // Check for nil
+        self.assembler
+            .cmp(Operand::Register(Register::Rax), Operand::Register(REG_NIL));
+        self.assembler.cmove(
+            Operand::Register(Register::Rax),
+            Operand::Register(REG_TRUE),
+        );
+        self.assembler.je(&mut end);
+
+        // Values other than nil and false are truthy
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Register(REG_FALSE),
+        );
+        self.assembler.bind_label(&mut end);
+
+        self.assembler.mov(
+            Operand::Memory(Register::Rsp, 0),
+            Operand::Register(Register::Rax),
+        );
+    }
+
+    pub fn negate(&mut self) {
+        let mut ok = self.assembler.create_label();
+
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+        self.is_non_primitive(Operand::Register(Register::Rax));
+        self.assembler.jne(&mut ok);
+
+        // The operand was an object.
+        self.assembler.call_label(&mut self.expected_number);
+
+        self.assembler.bind_label(&mut ok);
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            // The zero flag is the most significant bit of a floating point number.
+            Operand::Imm64(0x8000_0000_0000_0000),
+        );
+        self.assembler.xor(
+            Operand::Memory(Register::Rsp, 0),
+            Operand::Register(Register::Rax),
+        );
+    }
+
     pub fn add(&mut self) {
         let mut add_strings = self.assembler.create_label();
         let mut end = self.assembler.create_label();
@@ -351,14 +429,7 @@ impl Emitter {
             Operand::Register(Register::Rax),
             Operand::Register(Register::R9),
         );
-        self.assembler.and(
-            Operand::Register(Register::Rax),
-            Operand::Register(Register::Rbx),
-        );
-        self.assembler.cmp(
-            Operand::Register(Register::Rax),
-            Operand::Register(Register::Rbx),
-        );
+        self.is_non_primitive(Operand::Register(Register::Rax));
         self.assembler.je(&mut add_strings);
 
         // is the first operand an object?
@@ -370,14 +441,7 @@ impl Emitter {
             Operand::Register(Register::Rax),
             Operand::Register(Register::R8),
         );
-        self.assembler.and(
-            Operand::Register(Register::Rax),
-            Operand::Register(Register::Rbx),
-        );
-        self.assembler.cmp(
-            Operand::Register(Register::Rax),
-            Operand::Register(Register::Rbx),
-        );
+        self.is_non_primitive(Operand::Register(Register::Rax));
         self.assembler.je(&mut add_strings);
 
         // Numeric addition.
@@ -412,6 +476,13 @@ impl Emitter {
             .call_label(&mut self.expected_addition_operands);
 
         self.assembler.bind_label(&mut end);
+    }
+
+    /// If [val] is not a primitive, sets the zero/equals flag.
+    /// The value is modified in the process.
+    fn is_non_primitive(&mut self, val: Operand) {
+        self.assembler.and(val, Operand::Register(REG_QNAN));
+        self.assembler.cmp(val, Operand::Register(REG_QNAN));
     }
 
     pub fn sub(&mut self) {

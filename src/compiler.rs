@@ -586,8 +586,8 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.parse_precedence(Precedence::Unary);
         match operator_type {
-            TokenType::Bang => todo!(),  //self.emitter.not(),
-            TokenType::Minus => todo!(), //self.emitter.negate(),
+            TokenType::Bang => self.emitter.not(),
+            TokenType::Minus => self.emitter.negate(),
             _ => (),
         }
     }

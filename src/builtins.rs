@@ -9,26 +9,6 @@ pub extern "win64" fn print(value: Value) {
     println!("{}", value)
 }
 
-pub extern "win64" fn handle_global_uninit(
-    rip: *const u8,
-    rbp: *const u8,
-    emitter: *const Emitter,
-    index: GlobalVarIndex,
-) {
-    let emitter = unsafe { &*emitter };
-    let name = emitter.get_global_name(index);
-    eprintln!("Undefined variable '{}'.", name);
-    emitter.print_stacktrace(rip, rbp);
-}
-pub extern "win64" fn handle_unexpected_add_operands(
-    rip: *const u8,
-    rbp: *const u8,
-    emitter: *const Emitter,
-) {
-    eprintln!("Operands must be two numbers or two strings.");
-    unsafe { &*emitter }.print_stacktrace(rip, rbp);
-}
-
 pub extern "win64" fn concat_strings(
     stack_start: *const Value,
     stack_end: *const Value,
@@ -46,4 +26,36 @@ pub extern "win64" fn concat_strings(
         concatenated.push_str(right_str);
         intern_string(concatenated, stack_start..stack_end).into()
     }
+}
+
+// error handling
+
+pub extern "win64" fn handle_global_uninit(
+    rip: *const u8,
+    rbp: *const u8,
+    emitter: *const Emitter,
+    index: GlobalVarIndex,
+) {
+    let emitter = unsafe { &*emitter };
+    let name = emitter.get_global_name(index);
+    eprintln!("Undefined variable '{}'.", name);
+    emitter.print_stacktrace(rip, rbp);
+}
+
+pub extern "win64" fn handle_expected_add_operands(
+    rip: *const u8,
+    rbp: *const u8,
+    emitter: *const Emitter,
+) {
+    eprintln!("Operands must be two numbers or two strings.");
+    unsafe { &*emitter }.print_stacktrace(rip, rbp);
+}
+
+pub extern "win64" fn handle_expected_number(
+    rip: *const u8,
+    rbp: *const u8,
+    emitter: *const Emitter,
+) {
+    eprintln!("Operand must be a number.");
+    unsafe { &*emitter }.print_stacktrace(rip, rbp);
 }
