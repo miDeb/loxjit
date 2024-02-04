@@ -34,7 +34,7 @@ use crate::{
     gc::GcCell,
     object::ObjString,
     source_mapping::{FnSourceInfo, SourceMapping},
-    value::{Value, QNAN, UNINIT_VAL},
+    value::{Value, FALSE_VAL, NIL_VAL, QNAN, TRUE_VAL, UNINIT_VAL},
 };
 use memmap2::Mmap;
 
@@ -161,6 +161,12 @@ impl Emitter {
 
         self.assembler
             .mov(Operand::Register(Register::Rbx), Operand::Immediate(QNAN));
+        self.assembler
+            .mov(Operand::Register(Register::R13), Operand::Immediate(TRUE_VAL.to_bits()));
+        self.assembler
+            .mov(Operand::Register(Register::R14), Operand::Immediate(FALSE_VAL.to_bits()));
+        self.assembler
+            .mov(Operand::Register(Register::R15), Operand::Immediate(NIL_VAL.to_bits()));
 
         entry_point
     }
@@ -209,6 +215,18 @@ impl Emitter {
     pub fn set_line(&mut self, line: usize) {
         self.source_mapping
             .set_line(self.assembler.get_current_offset(), line);
+    }
+
+    pub fn nil(&mut self) {
+        self.assembler.push(Operand::Register(Register::R15));
+    }
+
+    pub fn true_(&mut self) {
+        self.assembler.push(Operand::Register(Register::R13));
+    }
+
+    pub fn false_(&mut self) {
+        self.assembler.push(Operand::Register(Register::R14));
     }
 
     pub fn add_global(&mut self, name: GcCell<ObjString>) -> GlobalVarIndex {

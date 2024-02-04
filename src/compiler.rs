@@ -652,9 +652,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn literal(&mut self, _can_assign: bool) {
         match self.previous.token_type {
-            TokenType::False => todo!(), //self.emitter.false_(),
-            TokenType::True => todo!(),  //self.emitter.true_(),
-            TokenType::Nil => todo!(),   //self.emitter.nil(),
+            TokenType::False => self.emitter.false_(),
+            TokenType::True => self.emitter.true_(),
+            TokenType::Nil => self.emitter.nil(),
             _ => unreachable!(),
         }
     }

@@ -1,5 +1,0 @@
-var s = "asdf";
-var s2 = "jkl";
-
-x;
-print s2 + s;
