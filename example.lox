@@ -1,3 +1,5 @@
-var v = 1;
+var s = "asdf";
+var s2 = "jkl";
 
-print 0.1 / 0.2;
+x;
+print s2 + s;

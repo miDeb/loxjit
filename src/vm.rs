@@ -22,7 +22,7 @@ pub fn interpret(
     match parser.compile() {
         Err(_) => InterpretResult::CompileError,
         Ok(function) => {
-            let result =  function(emitter.get_globals_ptr());
+            let result =  function(emitter.get_globals_ptr(), emitter);
             if result == 1 {
                 InterpretResult::Ok
             } else {

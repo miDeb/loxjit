@@ -477,7 +477,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn advance(&mut self) {
         self.previous = self.current;
-        //todo!();//self.emitter.set_line(self.previous.line);
+        self.emitter.set_line(self.previous.line);
         loop {
             self.current = self.scanner.scan_token();
             if !matches!(self.current.token_type, TokenType::Error) {
@@ -572,8 +572,8 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn number(&mut self, _can_assign: bool) {
-        let value = self.previous.source.parse().unwrap();
-        self.emitter.number(value);
+        let value: f64 = self.previous.source.parse().unwrap();
+        self.emitter.push(value.to_bits());
     }
 
     fn grouping(&mut self, _can_assign: bool) {
@@ -671,7 +671,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let obj = intern_const_string(
             self.previous.source[1..self.previous.source.len() - 1].to_string(),
         );
-        todo!() //self.emitter.value(Value::from_obj(unsafe { obj.cast() }));
+        self.emitter.push(Value::from_obj(unsafe { obj.cast() }).to_bits());
     }
 
     fn variable(&mut self, can_assign: bool) {
@@ -705,7 +705,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if let Some(value) = self.globals.get(&string) {
             *value
         } else {
-            let index = self.emitter.add_global();
+            let index = self.emitter.add_global(string);
             self.globals.insert(string, index);
             index
         }
@@ -1209,7 +1209,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    pub fn compile(mut self) -> Result<extern "win64" fn(*mut Value) -> u8, ()> {
+    pub fn compile(mut self) -> Result<extern "win64" fn(*mut Value, *const Emitter) -> u8, ()> {
         let entry_point = self.emitter.create_entrypoint();
         self.advance();
         while !self.match_token(TokenType::Eof) {

@@ -1,9 +1,23 @@
 use memmap2::{Mmap, MmapMut};
 
-use crate::value::Value;
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct AssemblyOffset(pub usize);
+
+pub struct LabelUse {
+    patch_offset: AssemblyOffset,
+    displacement_relative_to: AssemblyOffset,
+}
+
+pub enum Label {
+    WithTarget(AssemblyOffset),
+    WithUses(Vec<LabelUse>),
+}
+
+impl Label {
+    fn new() -> Self {
+        Self::WithUses(Vec::new())
+    }
+}
 
 #[derive(Clone, Copy)]
 pub enum Operand {
@@ -129,6 +143,39 @@ impl Assembler {
 
     pub fn get_current_offset(&self) -> AssemblyOffset {
         AssemblyOffset(self.ops.len())
+    }
+
+    pub fn create_label(&mut self) -> Label {
+        Label::new()
+    }
+
+    pub fn bind_label(&mut self, label: &mut Label) {
+        if let Label::WithUses(uses) = label {
+            for label_use in uses.iter() {
+                let displacement = self.get_current_offset().0 as i32
+                    - label_use.displacement_relative_to.0 as i32;
+                let patch_offset = label_use.patch_offset.0;
+                self.ops[patch_offset..patch_offset + 4]
+                    .copy_from_slice(&displacement.to_le_bytes());
+            }
+            *label = Label::WithTarget(self.get_current_offset());
+        } else {
+            panic!("Label already bound");
+        }
+    }
+
+    fn use_label(&mut self, label: &mut Label, label_use: LabelUse) {
+        match label {
+            Label::WithUses(uses) => {
+                uses.push(label_use);
+            }
+            Label::WithTarget(target) => {
+                let displacement = target.0 as i32 - label_use.displacement_relative_to.0 as i32;
+                let patch_offset = label_use.patch_offset.0;
+                self.ops[patch_offset..patch_offset + 4]
+                    .copy_from_slice(&displacement.to_le_bytes());
+            }
+        }
     }
 
     pub fn make_executable(&mut self) -> Mmap {
@@ -279,6 +326,20 @@ impl Assembler {
         }
     }
 
+    pub fn movq_float_dest(&mut self, dest: FloatOperand, src: Operand) {
+        match (dest, src) {
+            // movq reg, reg
+            (FloatOperand::Register(dest), Operand::Register(src)) => {
+                self.append(0x66);
+                self.append_rexw_for_modrm(dest, src);
+                self.append(0x0f);
+                self.append(0x6e);
+                self.append_modrm(Mod::Direct, dest, src);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn add(&mut self, dest: Operand, src: Operand) {
         match (dest, src) {
             // add reg, imm8
@@ -302,6 +363,14 @@ impl Assembler {
                 self.append(0x58);
                 self.append_modrm(Mod::IndirectDisplacement, dest, src);
                 self.append_i32(offset);
+            }
+            // addsd reg, reg
+            (FloatOperand::Register(dest), FloatOperand::Register(src,)) => {
+                self.append(0xf2);
+                self.maybe_append_rex_for_modrm(dest, src);
+                self.append(0x0f);
+                self.append(0x58);
+                self.append_modrm(Mod::Direct, dest, src);
             }
             _ => unimplemented!(),
         }
@@ -361,11 +430,91 @@ impl Assembler {
                 self.append_modrm(Mod::IndirectDisplacement, left, right);
                 self.append_i32(offset);
             }
+            // cmp reg, reg
+            (Operand::Register(left), Operand::Register(right)) => {
+                self.append_rexw_for_modrm(left, right);
+                self.append(0x3b);
+                self.append_modrm(Mod::Direct, left, right);
+            }
             _ => unimplemented!(),
         }
     }
 
-    pub fn call(&mut self, dest: Operand, tmp_register: Register) {
+    pub fn test(&mut self, left: Operand, right: Operand) {
+        match (left, right) {
+            // test reg, reg
+            (Operand::Register(left), Operand::Register(right)) => {
+                self.append_rexw_for_modrm(left, right);
+                self.append(0x85);
+                self.append_modrm(Mod::Direct, left, right);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn jmp(&mut self, label: &mut Label) {
+        // jmp rel32
+        self.append(0xe9);
+        let patch_offset = self.get_current_offset();
+        self.append_i32(0);
+        let displacement_relative_to = self.get_current_offset();
+        self.use_label(
+            label,
+            LabelUse {
+                patch_offset,
+                displacement_relative_to,
+            },
+        );
+    }
+
+    pub fn jne(&mut self, label: &mut Label) {
+        // jne rel32
+        self.append(0x0f);
+        self.append(0x85);
+        let patch_offset = self.get_current_offset();
+        self.append_i32(0);
+        let displacement_relative_to = self.get_current_offset();
+        self.use_label(
+            label,
+            LabelUse {
+                patch_offset,
+                displacement_relative_to,
+            },
+        );
+    }
+
+    pub fn je(&mut self, label: &mut Label) {
+        // je rel32
+        self.append(0x0f);
+        self.append(0x84);
+        let patch_offset = self.get_current_offset();
+        self.append_i32(0);
+        let displacement_relative_to = self.get_current_offset();
+        self.use_label(
+            label,
+            LabelUse {
+                patch_offset,
+                displacement_relative_to,
+            },
+        );
+    }
+
+    pub fn call_label(&mut self, label: &mut Label) {
+        // call rel32
+        self.append(0xe8);
+        let patch_offset = self.get_current_offset();
+        self.append_i32(0);
+        let displacement_relative_to = self.get_current_offset();
+        self.use_label(
+            label,
+            LabelUse {
+                patch_offset,
+                displacement_relative_to,
+            },
+        );
+    }
+
+    pub fn call_extern(&mut self, dest: Operand, tmp_register: Register) {
         // call reg
         self.align_stack_before_call(tmp_register);
         match dest {
@@ -379,15 +528,14 @@ impl Assembler {
         self.restore_stack_after_call();
     }
 
+
     fn align_stack_before_call(&mut self, tmp_register: Register) {
         self.mov(
             Operand::Register(tmp_register),
             Operand::Register(Register::Rsp),
         );
         self.or(Operand::Register(Register::Rsp), Operand::Immediate(0x08));
-        self.push(
-            Operand::Register(tmp_register),
-        );
+        self.push(Operand::Register(tmp_register));
     }
 
     fn restore_stack_after_call(&mut self) {
@@ -402,6 +550,18 @@ impl Assembler {
                 self.append(0x83);
                 self.append_modrm(Mod::Direct, 1, dest);
                 self.append(src as u8);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn and(&mut self, dest: Operand, src: Operand) {
+        match (dest, src) {
+            // and reg, reg
+            (Operand::Register(dest), Operand::Register(src)) => {
+                self.append_rexw_for_modrm(src, dest);
+                self.append(0x21);
+                self.append_modrm(Mod::Direct, src, dest);
             }
             _ => unimplemented!(),
         }

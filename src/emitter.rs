@@ -16,51 +16,123 @@
 //! rdi: call frame depth counter for stack overflow checks
 //! r12: ptr to globals table (=a heap allocated vector)
 //! r13-15: true, false, nil
+//! rbx: qnan
 //!
 //! General purpose registers available for use by the VM:
 //!
-//! rax, rbx, rcx, rdx, r8-11
+//! rax, rcx, rdx, r8-11
 //!
 //! Note that rcx, rdx, r8, r9 are used for argument passing when calling host functions.
+//!
+//! Predefined global variables (needed for unwinding/exiting):
+//! [0] = emitter
+//! [1] = RSP at the time of the call to the entry point
 
 use crate::{
-    assembler::{FloatOperand, FloatRegister, Operand, Register},
-    builtins::print,
-    value::{Value, UNINIT_VAL},
+    assembler::{FloatOperand, FloatRegister, Label, Operand, Register},
+    builtins::{concat_strings, handle_global_uninit, handle_unexpected_add_operands, print},
+    gc::GcCell,
+    object::ObjString,
+    source_mapping::{FnSourceInfo, SourceMapping},
+    value::{Value, QNAN, UNINIT_VAL},
 };
 use memmap2::Mmap;
 
-use crate::{
-    assembler::{Assembler, AssemblyOffset},
-    gc::GcCell,
-    object::ObjString,
-};
+use crate::assembler::{Assembler, AssemblyOffset};
 
 #[derive(Clone, Copy)]
+#[repr(transparent)]
 pub struct GlobalVarIndex(usize);
 
 pub struct FnInfo();
 
 pub struct EntryPoint(AssemblyOffset);
 
+fn exit_failure(assembler: &mut Assembler) {
+    assembler.mov(
+        Operand::Register(Register::Rsp),
+        Operand::Memory(Register::R12, 8),
+    );
+
+    // Restore nonvolatile registers
+    assembler.pop(Operand::Register(Register::R15));
+    assembler.pop(Operand::Register(Register::R14));
+    assembler.pop(Operand::Register(Register::R13));
+    assembler.pop(Operand::Register(Register::R12));
+    assembler.pop(Operand::Register(Register::Rsi));
+    assembler.pop(Operand::Register(Register::Rdi));
+    assembler.pop(Operand::Register(Register::Rbp));
+    assembler.pop(Operand::Register(Register::Rbx));
+
+    // return false
+    assembler.mov(Operand::Register(Register::Rax), Operand::Immediate(0));
+    assembler.ret();
+}
+
+fn create_error_handler(assembler: &mut Assembler, handler: u64) -> Label {
+    let mut label = assembler.create_label();
+    assembler.bind_label(&mut label);
+
+    assembler.mov(
+        Operand::Register(Register::Rcx),
+        Operand::Memory(Register::Rsp, 0),
+    );
+    assembler.mov(
+        Operand::Register(Register::Rdx),
+        Operand::Register(Register::Rbp),
+    );
+    assembler.mov(
+        Operand::Register(Register::R8),
+        Operand::Memory(Register::R12, 0),
+    );
+
+    assembler.mov(
+        Operand::Register(Register::Rax),
+        Operand::Immediate(handler),
+    );
+    assembler.call_extern(Operand::Register(Register::Rax), Register::R10);
+    exit_failure(assembler);
+    label
+}
+
 pub struct Emitter {
     assembler: Assembler,
     executable: Option<Mmap>,
     globals: Vec<Value>,
+    globals_names: Vec<GcCell<ObjString>>,
+    source_mapping: SourceMapping,
+
+    // Failure labels
+    global_uninit: Label,
+    expected_addition_operands: Label,
 }
+
 impl Emitter {
     pub fn new() -> Self {
-        let assembler = Assembler::new();
+        let mut assembler = Assembler::new();
+
+        let global_uninit = create_error_handler(&mut assembler, handle_global_uninit as u64);
+        let expected_addition_operands =
+            create_error_handler(&mut assembler, handle_unexpected_add_operands as u64);
+
+        let mut source_mapping = SourceMapping::new();
+        source_mapping.begin_function(assembler.get_current_offset(), FnSourceInfo::new(None, 0));
+
         Self {
             assembler,
             executable: None,
-            globals: Vec::new(),
+            // Allocate space for the predefined global variables
+            globals: vec![UNINIT_VAL; 2],
+            source_mapping,
+            globals_names: Vec::new(),
+            global_uninit,
+            expected_addition_operands,
         }
     }
 
     pub fn create_entrypoint(&mut self) -> EntryPoint {
         let entry_point = EntryPoint(self.assembler.get_current_offset());
-        // Preserve nonvolatile registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, R15
+        // Preserve nonvolatile registers RBX, RBP, RDI, RSI, R12, R13, R14, R15
         self.assembler.push(Operand::Register(Register::Rbx));
         self.assembler.push(Operand::Register(Register::Rbp));
         self.assembler.push(Operand::Register(Register::Rdi));
@@ -75,6 +147,21 @@ impl Emitter {
             Operand::Register(Register::R12),
             Operand::Register(Register::Rcx),
         );
+
+        // Store the pointer to the emitter as the first global variable
+        self.assembler.mov(
+            Operand::Memory(Register::R12, 0),
+            Operand::Register(Register::Rdx),
+        );
+        // Store the RSP at the time of the call to the entry point as the second global variable
+        self.assembler.mov(
+            Operand::Memory(Register::R12, 8),
+            Operand::Register(Register::Rsp),
+        );
+
+        self.assembler
+            .mov(Operand::Register(Register::Rbx), Operand::Immediate(QNAN));
+
         entry_point
     }
 
@@ -82,7 +169,10 @@ impl Emitter {
         self.globals.as_mut_ptr()
     }
 
-    pub fn finish(&mut self, entry_point: EntryPoint) -> extern "win64" fn(*mut Value) -> u8 {
+    pub fn finish(
+        &mut self,
+        entry_point: EntryPoint,
+    ) -> extern "win64" fn(*mut Value, *const Emitter) -> u8 {
         // Restore nonvolatile registers
         self.assembler.pop(Operand::Register(Register::R15));
         self.assembler.pop(Operand::Register(Register::R14));
@@ -93,9 +183,11 @@ impl Emitter {
         self.assembler.pop(Operand::Register(Register::Rbp));
         self.assembler.pop(Operand::Register(Register::Rbx));
 
+        // return true
         self.assembler
             .mov(Operand::Register(Register::Rax), Operand::Immediate(1));
         self.assembler.ret();
+
         let mmap = self.assembler.make_executable();
         self.executable = Some(mmap);
         unsafe {
@@ -109,15 +201,31 @@ impl Emitter {
         }
     }
 
-    pub fn add_global(&mut self) -> GlobalVarIndex {
+    pub fn print_stacktrace(&self, rip: *const u8, rbp: *const u8) {
+        self.source_mapping
+            .print_stacktrace(self.executable.as_ref().unwrap().as_ptr(), rip, rbp);
+    }
+
+    pub fn set_line(&mut self, line: usize) {
+        self.source_mapping
+            .set_line(self.assembler.get_current_offset(), line);
+    }
+
+    pub fn add_global(&mut self, name: GcCell<ObjString>) -> GlobalVarIndex {
         let index = GlobalVarIndex(self.globals.len());
         self.globals.push(UNINIT_VAL);
+        self.globals_names.push(name);
         index
+    }
+
+    pub fn get_global_name(&self, index: GlobalVarIndex) -> GcCell<ObjString> {
+        // Subtract 2 to account for the predefined global variables.
+        self.globals_names[index.0 - 2]
     }
 
     pub fn define_global(&mut self, index: GlobalVarIndex) {
         self.assembler
-            .pop(Operand::Memory(Register::R12, index.0 as i32));
+            .pop(Operand::Memory(Register::R12, index.0 as i32 * 8));
     }
 
     fn check_global_initialized(&mut self, index: GlobalVarIndex) {
@@ -127,9 +235,16 @@ impl Emitter {
         );
         self.assembler.cmp(
             Operand::Register(Register::Rax),
-            Operand::Memory(Register::R12, index.0 as i32),
+            Operand::Memory(Register::R12, index.0 as i32 * 8),
         );
-        // TODO: error handling (je)
+        let mut label_end = self.assembler.create_label();
+        self.assembler.jne(&mut label_end);
+        self.assembler.mov(
+            Operand::Register(Register::R9),
+            Operand::Immediate(index.0 as u64),
+        );
+        self.assembler.call_label(&mut self.global_uninit);
+        self.assembler.bind_label(&mut label_end);
     }
 
     pub fn set_global(&mut self, index: GlobalVarIndex) {
@@ -139,14 +254,15 @@ impl Emitter {
             Operand::Memory(Register::Rsp, 0),
         );
         self.assembler.mov(
-            Operand::Memory(Register::R12, index.0 as i32),
+            Operand::Memory(Register::R12, index.0 as i32 * 8),
             Operand::Register(Register::Rax),
         );
     }
 
     pub fn get_global(&mut self, index: GlobalVarIndex) {
+        self.check_global_initialized(index);
         self.assembler
-            .push(Operand::Memory(Register::R12, index.0 as i32));
+            .push(Operand::Memory(Register::R12, index.0 as i32 * 8));
     }
 
     pub fn print(&mut self) {
@@ -156,14 +272,12 @@ impl Emitter {
             Operand::Immediate(print as u64),
         );
         self.assembler
-            .call(Operand::Register(Register::Rax), Register::R10);
+            .call_extern(Operand::Register(Register::Rax), Register::R10);
     }
 
-    pub fn number(&mut self, value: f64) {
-        self.assembler.mov(
-            Operand::Register(Register::Rax),
-            Operand::Immediate(value.to_bits()),
-        );
+    pub fn push(&mut self, value: u64) {
+        self.assembler
+            .mov(Operand::Register(Register::Rax), Operand::Immediate(value));
         self.assembler.push(Operand::Register(Register::Rax));
     }
 
@@ -173,20 +287,89 @@ impl Emitter {
     }
 
     pub fn add(&mut self) {
-        self.assembler.movsd(
-            FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 0),
+        let mut add_strings = self.assembler.create_label();
+        let mut end = self.assembler.create_label();
+
+        // Load the operands into registers.
+        self.assembler.mov(
+            Operand::Register(Register::R9),
+            Operand::Memory(Register::Rsp, 0),
         );
+        self.assembler.mov(
+            Operand::Register(Register::R8),
+            Operand::Memory(Register::Rsp, 8),
+        );
+
+        // Is the second operand an object?
+        self.assembler.movq_float_dest(
+            FloatOperand::Register(FloatRegister::Xmm1),
+            Operand::Register(Register::R9),
+        );
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Register(Register::R9),
+        );
+        self.assembler.and(
+            Operand::Register(Register::Rax),
+            Operand::Register(Register::Rbx),
+        );
+        self.assembler.cmp(
+            Operand::Register(Register::Rax),
+            Operand::Register(Register::Rbx),
+        );
+        self.assembler.je(&mut add_strings);
+
+        // is the first operand an object?
+        self.assembler.movq_float_dest(
+            FloatOperand::Register(FloatRegister::Xmm0),
+            Operand::Register(Register::R8),
+        );
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Register(Register::R8),
+        );
+        self.assembler.and(
+            Operand::Register(Register::Rax),
+            Operand::Register(Register::Rbx),
+        );
+        self.assembler.cmp(
+            Operand::Register(Register::Rax),
+            Operand::Register(Register::Rbx),
+        );
+        self.assembler.je(&mut add_strings);
+
+        // Numeric addition.
         self.assembler
             .add(Operand::Register(Register::Rsp), Operand::Immediate(8));
         self.assembler.addsd(
             FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 0),
+            FloatOperand::Register(FloatRegister::Xmm1),
         );
         self.assembler.movsd(
             FloatOperand::Memory(Register::Rsp, 0),
             FloatOperand::Register(FloatRegister::Xmm0),
         );
+        self.assembler.jmp(&mut end);
+
+        // Attempt string concatenation.
+        self.assembler.bind_label(&mut add_strings);
+        self.call_gc(concat_strings as u64);
+        self.assembler
+            .add(Operand::Register(Register::Rsp), Operand::Immediate(16));
+        self.assembler.push(Operand::Register(Register::Rax));
+
+        // Check the result for errors.
+        self.assembler.test(
+            Operand::Register(Register::Rax),
+            Operand::Register(Register::Rax),
+        );
+        self.assembler.jne(&mut end);
+
+        // At least one argument was not a string.
+        self.assembler
+            .call_label(&mut self.expected_addition_operands);
+
+        self.assembler.bind_label(&mut end);
     }
 
     pub fn sub(&mut self) {
@@ -238,5 +421,24 @@ impl Emitter {
             FloatOperand::Memory(Register::Rsp, 0),
             FloatOperand::Register(FloatRegister::Xmm0),
         );
+    }
+
+    /// Calls an external function with the beginning and end of the stack as first and second arguments.
+    /// Therefore, additional arguments need to be passed in r8/r8 or on the stack.    
+    fn call_gc(&mut self, address: u64) {
+        self.assembler.mov(
+            Operand::Register(Register::Rcx),
+            Operand::Register(Register::Rsp),
+        );
+        self.assembler.mov(
+            Operand::Register(Register::Rdx),
+            Operand::Memory(Register::R12, 8),
+        );
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Immediate(address),
+        );
+        self.assembler
+            .call_extern(Operand::Register(Register::Rax), Register::R10);
     }
 }
