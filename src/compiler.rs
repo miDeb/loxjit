@@ -540,7 +540,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             if local.is_captured {
                 todo!(); //self.emitter.close_upvalue();
             } else {
-                todo!(); //self.emitter.pop();
+                self.emitter.pop();
             }
             self.compiler.locals.pop();
         }
@@ -721,9 +721,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         {
             if can_assign && self.match_token(TokenType::Equal) {
                 self.expression();
-                todo!(); //self.emitter.set_local(index);
+                self.emitter.set_local(index);
             } else {
-                todo!(); //self.emitter.get_local(index);
+                self.emitter.get_local(index);
             }
         } else if let Some(index) = self
             .compiler
@@ -819,7 +819,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if self.match_token(TokenType::Equal) {
             self.expression();
         } else {
-            todo!(); //self.emitter.nil();
+            self.emitter.nil();
         }
 
         self.consume(

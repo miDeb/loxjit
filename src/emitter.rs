@@ -65,7 +65,7 @@ fn exit_failure(assembler: &mut Assembler) {
     assembler.pop(Operand::Register(Register::Rbx));
 
     // return false
-    assembler.mov(Operand::Register(Register::Rax), Operand::Immediate(0));
+    assembler.mov(Operand::Register(Register::Rax), Operand::Imm64(0));
     assembler.ret();
 }
 
@@ -86,10 +86,7 @@ fn create_error_handler(assembler: &mut Assembler, handler: u64) -> Label {
         Operand::Memory(Register::R12, 0),
     );
 
-    assembler.mov(
-        Operand::Register(Register::Rax),
-        Operand::Immediate(handler),
-    );
+    assembler.mov(Operand::Register(Register::Rax), Operand::Imm64(handler));
     assembler.call_extern(Operand::Register(Register::Rax), Register::R10);
     exit_failure(assembler);
     label
@@ -160,13 +157,24 @@ impl Emitter {
         );
 
         self.assembler
-            .mov(Operand::Register(Register::Rbx), Operand::Immediate(QNAN));
-        self.assembler
-            .mov(Operand::Register(Register::R13), Operand::Immediate(TRUE_VAL.to_bits()));
-        self.assembler
-            .mov(Operand::Register(Register::R14), Operand::Immediate(FALSE_VAL.to_bits()));
-        self.assembler
-            .mov(Operand::Register(Register::R15), Operand::Immediate(NIL_VAL.to_bits()));
+            .mov(Operand::Register(Register::Rbx), Operand::Imm64(QNAN));
+        self.assembler.mov(
+            Operand::Register(Register::R13),
+            Operand::Imm64(TRUE_VAL.to_bits()),
+        );
+        self.assembler.mov(
+            Operand::Register(Register::R14),
+            Operand::Imm64(FALSE_VAL.to_bits()),
+        );
+        self.assembler.mov(
+            Operand::Register(Register::R15),
+            Operand::Imm64(NIL_VAL.to_bits()),
+        );
+
+        self.assembler.mov(
+            Operand::Register(Register::Rbp),
+            Operand::Register(Register::Rsp),
+        );
 
         entry_point
     }
@@ -191,7 +199,7 @@ impl Emitter {
 
         // return true
         self.assembler
-            .mov(Operand::Register(Register::Rax), Operand::Immediate(1));
+            .mov(Operand::Register(Register::Rax), Operand::Imm64(1));
         self.assembler.ret();
 
         let mmap = self.assembler.make_executable();
@@ -249,7 +257,7 @@ impl Emitter {
     fn check_global_initialized(&mut self, index: GlobalVarIndex) {
         self.assembler.mov(
             Operand::Register(Register::Rax),
-            Operand::Immediate(UNINIT_VAL.to_bits()),
+            Operand::Imm64(UNINIT_VAL.to_bits()),
         );
         self.assembler.cmp(
             Operand::Register(Register::Rax),
@@ -259,7 +267,7 @@ impl Emitter {
         self.assembler.jne(&mut label_end);
         self.assembler.mov(
             Operand::Register(Register::R9),
-            Operand::Immediate(index.0 as u64),
+            Operand::Imm64(index.0 as u64),
         );
         self.assembler.call_label(&mut self.global_uninit);
         self.assembler.bind_label(&mut label_end);
@@ -283,11 +291,27 @@ impl Emitter {
             .push(Operand::Memory(Register::R12, index.0 as i32 * 8));
     }
 
+    pub fn set_local(&mut self, index: usize) {
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+        self.assembler.mov(
+            Operand::Memory(Register::Rbp, -(index as i32 * 8)),
+            Operand::Register(Register::Rax),
+        );
+    }
+
+    pub fn get_local(&mut self, index: usize) {
+        self.assembler
+            .push(Operand::Memory(Register::Rbp, -(index as i32 * 8)));
+    }
+
     pub fn print(&mut self) {
         self.assembler.pop(Operand::Register(Register::Rcx));
         self.assembler.mov(
             Operand::Register(Register::Rax),
-            Operand::Immediate(print as u64),
+            Operand::Imm64(print as u64),
         );
         self.assembler
             .call_extern(Operand::Register(Register::Rax), Register::R10);
@@ -295,13 +319,13 @@ impl Emitter {
 
     pub fn push(&mut self, value: u64) {
         self.assembler
-            .mov(Operand::Register(Register::Rax), Operand::Immediate(value));
+            .mov(Operand::Register(Register::Rax), Operand::Imm64(value));
         self.assembler.push(Operand::Register(Register::Rax));
     }
 
     pub fn pop(&mut self) {
         self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Immediate(8));
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
     }
 
     pub fn add(&mut self) {
@@ -358,7 +382,7 @@ impl Emitter {
 
         // Numeric addition.
         self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Immediate(8));
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
         self.assembler.addsd(
             FloatOperand::Register(FloatRegister::Xmm0),
             FloatOperand::Register(FloatRegister::Xmm1),
@@ -373,7 +397,7 @@ impl Emitter {
         self.assembler.bind_label(&mut add_strings);
         self.call_gc(concat_strings as u64);
         self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Immediate(16));
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(16));
         self.assembler.push(Operand::Register(Register::Rax));
 
         // Check the result for errors.
@@ -400,7 +424,7 @@ impl Emitter {
             FloatOperand::Memory(Register::Rsp, 0),
         );
         self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Immediate(8));
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
         self.assembler.movsd(
             FloatOperand::Memory(Register::Rsp, 0),
             FloatOperand::Register(FloatRegister::Xmm0),
@@ -417,7 +441,7 @@ impl Emitter {
             FloatOperand::Memory(Register::Rsp, 0),
         );
         self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Immediate(8));
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
         self.assembler.movsd(
             FloatOperand::Memory(Register::Rsp, 0),
             FloatOperand::Register(FloatRegister::Xmm0),
@@ -434,7 +458,7 @@ impl Emitter {
             FloatOperand::Memory(Register::Rsp, 0),
         );
         self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Immediate(8));
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
         self.assembler.movsd(
             FloatOperand::Memory(Register::Rsp, 0),
             FloatOperand::Register(FloatRegister::Xmm0),
@@ -452,10 +476,8 @@ impl Emitter {
             Operand::Register(Register::Rdx),
             Operand::Memory(Register::R12, 8),
         );
-        self.assembler.mov(
-            Operand::Register(Register::Rax),
-            Operand::Immediate(address),
-        );
+        self.assembler
+            .mov(Operand::Register(Register::Rax), Operand::Imm64(address));
         self.assembler
             .call_extern(Operand::Register(Register::Rax), Register::R10);
     }

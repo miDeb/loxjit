@@ -22,7 +22,9 @@ impl Label {
 #[derive(Clone, Copy)]
 pub enum Operand {
     Register(Register),
-    Immediate(u64),
+    Imm64(u64),
+    Imm32(u32),
+    Imm8(u8),
     Memory(Register, i32),
 }
 
@@ -272,7 +274,7 @@ impl Assembler {
     pub fn mov(&mut self, dest: Operand, src: Operand) {
         match (dest, src) {
             // mov reg, imm64
-            (Operand::Register(dest), Operand::Immediate(src)) => {
+            (Operand::Register(dest), Operand::Imm64(src)) => {
                 self.append_rexw_for_reg(dest);
                 self.append(0xb8 + dest.base_reg());
                 self.append_u64(src);
@@ -343,11 +345,24 @@ impl Assembler {
     pub fn add(&mut self, dest: Operand, src: Operand) {
         match (dest, src) {
             // add reg, imm8
-            (Operand::Register(dest), Operand::Immediate(src)) if src <= u8::MAX as u64 => {
+            (Operand::Register(dest), Operand::Imm8(src))  => {
                 self.append_rexw_for_reg(dest);
                 self.append(0x83);
                 self.append_modrm(Mod::Direct, 0, dest);
-                self.append(src as u8);
+                self.append(src );
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn sub(&mut self, dest: Operand, src: Operand) {
+        match (dest, src) {
+            // sub reg, imm8
+            (Operand::Register(dest), Operand::Imm8(src))  => {
+                self.append_rexw_for_reg(dest);
+                self.append(0x83);
+                self.append_modrm(Mod::Direct, 5, dest);
+                self.append(src );
             }
             _ => unimplemented!(),
         }
@@ -365,7 +380,7 @@ impl Assembler {
                 self.append_i32(offset);
             }
             // addsd reg, reg
-            (FloatOperand::Register(dest), FloatOperand::Register(src,)) => {
+            (FloatOperand::Register(dest), FloatOperand::Register(src)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
@@ -528,14 +543,14 @@ impl Assembler {
         self.restore_stack_after_call();
     }
 
-
     fn align_stack_before_call(&mut self, tmp_register: Register) {
         self.mov(
             Operand::Register(tmp_register),
             Operand::Register(Register::Rsp),
         );
-        self.or(Operand::Register(Register::Rsp), Operand::Immediate(0x08));
-        self.push(Operand::Register(tmp_register));
+        self.sub(Operand::Register(Register::Rsp), Operand::Imm8(8));
+        self.and(Operand::Register(Register::Rsp), Operand::Imm8(0xf0));
+        self.mov(Operand::Memory(Register::Rsp, 0), Operand::Register(tmp_register));
     }
 
     fn restore_stack_after_call(&mut self) {
@@ -545,11 +560,11 @@ impl Assembler {
     pub fn or(&mut self, dest: Operand, src: Operand) {
         match (dest, src) {
             // or register, imm8
-            (Operand::Register(dest), Operand::Immediate(src)) if src <= u8::MAX as u64 => {
+            (Operand::Register(dest), Operand::Imm8(src)) => {
                 self.append_rexw_for_modrm(1, dest);
                 self.append(0x83);
                 self.append_modrm(Mod::Direct, 1, dest);
-                self.append(src as u8);
+                self.append(src);
             }
             _ => unimplemented!(),
         }
@@ -562,6 +577,13 @@ impl Assembler {
                 self.append_rexw_for_modrm(src, dest);
                 self.append(0x21);
                 self.append_modrm(Mod::Direct, src, dest);
+            }
+            // and reg, imm8
+            (Operand::Register(dest), Operand::Imm8(src)) => {
+                self.append_rexw_for_modrm(4, dest);
+                self.append(0x83);
+                self.append_modrm(Mod::Direct, 4, dest);
+                self.append(src);
             }
             _ => unimplemented!(),
         }
