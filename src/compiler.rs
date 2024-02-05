@@ -600,10 +600,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         match operator_type {
             TokenType::BangEqual => self.emitter.ne(),
             TokenType::EqualEqual => self.emitter.eq(),
-            TokenType::Greater => todo!(),      //self.emitter.gt(),
-            TokenType::GreaterEqual => todo!(), //self.emitter.ge(),
-            TokenType::Less => todo!(),         //self.emitter.lt(),
-            TokenType::LessEqual => todo!(),    //self.emitter.le(),
+            TokenType::Greater => self.emitter.gt(),
+            TokenType::GreaterEqual => self.emitter.ge(),
+            TokenType::Less => self.emitter.lt(),
+            TokenType::LessEqual => self.emitter.le(),
             TokenType::Plus => self.emitter.add(),
             TokenType::Minus => self.emitter.sub(),
             TokenType::Star => self.emitter.mul(),
@@ -671,7 +671,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         let obj = intern_const_string(
             self.previous.source[1..self.previous.source.len() - 1].to_string(),
         );
-        self.emitter.push(Value::from_obj(unsafe { obj.cast() }).to_bits());
+        self.emitter
+            .push(Value::from_obj(unsafe { obj.cast() }).to_bits());
     }
 
     fn variable(&mut self, can_assign: bool) {

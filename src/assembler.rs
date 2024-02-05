@@ -150,6 +150,26 @@ impl Mod {
     }
 }
 
+#[repr(u8)]
+pub enum Condition {
+    OF,
+    NO,
+    B,
+    AE,
+    E,
+    NE,
+    BE,
+    A,
+    S,
+    NS,
+    P,
+    NP,
+    L,
+    GE,
+    LE,
+    G,
+}
+
 pub struct Assembler {
     ops: Vec<u8>,
 }
@@ -327,27 +347,30 @@ impl Assembler {
         }
     }
 
-    pub fn cmove(&mut self, dest: Operand, src: Operand) {
+    pub fn movd(&mut self, dest: FloatOperand, src: Operand) {
         match (dest, src) {
-            // cmove reg, reg
-            (Operand::Register(dest), Operand::Register(src)) => {
+            // movd reg, r/m
+            (FloatOperand::Register(dest), rm @ Operand::Register(src))
+            | (FloatOperand::Register(dest), rm @ Operand::Memory(src, _)) => {
+                self.append(0x66);
                 self.append_rexw_for_modrm(dest, src);
                 self.append(0x0f);
-                self.append(0x44);
-                self.append_modrm(Mod::Direct, dest, src);
+                self.append(0x6e);
+                self.append_modrm_with_offset(dest, rm)
             }
             _ => unimplemented!(),
         }
     }
 
-    pub fn cmovp(&mut self, dest: Operand, src: Operand) {
+    pub fn cmovcc(&mut self, condition: Condition, dest: Operand, src: Operand) {
         match (dest, src) {
-            // cmovp reg, reg
-            (Operand::Register(dest), Operand::Register(src)) => {
+            // cmovcc reg, r/m
+            (Operand::Register(dest), rm @ Operand::Register(src))
+            | (Operand::Register(dest), rm @ Operand::Memory(src, _)) => {
                 self.append_rexw_for_modrm(dest, src);
                 self.append(0x0f);
-                self.append(0x4a);
-                self.append_modrm(Mod::Direct, dest, src);
+                self.append(0x40 + condition as u8);
+                self.append_modrm_with_offset(dest, rm)
             }
             _ => unimplemented!(),
         }
@@ -432,9 +455,10 @@ impl Assembler {
     }
 
     pub fn subsd(&mut self, dest: FloatOperand, src: FloatOperand) {
-        match (dest, src) {
-            // subsd reg, memory
-            (FloatOperand::Register(dest), rm @ FloatOperand::Memory(src, offset)) => {
+        match (dest.into(), src.into()) {
+            // subsd reg, r/m
+            (Operand::Register(dest), rm @ Operand::Register(src))
+            | (Operand::Register(dest), rm @ Operand::Memory(src, _)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
@@ -446,9 +470,10 @@ impl Assembler {
     }
 
     pub fn mulsd(&mut self, dest: FloatOperand, src: FloatOperand) {
-        match (dest, src) {
-            // mulsd reg, memory
-            (FloatOperand::Register(dest), rm @ FloatOperand::Memory(src, _)) => {
+        match (dest.into(), src.into()) {
+            // mulsd reg, r/m
+            (Operand::Register(dest), rm @ Operand::Register(src))
+            | (Operand::Register(dest), rm @ Operand::Memory(src, _)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
@@ -460,9 +485,10 @@ impl Assembler {
     }
 
     pub fn divsd(&mut self, dest: FloatOperand, src: FloatOperand) {
-        match (dest, src) {
-            // divsd reg, memory
-            (FloatOperand::Register(dest), rm @ FloatOperand::Memory(src, _)) => {
+        match (dest.into(), src.into()) {
+            // divsd reg, r/m
+            (Operand::Register(dest), rm @ Operand::Register(src))
+            | (Operand::Register(dest), rm @ Operand::Memory(src, _)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
@@ -476,9 +502,8 @@ impl Assembler {
     pub fn ucomisd(&mut self, left: FloatOperand, right: FloatOperand) {
         match (left.into(), right.into()) {
             // ucomisd reg, r/m
-            (Operand::Register(left), rm@Operand::Register(right)) | 
-             (Operand::Register(left), rm@Operand::Memory(right, _))
-             => {
+            (Operand::Register(left), rm @ Operand::Register(right))
+            | (Operand::Register(left), rm @ Operand::Memory(right, _)) => {
                 self.append(0x66);
                 self.append_rexw_for_modrm(left, right);
                 self.append(0x0f);

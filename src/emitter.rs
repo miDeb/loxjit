@@ -29,10 +29,9 @@
 //! [1] = RSP at the time of the call to the entry point
 
 use crate::{
-    assembler::{FloatOperand, FloatRegister, Label, Operand, Register},
+    assembler::{Condition, FloatOperand, FloatRegister, Label, Operand, Register},
     builtins::{
-        concat_strings, handle_expected_add_operands, handle_expected_number, handle_global_uninit,
-        print,
+        concat_strings, handle_expected_add_operands, handle_expected_number, handle_expected_numbers, handle_global_uninit, print
     },
     gc::GcCell,
     object::ObjString,
@@ -100,6 +99,17 @@ const REG_FALSE: Register = Register::R14;
 const REG_NIL: Register = Register::R15;
 const REG_QNAN: Register = Register::Rbx;
 
+enum NumericBinaryOp {
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    // Equal,Not Equal and Add are handled specially because they can handle non-numeric operands.
+    Sub,
+    Mul,
+    Div,
+}
+
 pub struct Emitter {
     assembler: Assembler,
     executable: Option<Mmap>,
@@ -111,6 +121,7 @@ pub struct Emitter {
     global_uninit: Label,
     expected_addition_operands: Label,
     expected_number: Label,
+    expected_numbers: Label,
 }
 
 impl Emitter {
@@ -122,6 +133,7 @@ impl Emitter {
         let expected_addition_operands =
             create_error_handler(&mut assembler, handle_expected_add_operands as u64);
         let expected_number = create_error_handler(&mut assembler, handle_expected_number as u64);
+        let expected_numbers = create_error_handler(&mut assembler, handle_expected_numbers as u64);
 
         let mut source_mapping = SourceMapping::new();
         source_mapping.begin_function(assembler.get_current_offset(), FnSourceInfo::new(None, 0));
@@ -136,6 +148,7 @@ impl Emitter {
             global_uninit,
             expected_addition_operands,
             expected_number,
+            expected_numbers,
         }
     }
 
@@ -353,7 +366,8 @@ impl Emitter {
             Operand::Register(Register::Rax),
             Operand::Register(REG_FALSE),
         );
-        self.assembler.cmove(
+        self.assembler.cmovcc(
+            Condition::E,
             Operand::Register(Register::Rax),
             Operand::Register(REG_TRUE),
         );
@@ -362,7 +376,8 @@ impl Emitter {
         // Check for nil
         self.assembler
             .cmp(Operand::Register(Register::Rax), Operand::Register(REG_NIL));
-        self.assembler.cmove(
+        self.assembler.cmovcc(
+            Condition::E,
             Operand::Register(Register::Rax),
             Operand::Register(REG_TRUE),
         );
@@ -486,54 +501,35 @@ impl Emitter {
     }
 
     pub fn sub(&mut self) {
-        self.assembler.movsd(
-            FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 8),
-        );
-        self.assembler.subsd(
-            FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 0),
-        );
-        self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
-        self.assembler.movsd(
-            FloatOperand::Memory(Register::Rsp, 0),
-            FloatOperand::Register(FloatRegister::Xmm0),
-        );
+        self.numeric_binary(NumericBinaryOp::Sub);
     }
 
     pub fn mul(&mut self) {
-        self.assembler.movsd(
-            FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 8),
-        );
-        self.assembler.mulsd(
-            FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 0),
-        );
-        self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
-        self.assembler.movsd(
-            FloatOperand::Memory(Register::Rsp, 0),
-            FloatOperand::Register(FloatRegister::Xmm0),
-        );
+        self.numeric_binary(NumericBinaryOp::Mul);
     }
 
     pub fn div(&mut self) {
-        self.assembler.movsd(
-            FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 8),
-        );
-        self.assembler.divsd(
-            FloatOperand::Register(FloatRegister::Xmm0),
-            FloatOperand::Memory(Register::Rsp, 0),
-        );
-        self.assembler
-            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
-        self.assembler.movsd(
-            FloatOperand::Memory(Register::Rsp, 0),
-            FloatOperand::Register(FloatRegister::Xmm0),
-        );
+        self.numeric_binary(NumericBinaryOp::Div);
+    }
+
+    pub fn lt(&mut self) {
+        self.numeric_binary(NumericBinaryOp::Less);
+    }
+
+    pub fn le(&mut self) {
+        self.numeric_binary(NumericBinaryOp::LessEqual);
+    }
+
+    pub fn gt(&mut self) {
+        self.numeric_binary(NumericBinaryOp::Greater);
+    }
+
+    pub fn ge(&mut self) {
+        self.numeric_binary(NumericBinaryOp::GreaterEqual);
+    }
+
+    pub fn less_equal(&mut self) {
+        self.numeric_binary(NumericBinaryOp::LessEqual);
     }
 
     pub fn equality(&mut self, eq_val: Register, ne_val: Register) {
@@ -565,10 +561,16 @@ impl Emitter {
         );
         self.assembler
             .mov(Operand::Register(Register::Rax), Operand::Register(ne_val));
-        self.assembler
-            .cmove(Operand::Register(Register::Rax), Operand::Register(eq_val));
-        self.assembler
-            .cmovp(Operand::Register(Register::Rax), Operand::Register(ne_val));
+        self.assembler.cmovcc(
+            Condition::E,
+            Operand::Register(Register::Rax),
+            Operand::Register(eq_val),
+        );
+        self.assembler.cmovcc(
+            Condition::P,
+            Operand::Register(Register::Rax),
+            Operand::Register(ne_val),
+        );
         self.assembler.jmp(&mut end);
 
         // Non-numeric comparison
@@ -583,8 +585,11 @@ impl Emitter {
         );
         self.assembler
             .mov(Operand::Register(Register::Rax), Operand::Register(ne_val));
-        self.assembler
-            .cmove(Operand::Register(Register::Rax), Operand::Register(eq_val));
+        self.assembler.cmovcc(
+            Condition::E,
+            Operand::Register(Register::Rax),
+            Operand::Register(eq_val),
+        );
 
         // Move the result to the stack
         self.assembler.bind_label(&mut end);
@@ -603,6 +608,125 @@ impl Emitter {
 
     pub fn ne(&mut self) {
         self.equality(REG_FALSE, REG_TRUE);
+    }
+
+    pub fn numeric_binary(&mut self, op: NumericBinaryOp) {
+        let mut fail_not_numbers = self.assembler.create_label();
+        let mut end = self.assembler.create_label();
+
+        // The left operand.
+        let left_reg = FloatOperand::Register(FloatRegister::Xmm0);
+        // The right operand.
+        let right_reg = FloatOperand::Register(FloatRegister::Xmm1);
+
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+        self.assembler
+            .movd(right_reg, Operand::Register(Register::Rax));
+        self.is_non_numeric(Operand::Register(Register::Rax));
+        self.assembler.je(&mut fail_not_numbers);
+
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 8),
+        );
+        self.assembler
+            .movd(left_reg, Operand::Register(Register::Rax));
+        self.is_non_numeric(Operand::Register(Register::Rax));
+        self.assembler.je(&mut fail_not_numbers);
+
+        self.assembler
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
+        match op {
+            NumericBinaryOp::Less => {
+                self.assembler.ucomisd(right_reg, left_reg);
+                self.assembler.mov(
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_FALSE),
+                );
+                self.assembler.cmovcc(
+                    Condition::A,
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_TRUE),
+                );
+                self.assembler.mov(
+                    Operand::Memory(Register::Rsp, 0),
+                    Operand::Register(Register::Rax),
+                );
+            }
+            NumericBinaryOp::LessEqual => {
+                self.assembler.ucomisd(right_reg, left_reg);
+                self.assembler.mov(
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_FALSE),
+                );
+                self.assembler.cmovcc(
+                    Condition::AE,
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_TRUE),
+                );
+                self.assembler.mov(
+                    Operand::Memory(Register::Rsp, 0),
+                    Operand::Register(Register::Rax),
+                );
+            }
+            NumericBinaryOp::Greater => {
+                self.assembler.ucomisd(left_reg, right_reg);
+                self.assembler.mov(
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_FALSE),
+                );
+                self.assembler.cmovcc(
+                    Condition::A,
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_TRUE),
+                );
+                self.assembler.mov(
+                    Operand::Memory(Register::Rsp, 0),
+                    Operand::Register(Register::Rax),
+                );
+            }
+            NumericBinaryOp::GreaterEqual => {
+                self.assembler.ucomisd(left_reg, right_reg);
+                self.assembler.mov(
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_FALSE),
+                );
+                self.assembler.cmovcc(
+                    Condition::AE,
+                    Operand::Register(Register::Rax),
+                    Operand::Register(REG_TRUE),
+                );
+                self.assembler.mov(
+                    Operand::Memory(Register::Rsp, 0),
+                    Operand::Register(Register::Rax),
+                );
+            }
+            NumericBinaryOp::Sub => {
+                self.assembler.subsd(left_reg, right_reg);
+                self.assembler
+                    .movsd(FloatOperand::Memory(Register::Rsp, 0), left_reg);
+            }
+            NumericBinaryOp::Mul => {
+                self.assembler.mulsd(left_reg, right_reg);
+                self.assembler
+                    .movsd(FloatOperand::Memory(Register::Rsp, 0), left_reg);
+            }
+            NumericBinaryOp::Div => {
+                self.assembler.divsd(left_reg, right_reg);
+                self.assembler
+                    .movsd(FloatOperand::Memory(Register::Rsp, 0), left_reg);
+            }
+        }
+        self.assembler.jmp(&mut end);
+
+        // Operands were not numbers
+        self.assembler.bind_label(&mut fail_not_numbers);
+        self.assembler.call_label(&mut self.expected_numbers);
+
+        self.assembler.bind_label(&mut end);
     }
 
     /// Calls an external function with the beginning and end of the stack as first and second arguments.

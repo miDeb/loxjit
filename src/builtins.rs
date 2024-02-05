@@ -59,3 +59,12 @@ pub extern "win64" fn handle_expected_number(
     eprintln!("Operand must be a number.");
     unsafe { &*emitter }.print_stacktrace(rip, rbp);
 }
+
+pub extern "win64" fn handle_expected_numbers(
+    rip: *const u8,
+    rbp: *const u8,
+    emitter: *const Emitter,
+) {
+    eprintln!("Operands must be numbers.");
+    unsafe { &*emitter }.print_stacktrace(rip, rbp);
+}
