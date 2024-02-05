@@ -35,6 +35,16 @@ pub enum FloatOperand {
     Memory(Register, i32),
 }
 
+impl From<FloatOperand> for Operand {
+    fn from(operand: FloatOperand) -> Self {
+        match operand {
+            FloatOperand::Register(reg) => Operand::Register(reg.into()),
+            FloatOperand::Immediate(imm) => Operand::Imm64(imm.to_bits()),
+            FloatOperand::Memory(reg, offset) => Operand::Memory(reg, offset),
+        }
+    }
+}
+
 trait IntoRegisterIndex {
     fn upper_bit(&self) -> u8;
     fn base_reg(&self) -> u8;
@@ -80,6 +90,12 @@ pub enum FloatRegister {
     Xmm13,
     Xmm14,
     Xmm15,
+}
+
+impl From<FloatRegister> for Register {
+    fn from(reg: FloatRegister) -> Self {
+        unsafe { std::mem::transmute(reg as u8) }
+    }
 }
 
 impl IntoRegisterIndex for Register {
@@ -235,6 +251,22 @@ impl Assembler {
         }
     }
 
+    fn append_modrm_with_offset(&mut self, reg: impl IntoRegisterIndex, rm: Operand) {
+        match rm {
+            Operand::Register(rm) => {
+                self.append_modrm(Mod::Direct, reg, rm);
+            }
+            Operand::Memory(rm, 0) => {
+                self.append_modrm(Mod::Indirect, reg, rm);
+            }
+            Operand::Memory(rm, offset) => {
+                self.append_modrm(Mod::IndirectDisplacement, reg, rm);
+                self.append_i32(offset);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn push(&mut self, src: Operand) {
         match src {
             // push reg
@@ -243,11 +275,10 @@ impl Assembler {
                 self.append(0x50 + src.base_reg());
             }
             // push memory
-            Operand::Memory(src, offset) => {
+            rm @ Operand::Memory(src, _) => {
                 self.maybe_append_rex(src);
                 self.append(0xff);
-                self.append_modrm(Mod::IndirectDisplacement, 6, src);
-                self.append_i32(offset);
+                self.append_modrm_with_offset(6, rm);
             }
             _ => unimplemented!(),
         }
@@ -261,11 +292,10 @@ impl Assembler {
                 self.append(0x58 + dest.base_reg());
             }
             // pop memory
-            Operand::Memory(dest, offset) => {
+            rm @ Operand::Memory(dest, _) => {
                 self.maybe_append_rex(dest);
                 self.append(0x8f);
-                self.append_modrm(Mod::IndirectDisplacement, 0, dest);
-                self.append_i32(offset);
+                self.append_modrm_with_offset(0, rm);
             }
             _ => unimplemented!(),
         }
@@ -279,18 +309,12 @@ impl Assembler {
                 self.append(0xb8 + dest.base_reg());
                 self.append_u64(src);
             }
-            // mov memory, reg
-            (Operand::Memory(dest, offset), Operand::Register(src)) => {
+            // mov r/m, reg
+            (rm @ Operand::Memory(dest, _), Operand::Register(src))
+            | (rm @ Operand::Register(dest), Operand::Register(src)) => {
                 self.append_rexw_for_modrm(src, dest);
                 self.append(0x89);
-                self.append_modrm(Mod::IndirectDisplacement, src, dest);
-                self.append_i32(offset);
-            }
-            // mov reg, reg
-            (Operand::Register(dest), Operand::Register(src)) => {
-                self.append_rexw_for_modrm(src, dest);
-                self.append(0x89);
-                self.append_modrm(Mod::Direct, src, dest);
+                self.append_modrm_with_offset(src, rm)
             }
             // mov reg, memory
             (Operand::Register(dest), Operand::Memory(src, offset)) => {
@@ -317,25 +341,23 @@ impl Assembler {
     }
 
     pub fn movsd(&mut self, dest: FloatOperand, src: FloatOperand) {
-        match (dest, src) {
+        match (dest.into(), src.into()) {
             // movsd memory, reg
-            (FloatOperand::Memory(dest, offset), FloatOperand::Register(src)) => {
+            (rm @ Operand::Memory(dest, _), Operand::Register(src)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(src, dest);
                 self.append(0x0f);
                 self.append(0x11);
-                self.append_modrm(Mod::IndirectDisplacement, src, dest);
-                self.append_i32(offset);
+                self.append_modrm_with_offset(src, rm);
             }
 
             // movsd reg, memory
-            (FloatOperand::Register(dest), FloatOperand::Memory(src, offset)) => {
+            (Operand::Register(dest), rm @ Operand::Memory(src, _)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
                 self.append(0x10);
-                self.append_modrm(Mod::IndirectDisplacement, dest, src);
-                self.append_i32(offset);
+                self.append_modrm_with_offset(dest, rm)
             }
             _ => unimplemented!(),
         }
@@ -358,11 +380,11 @@ impl Assembler {
     pub fn add(&mut self, dest: Operand, src: Operand) {
         match (dest, src) {
             // add reg, imm8
-            (Operand::Register(dest), Operand::Imm8(src))  => {
+            (Operand::Register(dest), Operand::Imm8(src)) => {
                 self.append_rexw_for_reg(dest);
                 self.append(0x83);
                 self.append_modrm(Mod::Direct, 0, dest);
-                self.append(src );
+                self.append(src);
             }
             _ => unimplemented!(),
         }
@@ -371,34 +393,26 @@ impl Assembler {
     pub fn sub(&mut self, dest: Operand, src: Operand) {
         match (dest, src) {
             // sub reg, imm8
-            (Operand::Register(dest), Operand::Imm8(src))  => {
+            (Operand::Register(dest), Operand::Imm8(src)) => {
                 self.append_rexw_for_reg(dest);
                 self.append(0x83);
                 self.append_modrm(Mod::Direct, 5, dest);
-                self.append(src );
+                self.append(src);
             }
             _ => unimplemented!(),
         }
     }
 
     pub fn addsd(&mut self, dest: FloatOperand, src: FloatOperand) {
-        match (dest, src) {
-            // addsd reg, memory
-            (FloatOperand::Register(dest), FloatOperand::Memory(src, offset)) => {
+        match (dest.into(), src.into()) {
+            // addsd reg, r/m
+            (Operand::Register(dest), rm @ Operand::Memory(src, _))
+            | (Operand::Register(dest), rm @ Operand::Register(src)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
                 self.append(0x58);
-                self.append_modrm(Mod::IndirectDisplacement, dest, src);
-                self.append_i32(offset);
-            }
-            // addsd reg, reg
-            (FloatOperand::Register(dest), FloatOperand::Register(src)) => {
-                self.append(0xf2);
-                self.maybe_append_rex_for_modrm(dest, src);
-                self.append(0x0f);
-                self.append(0x58);
-                self.append_modrm(Mod::Direct, dest, src);
+                self.append_modrm_with_offset(dest, rm)
             }
             _ => unimplemented!(),
         }
@@ -407,13 +421,12 @@ impl Assembler {
     pub fn subsd(&mut self, dest: FloatOperand, src: FloatOperand) {
         match (dest, src) {
             // subsd reg, memory
-            (FloatOperand::Register(dest), FloatOperand::Memory(src, offset)) => {
+            (FloatOperand::Register(dest), rm @ FloatOperand::Memory(src, offset)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
                 self.append(0x5c);
-                self.append_modrm(Mod::IndirectDisplacement, dest, src);
-                self.append_i32(offset);
+                self.append_modrm_with_offset(dest, rm.into())
             }
             _ => unimplemented!(),
         }
@@ -422,13 +435,12 @@ impl Assembler {
     pub fn mulsd(&mut self, dest: FloatOperand, src: FloatOperand) {
         match (dest, src) {
             // mulsd reg, memory
-            (FloatOperand::Register(dest), FloatOperand::Memory(src, offset)) => {
+            (FloatOperand::Register(dest), rm @ FloatOperand::Memory(src, _)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
                 self.append(0x59);
-                self.append_modrm(Mod::IndirectDisplacement, dest, src);
-                self.append_i32(offset);
+                self.append_modrm_with_offset(dest, rm.into())
             }
             _ => unimplemented!(),
         }
@@ -437,13 +449,12 @@ impl Assembler {
     pub fn divsd(&mut self, dest: FloatOperand, src: FloatOperand) {
         match (dest, src) {
             // divsd reg, memory
-            (FloatOperand::Register(dest), FloatOperand::Memory(src, offset)) => {
+            (FloatOperand::Register(dest), rm @ FloatOperand::Memory(src, _)) => {
                 self.append(0xf2);
                 self.maybe_append_rex_for_modrm(dest, src);
                 self.append(0x0f);
                 self.append(0x5e);
-                self.append_modrm(Mod::IndirectDisplacement, dest, src);
-                self.append_i32(offset);
+                self.append_modrm_with_offset(dest, rm.into())
             }
             _ => unimplemented!(),
         }
@@ -451,18 +462,12 @@ impl Assembler {
 
     pub fn cmp(&mut self, left: Operand, right: Operand) {
         match (left, right) {
-            // cmp reg, memory
-            (Operand::Register(left), Operand::Memory(right, offset)) => {
+            // cmp reg, r/m
+            (Operand::Register(left), rm @ Operand::Memory(right, _))
+            | (Operand::Register(left), rm @ Operand::Register(right)) => {
                 self.append_rexw_for_modrm(left, right);
                 self.append(0x3b);
-                self.append_modrm(Mod::IndirectDisplacement, left, right);
-                self.append_i32(offset);
-            }
-            // cmp reg, reg
-            (Operand::Register(left), Operand::Register(right)) => {
-                self.append_rexw_for_modrm(left, right);
-                self.append(0x3b);
-                self.append_modrm(Mod::Direct, left, right);
+                self.append_modrm_with_offset(left, rm)
             }
             _ => unimplemented!(),
         }
@@ -563,7 +568,10 @@ impl Assembler {
         );
         self.sub(Operand::Register(Register::Rsp), Operand::Imm8(8));
         self.and(Operand::Register(Register::Rsp), Operand::Imm8(0xf0));
-        self.mov(Operand::Memory(Register::Rsp, 0), Operand::Register(tmp_register));
+        self.mov(
+            Operand::Memory(Register::Rsp, 0),
+            Operand::Register(tmp_register),
+        );
     }
 
     fn restore_stack_after_call(&mut self) {
