@@ -340,6 +340,19 @@ impl Assembler {
         }
     }
 
+    pub fn cmovp(&mut self, dest: Operand, src: Operand) {
+        match (dest, src) {
+            // cmovp reg, reg
+            (Operand::Register(dest), Operand::Register(src)) => {
+                self.append_rexw_for_modrm(dest, src);
+                self.append(0x0f);
+                self.append(0x4a);
+                self.append_modrm(Mod::Direct, dest, src);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn movsd(&mut self, dest: FloatOperand, src: FloatOperand) {
         match (dest.into(), src.into()) {
             // movsd memory, reg
@@ -455,6 +468,22 @@ impl Assembler {
                 self.append(0x0f);
                 self.append(0x5e);
                 self.append_modrm_with_offset(dest, rm.into())
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn ucomisd(&mut self, left: FloatOperand, right: FloatOperand) {
+        match (left.into(), right.into()) {
+            // ucomisd reg, r/m
+            (Operand::Register(left), rm@Operand::Register(right)) | 
+             (Operand::Register(left), rm@Operand::Memory(right, _))
+             => {
+                self.append(0x66);
+                self.append_rexw_for_modrm(left, right);
+                self.append(0x0f);
+                self.append(0x2e);
+                self.append_modrm_with_offset(left, rm);
             }
             _ => unimplemented!(),
         }

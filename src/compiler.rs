@@ -598,8 +598,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.parse_precedence((Into::<u8>::into(rule.precedence) + 1).try_into().unwrap());
 
         match operator_type {
-            TokenType::BangEqual => todo!(),    //self.emitter.ne(),
-            TokenType::EqualEqual => todo!(),   //self.emitter.eq(),
+            TokenType::BangEqual => self.emitter.ne(),
+            TokenType::EqualEqual => self.emitter.eq(),
             TokenType::Greater => todo!(),      //self.emitter.gt(),
             TokenType::GreaterEqual => todo!(), //self.emitter.ge(),
             TokenType::Less => todo!(),         //self.emitter.lt(),

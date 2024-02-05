@@ -388,7 +388,7 @@ impl Emitter {
             Operand::Register(Register::Rax),
             Operand::Memory(Register::Rsp, 0),
         );
-        self.is_non_primitive(Operand::Register(Register::Rax));
+        self.is_non_numeric(Operand::Register(Register::Rax));
         self.assembler.jne(&mut ok);
 
         // The operand was an object.
@@ -429,7 +429,7 @@ impl Emitter {
             Operand::Register(Register::Rax),
             Operand::Register(Register::R9),
         );
-        self.is_non_primitive(Operand::Register(Register::Rax));
+        self.is_non_numeric(Operand::Register(Register::Rax));
         self.assembler.je(&mut add_strings);
 
         // is the first operand an object?
@@ -441,7 +441,7 @@ impl Emitter {
             Operand::Register(Register::Rax),
             Operand::Register(Register::R8),
         );
-        self.is_non_primitive(Operand::Register(Register::Rax));
+        self.is_non_numeric(Operand::Register(Register::Rax));
         self.assembler.je(&mut add_strings);
 
         // Numeric addition.
@@ -478,9 +478,9 @@ impl Emitter {
         self.assembler.bind_label(&mut end);
     }
 
-    /// If [val] is not a primitive, sets the zero/equals flag.
+    /// If [val] is not a numeric, sets the zero/equals flag.
     /// The value is modified in the process.
-    fn is_non_primitive(&mut self, val: Operand) {
+    fn is_non_numeric(&mut self, val: Operand) {
         self.assembler.and(val, Operand::Register(REG_QNAN));
         self.assembler.cmp(val, Operand::Register(REG_QNAN));
     }
@@ -534,6 +534,75 @@ impl Emitter {
             FloatOperand::Memory(Register::Rsp, 0),
             FloatOperand::Register(FloatRegister::Xmm0),
         );
+    }
+
+    pub fn equality(&mut self, eq_val: Register, ne_val: Register) {
+        let mut non_numeric_cmp = self.assembler.create_label();
+        let mut end = self.assembler.create_label();
+
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+        self.is_non_numeric(Operand::Register(Register::Rax));
+        self.assembler.je(&mut non_numeric_cmp);
+
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 8),
+        );
+        self.is_non_numeric(Operand::Register(Register::Rax));
+        self.assembler.je(&mut non_numeric_cmp);
+
+        // Numeric (floating point) comparison
+        self.assembler.movsd(
+            FloatOperand::Register(FloatRegister::Xmm0),
+            FloatOperand::Memory(Register::Rsp, 0),
+        );
+        self.assembler.ucomisd(
+            FloatOperand::Register(FloatRegister::Xmm0),
+            FloatOperand::Memory(Register::Rsp, 8),
+        );
+        self.assembler
+            .mov(Operand::Register(Register::Rax), Operand::Register(ne_val));
+        self.assembler
+            .cmove(Operand::Register(Register::Rax), Operand::Register(eq_val));
+        self.assembler
+            .cmovp(Operand::Register(Register::Rax), Operand::Register(ne_val));
+        self.assembler.jmp(&mut end);
+
+        // Non-numeric comparison
+        self.assembler.bind_label(&mut non_numeric_cmp);
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+        self.assembler.cmp(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 8),
+        );
+        self.assembler
+            .mov(Operand::Register(Register::Rax), Operand::Register(ne_val));
+        self.assembler
+            .cmove(Operand::Register(Register::Rax), Operand::Register(eq_val));
+
+        // Move the result to the stack
+        self.assembler.bind_label(&mut end);
+
+        self.assembler
+            .add(Operand::Register(Register::Rsp), Operand::Imm8(8));
+        self.assembler.mov(
+            Operand::Memory(Register::Rsp, 0),
+            Operand::Register(Register::Rax),
+        );
+    }
+
+    pub fn eq(&mut self) {
+        self.equality(REG_TRUE, REG_FALSE);
+    }
+
+    pub fn ne(&mut self) {
+        self.equality(REG_FALSE, REG_TRUE);
     }
 
     /// Calls an external function with the beginning and end of the stack as first and second arguments.
