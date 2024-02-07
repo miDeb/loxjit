@@ -906,22 +906,22 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expression();
         self.consume(TokenType::RightParen, "Expect ')' after condition.");
 
-        let then_jmp = todo!(); //self.emitter.get_new_label();
-        todo!(); //self.emitter.jump_if_false(then_jmp);
-        todo!(); //self.emitter.pop();
+        let mut then_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_false(&mut then_jmp);
+        self.emitter.pop();
         self.statement();
 
-        //let else_jmp = todo!();//self.emitter.get_new_label();
-        todo!(); //self.emitter.jump(else_jmp);
+        let mut else_jmp = self.emitter.get_new_label();
+        self.emitter.jump(&mut else_jmp);
 
-        todo!(); //self.emitter.set_jump_target(then_jmp);
-        todo!(); //self.emitter.pop();
+        self.emitter.set_jump_target(&mut then_jmp);
+        self.emitter.pop();
 
         if self.match_token(TokenType::Else) {
             self.statement();
         }
 
-        todo!(); //self.emitter.set_jump_target(else_jmp);
+        self.emitter.set_jump_target(&mut else_jmp);
     }
 
     fn fun_declaration(&mut self) {

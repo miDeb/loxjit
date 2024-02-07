@@ -610,7 +610,7 @@ impl Emitter {
         self.equality(REG_FALSE, REG_TRUE);
     }
 
-    pub fn numeric_binary(&mut self, op: NumericBinaryOp) {
+    fn numeric_binary(&mut self, op: NumericBinaryOp) {
         let mut fail_not_numbers = self.assembler.create_label();
         let mut end = self.assembler.create_label();
 
@@ -729,6 +729,39 @@ impl Emitter {
         self.assembler.bind_label(&mut end);
     }
 
+    pub fn get_new_label(&mut self) -> Label {
+        self.assembler.create_label()
+    }
+
+    pub fn set_jump_target(&mut self, label: &mut Label) {
+        self.assembler.bind_label(label);
+    }
+
+    pub fn jump(&mut self, label: &mut Label) {
+        self.assembler.jmp(label);
+    }
+
+    pub fn jump_if_false(&mut self, label: &mut Label) {
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+
+        // Check for false
+        self.assembler.cmp(
+            Operand::Register(Register::Rax),
+            Operand::Register(REG_FALSE),
+        );
+        self.assembler.je(label);
+
+        // Check for nil
+        self.assembler
+            .cmp(Operand::Register(Register::Rax), Operand::Register(REG_NIL));
+        self.assembler.je(label);
+
+        // Values other than nil and false are truthy
+    } 
+
     /// Calls an external function with the beginning and end of the stack as first and second arguments.
     /// Therefore, additional arguments need to be passed in r8/r8 or on the stack.    
     fn call_gc(&mut self, address: u64) {
@@ -745,4 +778,6 @@ impl Emitter {
         self.assembler
             .call_extern(Operand::Register(Register::Rax), Register::R10);
     }
+
+
 }
