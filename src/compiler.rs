@@ -848,23 +848,23 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn and(&mut self, _can_assign: bool) {
-        let end_jmp = todo!(); //self.emitter.get_new_label();
-        todo!(); //self.emitter.jump_if_false(end_jmp);
+        let mut end_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_false(&mut end_jmp);
 
-        todo!(); //self.emitter.pop();
+        self.emitter.pop();
         self.parse_precedence(Precedence::And);
 
-        todo!(); //self.emitter.set_jump_target(end_jmp);
+        self.emitter.set_jump_target(&mut end_jmp);
     }
 
     fn or(&mut self, _can_assign: bool) {
-        let end_jmp = todo!(); //self.emitter.get_new_label();
-        todo!(); //self.emitter.jump_if_true(end_jmp);
+        let mut end_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_true(&mut end_jmp);
 
-        todo!(); //self.emitter.pop();
+        self.emitter.pop();
         self.parse_precedence(Precedence::Or);
 
-        todo!(); //self.emitter.set_jump_target(end_jmp);
+        self.emitter.set_jump_target(&mut end_jmp);
     }
 
     fn statement(&mut self) {
@@ -1074,22 +1074,22 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn while_statement(&mut self) {
-        let loop_start = todo!(); //self.emitter.get_new_label();
-        todo!(); //self.emitter.set_jump_target(loop_start);
+        let mut loop_start = self.emitter.get_new_label();
+        self.emitter.set_jump_target(&mut loop_start);
 
         self.consume(TokenType::LeftParen, "Expect '(' after 'while'.");
         self.expression();
         self.consume(TokenType::RightParen, "Expect ')' after condition.");
 
-        let exit_jmp = todo!(); //self.emitter.get_new_label();
-        todo!(); //self.emitter.jump_if_false(exit_jmp);
-        todo!(); //self.emitter.pop();
+        let mut exit_jmp = self.emitter.get_new_label();
+        self.emitter.jump_if_false(&mut exit_jmp);
+        self.emitter.pop();
         self.statement();
 
-        todo!(); //self.emitter.jump(loop_start);
+        self.emitter.jump(&mut loop_start);
 
-        todo!(); //self.emitter.set_jump_target(exit_jmp);
-        todo!(); //self.emitter.pop();
+        self.emitter.set_jump_target(&mut exit_jmp);
+        self.emitter.pop();
     }
 
     fn for_statement(&mut self) {
@@ -1104,40 +1104,40 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.expression_statement();
         }
 
-        //let mut loop_start = todo!();//self.emitter.get_new_label();
-        todo!(); //self.emitter.set_jump_target(loop_start);
+        let mut loop_start = self.emitter.get_new_label();
+        self.emitter.set_jump_target(&mut loop_start);
 
-        //let exit_jump = todo!();//self.emitter.get_new_label();
+        let mut exit_jump = self.emitter.get_new_label();
 
         if !self.match_token(TokenType::Semicolon) {
             self.expression();
             self.consume(TokenType::Semicolon, "Expect ';' after loop condition.");
 
-            todo!(); //self.emitter.jump_if_false(exit_jump);
-            todo!(); //self.emitter.pop();
+            self.emitter.jump_if_false(&mut exit_jump);
+            self.emitter.pop();
         }
 
         if !self.match_token(TokenType::RightParen) {
-            let body_jmp = todo!(); //self.emitter.get_new_label();
-            todo!(); //self.emitter.jump(body_jmp);
+            let mut body_jmp = self.emitter.get_new_label();
+            self.emitter.jump(&mut body_jmp);
 
-            //let increment_start = todo!();//self.emitter.get_new_label();
-            todo!(); //self.emitter.set_jump_target(increment_start);
+            let mut increment_start = self.emitter.get_new_label();
+            self.emitter.set_jump_target(&mut increment_start);
             self.expression();
-            todo!(); //self.emitter.pop();
+            self.emitter.pop();
             self.consume(TokenType::RightParen, "Expect ')' after for clauses.");
 
-            todo!(); //self.emitter.jump(loop_start);
-                     //loop_start = increment_start;
-            todo!(); //self.emitter.set_jump_target(body_jmp);
+            self.emitter.jump(&mut loop_start);
+            loop_start = increment_start;
+            self.emitter.set_jump_target(&mut body_jmp);
         }
 
         self.statement();
 
-        todo!(); //self.emitter.jump(loop_start);
+        self.emitter.jump(&mut loop_start);
 
-        todo!(); //self.emitter.set_jump_target(exit_jump);
-        todo!(); //self.emitter.pop();
+        self.emitter.set_jump_target(&mut exit_jump);
+        self.emitter.pop();
 
         self.end_scope();
     }

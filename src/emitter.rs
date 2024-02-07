@@ -760,7 +760,33 @@ impl Emitter {
         self.assembler.je(label);
 
         // Values other than nil and false are truthy
-    } 
+    }
+
+    pub fn jump_if_true(&mut self, label: &mut Label) {
+        let mut end = self.assembler.create_label();
+        
+        self.assembler.mov(
+            Operand::Register(Register::Rax),
+            Operand::Memory(Register::Rsp, 0),
+        );
+
+        // Check for false
+        self.assembler.cmp(
+            Operand::Register(Register::Rax),
+            Operand::Register(REG_FALSE),
+        );
+        self.assembler.je(&mut end);
+
+        // Check for nil
+        self.assembler
+            .cmp(Operand::Register(Register::Rax), Operand::Register(REG_NIL));
+        self.assembler.je(&mut end);
+
+        // Values other than nil and false are truthy
+        self.assembler.jmp(label);
+
+        self.assembler.bind_label(&mut end);
+    }
 
     /// Calls an external function with the beginning and end of the stack as first and second arguments.
     /// Therefore, additional arguments need to be passed in r8/r8 or on the stack.    
